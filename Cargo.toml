@@ -1,0 +1,23 @@
+[package]
+name = "egui-gizmo"
+version = "0.1.0"
+authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
+edition = "2021"
+
+license-file = "LICENSE"
+readme = "README.md"
+description = "3d transform gizmo for the egui library"
+homepage = "https://github.com/urholaukkarinen/egui-gizmo"
+repository = "https://github.com/urholaukkarinen/egui-gizmo"
+categories = ["gui", "game-development", "game-engines"]
+keywords = ["egui", "3d", "gizmo"]
+
+[workspace]
+members = ["demo"]
+
+[dependencies]
+egui = "0.14.2"
+glam = "0.19.0"
+
+[profile.release]
+opt-level = 2

@@ -1,0 +1,13 @@
+[package]
+name = "egui-gizmo-demo"
+version = "0.1.0"
+authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
+edition = "2021"
+
+license = "MIT"
+
+[dependencies]
+macroquad = "0.3.10"
+egui = "0.14.2"
+egui-macroquad = "0.6.1"
+egui-gizmo = { path = ".." }
