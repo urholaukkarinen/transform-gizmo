@@ -1,12 +1,12 @@
 use std::f32::consts::FRAC_PI_4;
 
-use egui::{Align2, Color32, LayerId, pos2, TextStyle, Ui, Widget};
 use egui::color_picker::Alpha;
+use egui::{pos2, Align2, Color32, LayerId, TextStyle, Ui, Widget};
 use macroquad::prelude::*;
 
 use egui_gizmo::{
-    DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, Gizmo, GizmoMode, GizmoOrientation, GizmoResult,
-    GizmoVisuals,
+    Gizmo, GizmoMode, GizmoOrientation, GizmoResult, GizmoVisuals, DEFAULT_SNAP_ANGLE,
+    DEFAULT_SNAP_DISTANCE,
 };
 
 #[cfg(target_arch = "wasm32")]

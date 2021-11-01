@@ -1,10 +1,10 @@
 use egui::{Color32, PointerButton, Response};
 use glam::{Mat4, Vec3};
 
+use crate::{GizmoMode, GizmoResult, Ray};
 use crate::math::{ray_to_ray, round_to_interval, segment_to_segment};
 use crate::painter::Painter3d;
 use crate::subgizmo::SubGizmo;
-use crate::{GizmoMode, GizmoResult, Ray};
 
 /// Picks given translation subgizmo. If the subgizmo is close enough to
 /// the mouse pointer, distance from camera to the subgizmo is returned.
@@ -86,7 +86,11 @@ pub(crate) fn draw_translation(subgizmo: &SubGizmo) {
 
     painter.line_segment(start, end, (subgizmo.config.visuals.stroke_width, color));
 
-    let cross = direction.cross(subgizmo.config.view_forward()) * arrow_half_width;
+    let cross = if subgizmo.config.local_space() {
+        direction.cross(subgizmo.config.rotation.inverse() * subgizmo.config.view_forward())
+    } else {
+        direction.cross(subgizmo.config.view_forward())
+    } * arrow_half_width;
 
     painter.polygon(
         &[end + cross, end - cross, end + (direction * arrow_length)],

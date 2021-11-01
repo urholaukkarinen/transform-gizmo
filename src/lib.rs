@@ -187,7 +187,7 @@ impl<'a> Gizmo<'a> {
     }
 
     /// Iterator to the subgizmos
-    fn subgizmos(&self) -> impl Iterator<Item=&SubGizmo<'a>> {
+    fn subgizmos(&self) -> impl Iterator<Item = &SubGizmo<'a>> {
         self.subgizmos.iter().flatten()
     }
 
