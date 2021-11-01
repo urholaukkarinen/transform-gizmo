@@ -3,7 +3,7 @@
 //! such as game engines and 3d modeling software.
 //!
 //! # Creating a gizmo
-//! For a more complete example, see the online demo at <https://urholaukkarinen.github.io/egui-gizmo>.
+//! For a more complete example, see the online demo at <https://urholaukkarinen.github.io/egui-gizmo/>.
 //! The demo sources can be found at <https://github.com/urholaukkarinen/egui-gizmo/blob/main/demo/src/main.rs>.
 //!
 //! ## A basic example
@@ -187,7 +187,7 @@ impl<'a> Gizmo<'a> {
     }
 
     /// Iterator to the subgizmos
-    fn subgizmos(&self) -> impl Iterator<Item = &SubGizmo<'a>> {
+    fn subgizmos(&self) -> impl Iterator<Item=&SubGizmo<'a>> {
         self.subgizmos.iter().flatten()
     }
 

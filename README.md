@@ -6,7 +6,7 @@
 
 3d transformation gizmo built on top of the [egui](https://github.com/emilk/egui) library.
 
-[Try it out in a web demo](https://urholaukkarinen.github.io/egui-gizmo)
+[Try it out in a web demo](https://urholaukkarinen.github.io/egui-gizmo/)
 
 ![Rotation](media/rotation.gif)
 ![Rotation](media/translation.png)
