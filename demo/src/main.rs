@@ -231,6 +231,8 @@ async fn main() {
 
                             show_gizmo_status(ui, gizmo_response);
                         }
+
+                        instructions_text(ui);
                     });
                 });
         });
@@ -248,6 +250,18 @@ async fn main() {
 
         next_frame().await
     }
+}
+
+fn instructions_text(ui: &Ui) {
+    let rect = ui.clip_rect();
+    ui.painter().text(
+        pos2(rect.right() - 10.0, rect.bottom() - 10.0),
+        Align2::RIGHT_BOTTOM,
+        "Move camera with (A, D, W, S)\n\
+         Toggle snapping with Ctrl & Shift",
+        TextStyle::Body,
+        Color32::GRAY,
+    );
 }
 
 fn show_gizmo_status(ui: &Ui, response: GizmoResult) {

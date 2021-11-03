@@ -148,7 +148,7 @@ impl Gizmo {
             let interaction = ui.interact(self.config.viewport, self.id, Sense::click_and_drag());
             let dragging = interaction.dragged_by(PointerButton::Primary);
 
-            // If there is no active subgizmo, find the which one of them
+            // If there is no active subgizmo, find which one of them
             // is under the mouse pointer, if any.
             if state.active_subgizmo_id.is_none() {
                 if let Some(subgizmo) = self.pick_subgizmo(ui, pointer_ray) {
@@ -186,7 +186,7 @@ impl Gizmo {
         result
     }
 
-    /// Picks the subgizmo that is closest to the mouse pointer ra
+    /// Picks the subgizmo that is closest to the mouse pointer
     fn pick_subgizmo(&mut self, ui: &Ui, ray: Ray) -> Option<&mut SubGizmo> {
         self.subgizmos_mut()
             .filter_map(|subgizmo| subgizmo.pick(ui, ray).map(|t| (t, subgizmo)))
