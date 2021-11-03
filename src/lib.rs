@@ -33,7 +33,7 @@ use std::ops::Sub;
 use egui::{Color32, Id, PointerButton, Rect, Sense, Ui};
 use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
 
-use crate::subgizmo::SubGizmo;
+use crate::subgizmo::{SubGizmo, SubGizmoKind};
 
 mod math;
 mod painter;
@@ -49,7 +49,7 @@ pub const DEFAULT_SNAP_DISTANCE: f32 = 0.1;
 /// Maximum number of subgizmos in a single gizmo.
 /// A subgizmo array of this size is allocated from stack,
 /// even if the actual number of subgizmos is less.
-pub const MAX_SUBGIZMOS: usize = 5;
+pub const MAX_SUBGIZMOS: usize = 6;
 
 pub struct Gizmo<'a> {
     id: Id,
@@ -204,55 +204,76 @@ impl<'a> Gizmo<'a> {
                 self.id.with("rx"),
                 self.config,
                 GizmoDirection::X,
-                GizmoMode::Rotate,
+                SubGizmoKind::RotationAxis,
             ),
             SubGizmo::new(
                 ui,
                 self.id.with("ry"),
                 self.config,
                 GizmoDirection::Y,
-                GizmoMode::Rotate,
+                SubGizmoKind::RotationAxis,
             ),
             SubGizmo::new(
                 ui,
                 self.id.with("rz"),
                 self.config,
                 GizmoDirection::Z,
-                GizmoMode::Rotate,
+                SubGizmoKind::RotationAxis,
             ),
             SubGizmo::new(
                 ui,
                 self.id.with("rs"),
                 self.config,
                 GizmoDirection::Screen,
-                GizmoMode::Rotate,
+                SubGizmoKind::RotationAxis,
             ),
         ]
     }
 
     /// Create subgizmos for translation
-    fn new_translation(&self, ui: &'a Ui) -> [SubGizmo<'a>; 3] {
+    fn new_translation(&self, ui: &'a Ui) -> [SubGizmo<'a>; 6] {
         [
             SubGizmo::new(
                 ui,
                 self.id.with("tx"),
                 self.config,
                 GizmoDirection::X,
-                GizmoMode::Translate,
+                SubGizmoKind::TranslationVector,
             ),
             SubGizmo::new(
                 ui,
                 self.id.with("ty"),
                 self.config,
                 GizmoDirection::Y,
-                GizmoMode::Translate,
+                SubGizmoKind::TranslationVector,
             ),
             SubGizmo::new(
                 ui,
                 self.id.with("tz"),
                 self.config,
                 GizmoDirection::Z,
-                GizmoMode::Translate,
+                SubGizmoKind::TranslationVector,
+            ),
+            SubGizmo::new(
+                ui,
+                self.id.with("tyz"),
+                self.config,
+                GizmoDirection::X,
+                SubGizmoKind::TranslationPlane,
+            ),
+            SubGizmo::new(
+                ui,
+                self.id.with("txz"),
+                self.config,
+                GizmoDirection::Y,
+                SubGizmoKind::TranslationPlane,
+            ),
+            SubGizmo::new(
+                ui,
+                self.id.with("txy"),
+                self.config,
+                GizmoDirection::Z,
+                SubGizmoKind::TranslationPlane,
             ),
         ]
     }

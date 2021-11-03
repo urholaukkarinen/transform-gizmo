@@ -3,11 +3,12 @@ use std::hash::Hash;
 use egui::{Color32, Id, Response, Ui};
 use glam::Vec3;
 
-use crate::rotation::{draw_rotation, pick_rotation, update_rotation, RotationState};
+use crate::{GizmoConfig, GizmoDirection, GizmoResult, Ray};
+use crate::rotation::{draw_rotation, pick_rotation, RotationState, update_rotation};
 use crate::translation::{
-    draw_translation, pick_translation, update_translation, TranslationState,
+    draw_translation, draw_translation_plane, pick_translation, pick_translation_plane,
+    TranslationState, update_translation, update_translation_plane,
 };
-use crate::{GizmoConfig, GizmoDirection, GizmoMode, GizmoResult, Ray};
 
 #[derive(Copy, Clone)]
 pub(crate) struct SubGizmo<'a> {
@@ -15,7 +16,7 @@ pub(crate) struct SubGizmo<'a> {
     pub(crate) id: Id,
     pub(crate) config: GizmoConfig,
     pub(crate) direction: GizmoDirection,
-    pub(crate) mode: GizmoMode,
+    pub(crate) kind: SubGizmoKind,
 }
 
 impl<'a> SubGizmo<'a> {
@@ -24,14 +25,14 @@ impl<'a> SubGizmo<'a> {
         id_source: impl Hash,
         config: GizmoConfig,
         direction: GizmoDirection,
-        mode: GizmoMode,
+        kind: SubGizmoKind,
     ) -> Self {
         Self {
             ui,
             id: Id::new(id_source),
             config,
             direction,
-            mode,
+            kind,
         }
     }
 
@@ -116,26 +117,28 @@ impl<'a> SubGizmo<'a> {
     }
 
     pub fn pick(&self, ray: Ray) -> Option<f32> {
-        match self.mode {
-            GizmoMode::Rotate => pick_rotation(self, ray),
-            GizmoMode::Translate => pick_translation(self, ray),
+        match self.kind {
+            SubGizmoKind::RotationAxis => pick_rotation(self, ray),
+            SubGizmoKind::TranslationVector => pick_translation(self, ray),
+            SubGizmoKind::TranslationPlane => pick_translation_plane(self, ray),
         }
     }
 
     /// Update this subgizmo based on pointer ray and interaction.
-    ///
     pub fn update(&self, ray: Ray, interaction: &Response) -> Option<GizmoResult> {
-        match self.mode {
-            GizmoMode::Rotate => update_rotation(self, ray, interaction),
-            GizmoMode::Translate => update_translation(self, ray, interaction),
+        match self.kind {
+            SubGizmoKind::RotationAxis => update_rotation(self, ray, interaction),
+            SubGizmoKind::TranslationVector => update_translation(self, ray, interaction),
+            SubGizmoKind::TranslationPlane => update_translation_plane(self, ray, interaction),
         }
     }
 
     /// Draw this subgizmo
     pub fn draw(&self) {
-        match self.mode {
-            GizmoMode::Rotate => draw_rotation(self),
-            GizmoMode::Translate => draw_translation(self),
+        match self.kind {
+            SubGizmoKind::RotationAxis => draw_rotation(self),
+            SubGizmoKind::TranslationVector => draw_translation(self),
+            SubGizmoKind::TranslationPlane => draw_translation_plane(self),
         }
     }
 }
@@ -150,4 +153,14 @@ pub(crate) struct SubGizmoState {
     pub rotation: RotationState,
     /// State used for translation
     pub translation: TranslationState,
+}
+
+#[derive(Copy, Clone)]
+pub(crate) enum SubGizmoKind {
+    /// Rotation around an axis
+    RotationAxis,
+    /// Translation along a vector
+    TranslationVector,
+    /// Translation along a plane
+    TranslationPlane,
 }
