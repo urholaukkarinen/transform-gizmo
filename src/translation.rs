@@ -90,10 +90,8 @@ pub(crate) fn update_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Opti
     let mut new_point = point_on_axis(subgizmo, ray);
     let mut new_delta = new_point - state.start_point;
 
-    let delta_length = new_delta.length();
-    if subgizmo.config.snapping && delta_length > 1e-5 {
-        new_delta = new_delta / delta_length
-            * round_to_interval(delta_length, subgizmo.config.snap_distance);
+    if subgizmo.config.snapping {
+        new_delta = snap_translation_vector(subgizmo, new_delta);
         new_point = state.start_point + new_delta;
     }
 
@@ -112,6 +110,15 @@ pub(crate) fn update_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Opti
         mode: GizmoMode::Translate,
         value: state.current_delta.to_array(),
     })
+}
+
+fn snap_translation_vector(subgizmo: &SubGizmo, new_delta: Vec3) -> Vec3 {
+    let delta_length = new_delta.length();
+    if delta_length > 1e-5 {
+        new_delta / delta_length * round_to_interval(delta_length, subgizmo.config.snap_distance)
+    } else {
+        new_delta
+    }
 }
 
 /// Picks given translation plane subgizmo. If the subgizmo is close enough to
@@ -181,10 +188,8 @@ pub(crate) fn update_translation_plane(
     )?;
     let mut new_delta = new_point - state.start_point;
 
-    let delta_length = new_delta.length();
-    if subgizmo.config.snapping && delta_length > 1e-5 {
-        new_delta = new_delta / delta_length
-            * round_to_interval(delta_length, subgizmo.config.snap_distance);
+    if subgizmo.config.snapping {
+        new_delta = snap_translation_plane(subgizmo, new_delta);
         new_point = state.start_point + new_delta;
     }
 
@@ -203,6 +208,27 @@ pub(crate) fn update_translation_plane(
         mode: GizmoMode::Translate,
         value: state.current_delta.to_array(),
     })
+}
+
+fn snap_translation_plane(subgizmo: &SubGizmo, new_delta: Vec3) -> Vec3 {
+    let mut binormal = translation_plane_binormal(subgizmo.direction);
+    let mut tangent = translation_plane_tangent(subgizmo.direction);
+    if subgizmo.config.local_space() {
+        binormal = subgizmo.config.rotation * binormal;
+        tangent = subgizmo.config.rotation * tangent;
+    }
+    let cb = new_delta.cross(-binormal);
+    let ct = new_delta.cross(tangent);
+    let lb = cb.length();
+    let lt = ct.length();
+    let n = subgizmo.normal();
+
+    if lb > 1e-5 && lt > 1e-5 {
+        binormal * round_to_interval(lt, subgizmo.config.snap_distance) * (ct / lt).dot(n)
+            + tangent * round_to_interval(lb, subgizmo.config.snap_distance) * (cb / lb).dot(n)
+    } else {
+        new_delta
+    }
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -225,7 +251,7 @@ fn translation_transform(subgizmo: &SubGizmo) -> Mat4 {
 fn translation_plane_binormal(direction: GizmoDirection) -> Vec3 {
     match direction {
         GizmoDirection::X => Vec3::Y,
-        GizmoDirection::Y => Vec3::X,
+        GizmoDirection::Y => Vec3::Z,
         GizmoDirection::Z => Vec3::X,
         GizmoDirection::Screen => Vec3::X, // Unused
     }
@@ -234,7 +260,7 @@ fn translation_plane_binormal(direction: GizmoDirection) -> Vec3 {
 fn translation_plane_tangent(direction: GizmoDirection) -> Vec3 {
     match direction {
         GizmoDirection::X => Vec3::Z,
-        GizmoDirection::Y => Vec3::Z,
+        GizmoDirection::Y => Vec3::X,
         GizmoDirection::Z => Vec3::Y,
         GizmoDirection::Screen => Vec3::X, // Unused
     }
