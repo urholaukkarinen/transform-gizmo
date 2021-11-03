@@ -200,8 +200,8 @@ async fn main() {
                             y_color,
                             z_color,
                             s_color,
-                            inactive_alpha: (inactive_alpha * 255.0) as u8,
-                            highlight_alpha: (highlight_alpha * 255.0) as u8,
+                            inactive_alpha,
+                            highlight_alpha,
                             highlight_color: if custom_highlight_color {
                                 Some(highlight_color)
                             } else {

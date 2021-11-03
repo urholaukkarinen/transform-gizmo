@@ -1,37 +1,41 @@
 use std::hash::Hash;
 
-use egui::{Color32, Id, Response, Ui};
+use egui::{Color32, Id, Ui};
 use glam::Vec3;
 
-use crate::rotation::{draw_rotation, pick_rotation, update_rotation, RotationState};
+use crate::rotation::{draw_rotation, pick_rotation, update_rotation};
 use crate::translation::{
-    draw_translation, pick_translation, update_translation, TranslationState,
+    draw_translation, draw_translation_plane, pick_translation, pick_translation_plane,
+    update_translation, update_translation_plane,
 };
-use crate::{GizmoConfig, GizmoDirection, GizmoMode, GizmoResult, Ray};
+use crate::{GizmoConfig, GizmoDirection, GizmoResult, Ray, WidgetData};
 
 #[derive(Copy, Clone)]
-pub(crate) struct SubGizmo<'a> {
-    pub(crate) ui: &'a Ui,
+pub(crate) struct SubGizmo {
     pub(crate) id: Id,
     pub(crate) config: GizmoConfig,
     pub(crate) direction: GizmoDirection,
-    pub(crate) mode: GizmoMode,
+    pub(crate) kind: SubGizmoKind,
+    /// Whether this subgizmo is focused this frame
+    pub(crate) focused: bool,
+    /// Whether this subgizmo is active this frame
+    pub(crate) active: bool,
 }
 
-impl<'a> SubGizmo<'a> {
+impl SubGizmo {
     pub fn new(
-        ui: &'a Ui,
         id_source: impl Hash,
         config: GizmoConfig,
         direction: GizmoDirection,
-        mode: GizmoMode,
+        kind: SubGizmoKind,
     ) -> Self {
         Self {
-            ui,
             id: Id::new(id_source),
             config,
             direction,
-            mode,
+            kind,
+            focused: false,
+            active: false,
         }
     }
 
@@ -54,100 +58,72 @@ impl<'a> SubGizmo<'a> {
         normal
     }
 
-    pub fn local_tangent(&self) -> Vec3 {
-        match self.direction {
-            GizmoDirection::X => Vec3::Z,
-            GizmoDirection::Y => Vec3::Z,
-            GizmoDirection::Z => -Vec3::Y,
-            GizmoDirection::Screen => -self.config.view_right(),
-        }
-    }
-
-    pub fn tangent(&self) -> Vec3 {
-        let mut tangent = self.local_tangent();
-
-        if self.config.local_space() && self.direction != GizmoDirection::Screen {
-            tangent = self.config.rotation * tangent;
-        }
-
-        tangent
-    }
-
     pub fn color(&self) -> Color32 {
-        match self.direction {
+        let color = match self.direction {
             GizmoDirection::X => self.config.visuals.x_color,
             GizmoDirection::Y => self.config.visuals.y_color,
             GizmoDirection::Z => self.config.visuals.z_color,
             GizmoDirection::Screen => self.config.visuals.s_color,
-        }
+        };
+
+        let color = if self.focused {
+            self.config.visuals.highlight_color.unwrap_or(color)
+        } else {
+            color
+        };
+
+        let alpha = if self.focused {
+            self.config.visuals.highlight_alpha
+        } else {
+            self.config.visuals.inactive_alpha
+        };
+
+        color.linear_multiply(alpha)
     }
 
-    pub fn radius(&self) -> f32 {
-        let mut radius = self.config.visuals.gizmo_size;
-
-        if self.direction == GizmoDirection::Screen {
-            // Screen axis should be a little bit larger
-            radius += self.config.visuals.stroke_width + 5.0;
-        }
-
-        self.config.scale_factor * radius
+    pub fn state<T: WidgetData>(&self, ui: &Ui) -> T {
+        T::load(ui.ctx(), self.id)
     }
 
-    pub fn state(&self) -> SubGizmoState {
-        *self
-            .ui
-            .ctx()
-            .memory()
-            .id_data_temp
-            .get_or_default::<SubGizmoState>(self.id)
+    pub fn update_state_with<T: WidgetData>(&self, ui: &Ui, fun: impl FnOnce(&mut T)) {
+        let mut state = self.state::<T>(ui);
+        fun(&mut state);
+        state.save(ui.ctx(), self.id);
     }
 
-    pub fn update_state_with(&self, fun: impl FnOnce(&mut SubGizmoState)) {
-        fun(self
-            .ui
-            .ctx()
-            .memory()
-            .id_data_temp
-            .get_mut_or_default::<SubGizmoState>(self.id))
-    }
-
-    pub fn active(&self) -> bool {
-        self.state().active
-    }
-
-    pub fn pick(&self, ray: Ray) -> Option<f32> {
-        match self.mode {
-            GizmoMode::Rotate => pick_rotation(self, ray),
-            GizmoMode::Translate => pick_translation(self, ray),
+    pub fn pick(&self, ui: &Ui, ray: Ray) -> Option<f32> {
+        match self.kind {
+            SubGizmoKind::RotationAxis => pick_rotation(self, ui, ray),
+            SubGizmoKind::TranslationVector => pick_translation(self, ui, ray),
+            SubGizmoKind::TranslationPlane => pick_translation_plane(self, ui, ray),
         }
     }
 
     /// Update this subgizmo based on pointer ray and interaction.
-    ///
-    pub fn update(&self, ray: Ray, interaction: &Response) -> Option<GizmoResult> {
-        match self.mode {
-            GizmoMode::Rotate => update_rotation(self, ray, interaction),
-            GizmoMode::Translate => update_translation(self, ray, interaction),
+    pub fn update(&self, ui: &Ui, ray: Ray) -> Option<GizmoResult> {
+        match self.kind {
+            SubGizmoKind::RotationAxis => update_rotation(self, ui, ray),
+            SubGizmoKind::TranslationVector => update_translation(self, ui, ray),
+            SubGizmoKind::TranslationPlane => update_translation_plane(self, ui, ray),
         }
     }
 
     /// Draw this subgizmo
-    pub fn draw(&self) {
-        match self.mode {
-            GizmoMode::Rotate => draw_rotation(self),
-            GizmoMode::Translate => draw_translation(self),
+    pub fn draw(&self, ui: &Ui) {
+        match self.kind {
+            SubGizmoKind::RotationAxis => draw_rotation(self, ui),
+            SubGizmoKind::TranslationVector => draw_translation(self, ui),
+            SubGizmoKind::TranslationPlane => draw_translation_plane(self, ui),
         }
     }
 }
 
-#[derive(Copy, Clone, Default)]
-pub(crate) struct SubGizmoState {
-    /// Whether this subgizmo is focused
-    pub focused: bool,
-    /// Whether this subgizmo is active
-    pub active: bool,
-    /// State used for rotation
-    pub rotation: RotationState,
-    /// State used for translation
-    pub translation: TranslationState,
+#[derive(Copy, Clone)]
+pub(crate) enum SubGizmoKind {
+    /// Rotation around an axis
+    RotationAxis,
+    /// Translation along a vector
+    TranslationVector,
+    /// Translation along a plane
+    TranslationPlane,
 }

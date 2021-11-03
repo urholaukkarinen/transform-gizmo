@@ -1,21 +1,21 @@
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
-use egui::{Color32, PointerButton, Response};
+use egui::{Color32, Ui};
 use glam::{Mat4, Quat, Vec2, Vec3};
 
 use crate::math::{ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen};
 use crate::painter::Painter3d;
 use crate::subgizmo::SubGizmo;
-use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
+use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray, WidgetData};
 
 /// Picks given rotation subgizmo. If the subgizmo is close enough to
 /// the mouse pointer, distance from camera to the subgizmo is returned.
-pub(crate) fn pick_rotation(subgizmo: &SubGizmo, ray: Ray) -> Option<f32> {
-    let radius = subgizmo.radius();
+pub(crate) fn pick_rotation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f32> {
+    let radius = arc_radius(subgizmo);
     let config = subgizmo.config;
     let origin = config.translation;
     let normal = subgizmo.normal();
-    let tangent = subgizmo.tangent();
+    let tangent = tangent(subgizmo);
 
     let (t, dist_from_gizmo_origin) =
         ray_to_plane_origin(normal, origin, ray.origin, ray.direction);
@@ -34,13 +34,12 @@ pub(crate) fn pick_rotation(subgizmo: &SubGizmo, ray: Ray) -> Option<f32> {
         f32::atan2(offset.cross(forward).dot(normal), offset.dot(forward))
     };
 
-    subgizmo.update_state_with(|state| {
-        let rotation_angle = rotation_angle(subgizmo).unwrap_or(0.0);
-        state.focused = false;
-        state.rotation.start_axis_angle = angle;
-        state.rotation.start_rotation_angle = rotation_angle;
-        state.rotation.last_rotation_angle = rotation_angle;
-        state.rotation.current_delta = 0.0;
+    subgizmo.update_state_with(ui, |state: &mut RotationState| {
+        let rotation_angle = rotation_angle(subgizmo, ui).unwrap_or(0.0);
+        state.start_axis_angle = angle;
+        state.start_rotation_angle = rotation_angle;
+        state.last_rotation_angle = rotation_angle;
+        state.current_delta = 0.0;
     });
 
     if dist_from_gizmo_edge <= config.focus_distance && angle.abs() < arc_angle(subgizmo) {
@@ -50,45 +49,29 @@ pub(crate) fn pick_rotation(subgizmo: &SubGizmo, ray: Ray) -> Option<f32> {
     }
 }
 
-pub(crate) fn draw_rotation(subgizmo: &SubGizmo) {
-    let state = subgizmo.state();
+pub(crate) fn draw_rotation(subgizmo: &SubGizmo, ui: &Ui) {
+    let state = subgizmo.state::<RotationState>(ui);
     let config = subgizmo.config;
 
     let transform = rotation_matrix(subgizmo);
     let painter = Painter3d::new(
-        subgizmo.ui.painter().clone(),
+        ui.painter().clone(),
         config.view_projection * transform,
         config.viewport,
     );
 
-    let color = if state.focused {
-        subgizmo
-            .config
-            .visuals
-            .highlight_color
-            .unwrap_or_else(|| subgizmo.color())
-    } else {
-        subgizmo.color()
-    };
-
-    let alpha = if state.focused {
-        config.visuals.highlight_alpha
-    } else {
-        config.visuals.inactive_alpha
-    };
-
-    let color = Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), alpha);
+    let color = subgizmo.color();
     let fill_color = Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), 10);
     let stroke = (config.visuals.stroke_width, color);
 
-    let radius = subgizmo.radius();
+    let radius = arc_radius(subgizmo);
 
-    if !state.active {
+    if !subgizmo.active {
         let angle = arc_angle(subgizmo);
         painter.arc(radius, FRAC_PI_2 - angle, FRAC_PI_2 + angle, stroke);
     } else {
-        let start_angle = state.rotation.start_axis_angle + FRAC_PI_2;
-        let end_angle = start_angle + state.rotation.current_delta;
+        let start_angle = state.start_axis_angle + FRAC_PI_2;
+        let end_angle = start_angle + state.current_delta;
 
         // The polyline does not get rendered correctly if
         // the start and end lines are exactly the same
@@ -131,23 +114,19 @@ pub(crate) fn draw_rotation(subgizmo: &SubGizmo) {
 
 /// Updates given rotation subgizmo.
 /// If the subgizmo is active, returns the rotation result.
-pub(crate) fn update_rotation(
-    subgizmo: &SubGizmo,
-    _ray: Ray,
-    interaction: &Response,
-) -> Option<GizmoResult> {
-    let state = subgizmo.state();
+pub(crate) fn update_rotation(subgizmo: &SubGizmo, ui: &Ui, _ray: Ray) -> Option<GizmoResult> {
+    let state = subgizmo.state::<RotationState>(ui);
     let config = subgizmo.config;
 
-    let mut rotation_angle = rotation_angle(subgizmo)?;
+    let mut rotation_angle = rotation_angle(subgizmo, ui)?;
     if config.snapping {
         rotation_angle = round_to_interval(
-            rotation_angle - state.rotation.start_rotation_angle,
+            rotation_angle - state.start_rotation_angle,
             config.snap_angle,
-        ) + state.rotation.start_rotation_angle;
+        ) + state.start_rotation_angle;
     }
 
-    let mut angle_delta = rotation_angle - state.rotation.last_rotation_angle;
+    let mut angle_delta = rotation_angle - state.last_rotation_angle;
 
     // Always take the smallest angle, e.g. -10° instead of 350°
     if angle_delta > PI {
@@ -156,10 +135,9 @@ pub(crate) fn update_rotation(
         angle_delta += TAU;
     }
 
-    subgizmo.update_state_with(|state| {
-        state.active = interaction.dragged_by(PointerButton::Primary);
-        state.rotation.last_rotation_angle = rotation_angle;
-        state.rotation.current_delta += angle_delta;
+    subgizmo.update_state_with(ui, |state: &mut RotationState| {
+        state.last_rotation_angle = rotation_angle;
+        state.current_delta += angle_delta;
     });
 
     let (scale, mut rotation, translation) = config.model_matrix.to_scale_rotation_translation();
@@ -169,16 +147,8 @@ pub(crate) fn update_rotation(
         transform: Mat4::from_scale_rotation_translation(scale, rotation, translation)
             .to_cols_array_2d(),
         mode: GizmoMode::Rotate,
-        value: (subgizmo.normal() * state.rotation.current_delta).to_array(),
+        value: (subgizmo.normal() * state.current_delta).to_array(),
     })
-}
-
-#[derive(Default, Debug, Copy, Clone)]
-pub(crate) struct RotationState {
-    pub(crate) start_axis_angle: f32,
-    pub(crate) start_rotation_angle: f32,
-    pub(crate) last_rotation_angle: f32,
-    pub(crate) current_delta: f32,
 }
 
 /// Calculates angle of the rotation axis arc.
@@ -207,7 +177,7 @@ fn rotation_matrix(subgizmo: &SubGizmo) -> Mat4 {
             rotation = config.rotation * rotation;
         }
 
-        let tangent = subgizmo.tangent();
+        let tangent = tangent(subgizmo);
         let normal = subgizmo.normal();
         let forward = config.view_forward();
         let angle = f32::atan2(tangent.cross(forward).dot(normal), tangent.dot(forward));
@@ -222,8 +192,8 @@ fn rotation_matrix(subgizmo: &SubGizmo) -> Mat4 {
     Mat4::from_rotation_translation(rotation, config.translation)
 }
 
-fn rotation_angle(subgizmo: &SubGizmo) -> Option<f32> {
-    let cursor_pos = subgizmo.ui.input().pointer.hover_pos()?;
+fn rotation_angle(subgizmo: &SubGizmo, ui: &Ui) -> Option<f32> {
+    let cursor_pos = ui.input().pointer.hover_pos()?;
     let viewport = subgizmo.config.viewport;
     let gizmo_pos = world_to_screen(viewport, subgizmo.config.mvp, Vec3::new(0.0, 0.0, 0.0))?;
     let delta = Vec2::new(cursor_pos.x - gizmo_pos.x, cursor_pos.y - gizmo_pos.y).normalize();
@@ -239,3 +209,39 @@ fn rotation_angle(subgizmo: &SubGizmo) -> Option<f32> {
 
     Some(angle)
 }
+
+fn tangent(subgizmo: &SubGizmo) -> Vec3 {
+    let mut tangent = match subgizmo.direction {
+        GizmoDirection::X => Vec3::Z,
+        GizmoDirection::Y => Vec3::Z,
+        GizmoDirection::Z => -Vec3::Y,
+        GizmoDirection::Screen => -subgizmo.config.view_right(),
+    };
+
+    if subgizmo.config.local_space() && subgizmo.direction != GizmoDirection::Screen {
+        tangent = subgizmo.config.rotation * tangent;
+    }
+
+    tangent
+}
+
+fn arc_radius(subgizmo: &SubGizmo) -> f32 {
+    let mut radius = subgizmo.config.visuals.gizmo_size;
+
+    if subgizmo.direction == GizmoDirection::Screen {
+        // Screen axis should be a little bit larger
+        radius += subgizmo.config.visuals.stroke_width + 5.0;
+    }
+
+    subgizmo.config.scale_factor * radius
+}
+
+#[derive(Default, Debug, Copy, Clone)]
+struct RotationState {
+    start_axis_angle: f32,
+    start_rotation_angle: f32,
+    last_rotation_angle: f32,
+    current_delta: f32,
+}
+
+impl WidgetData for RotationState {}
