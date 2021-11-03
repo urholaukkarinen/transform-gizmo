@@ -1,4 +1,4 @@
-use egui::{Color32, PointerButton, Response, Stroke};
+use egui::{Stroke, Ui};
 use glam::{Mat4, Vec3};
 
 use crate::math::{
@@ -6,11 +6,11 @@ use crate::math::{
 };
 use crate::painter::Painter3d;
 use crate::subgizmo::SubGizmo;
-use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
+use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray, WidgetData};
 
 /// Picks given translation subgizmo. If the subgizmo is close enough to
 /// the mouse pointer, distance from camera to the subgizmo is returned.
-pub(crate) fn pick_translation(subgizmo: &SubGizmo, ray: Ray) -> Option<f32> {
+pub(crate) fn pick_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f32> {
     let origin = subgizmo.config.translation;
     let dir = subgizmo.normal();
     let scale = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size;
@@ -28,11 +28,10 @@ pub(crate) fn pick_translation(subgizmo: &SubGizmo, ray: Ray) -> Option<f32> {
     let subgizmo_point = origin + dir * length * subgizmo_t;
     let dist = (ray_point - subgizmo_point).length();
 
-    subgizmo.update_state_with(|state| {
-        state.focused = false;
-        state.translation.start_point = subgizmo_point;
-        state.translation.last_point = subgizmo_point;
-        state.translation.current_delta = Vec3::ZERO;
+    subgizmo.update_state_with(ui, |state: &mut TranslationState| {
+        state.start_point = subgizmo_point;
+        state.last_point = subgizmo_point;
+        state.current_delta = Vec3::ZERO;
     });
 
     if dist <= subgizmo.config.focus_distance {
@@ -42,7 +41,7 @@ pub(crate) fn pick_translation(subgizmo: &SubGizmo, ray: Ray) -> Option<f32> {
     }
 }
 
-pub(crate) fn draw_translation(subgizmo: &SubGizmo) {
+pub(crate) fn draw_translation(subgizmo: &SubGizmo, ui: &Ui) {
     let transform = if subgizmo.config.local_space() {
         Mat4::from_rotation_translation(subgizmo.config.rotation, subgizmo.config.translation)
     } else {
@@ -50,32 +49,14 @@ pub(crate) fn draw_translation(subgizmo: &SubGizmo) {
     };
 
     let painter = Painter3d::new(
-        subgizmo.ui.painter().clone(),
+        ui.painter().clone(),
         subgizmo.config.view_projection * transform,
         subgizmo.config.viewport,
     );
 
     let direction = subgizmo.local_normal();
 
-    let state = subgizmo.state();
-
-    let color = if state.focused {
-        subgizmo
-            .config
-            .visuals
-            .highlight_color
-            .unwrap_or_else(|| subgizmo.color())
-    } else {
-        subgizmo.color()
-    };
-
-    let alpha = if state.focused {
-        subgizmo.config.visuals.highlight_alpha
-    } else {
-        subgizmo.config.visuals.inactive_alpha
-    };
-
-    let color = Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), alpha);
+    let color = subgizmo.color();
 
     let width = subgizmo.config.scale_factor * subgizmo.config.visuals.stroke_width;
     let length = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size;
@@ -103,44 +84,39 @@ pub(crate) fn draw_translation(subgizmo: &SubGizmo) {
 
 /// Updates given translation subgizmo.
 /// If the subgizmo is active, returns the translation result.
-pub(crate) fn update_translation(
-    subgizmo: &SubGizmo,
-    ray: Ray,
-    interaction: &Response,
-) -> Option<GizmoResult> {
-    let state = subgizmo.state();
+pub(crate) fn update_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<GizmoResult> {
+    let state = subgizmo.state::<TranslationState>(ui);
 
     let mut new_point = point_on_axis(subgizmo, ray);
-    let mut new_delta = new_point - state.translation.start_point;
+    let mut new_delta = new_point - state.start_point;
 
     let delta_length = new_delta.length();
     if subgizmo.config.snapping && delta_length > 1e-5 {
         new_delta = new_delta / delta_length
             * round_to_interval(delta_length, subgizmo.config.snap_distance);
-        new_point = state.translation.start_point + new_delta;
+        new_point = state.start_point + new_delta;
     }
 
     let (scale, rotation, mut translation) =
         subgizmo.config.model_matrix.to_scale_rotation_translation();
-    translation += new_point - state.translation.last_point;
+    translation += new_point - state.last_point;
 
-    subgizmo.update_state_with(|state| {
-        state.active = interaction.dragged_by(PointerButton::Primary);
-        state.translation.last_point = new_point;
-        state.translation.current_delta = new_delta;
+    subgizmo.update_state_with(ui, |state: &mut TranslationState| {
+        state.last_point = new_point;
+        state.current_delta = new_delta;
     });
 
     Some(GizmoResult {
         transform: Mat4::from_scale_rotation_translation(scale, rotation, translation)
             .to_cols_array_2d(),
         mode: GizmoMode::Translate,
-        value: state.translation.current_delta.to_array(),
+        value: state.current_delta.to_array(),
     })
 }
 
 /// Picks given translation plane subgizmo. If the subgizmo is close enough to
 /// the mouse pointer, distance from camera to the subgizmo is returned.
-pub(crate) fn pick_translation_plane(subgizmo: &SubGizmo, ray: Ray) -> Option<f32> {
+pub(crate) fn pick_translation_plane(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f32> {
     let origin = translation_plane_global_origin(subgizmo);
 
     let normal = subgizmo.normal();
@@ -149,11 +125,10 @@ pub(crate) fn pick_translation_plane(subgizmo: &SubGizmo, ray: Ray) -> Option<f3
 
     let ray_point = ray.origin + ray.direction * t;
 
-    subgizmo.update_state_with(|state| {
-        state.focused = false;
-        state.translation.start_point = ray_point;
-        state.translation.last_point = ray_point;
-        state.translation.current_delta = Vec3::ZERO;
+    subgizmo.update_state_with(ui, |state: &mut TranslationState| {
+        state.start_point = ray_point;
+        state.last_point = ray_point;
+        state.current_delta = Vec3::ZERO;
     });
 
     if dist_from_origin <= translation_plane_size(subgizmo) {
@@ -163,38 +138,14 @@ pub(crate) fn pick_translation_plane(subgizmo: &SubGizmo, ray: Ray) -> Option<f3
     }
 }
 
-pub(crate) fn draw_translation_plane(subgizmo: &SubGizmo) {
-    let transform = if subgizmo.config.local_space() {
-        Mat4::from_rotation_translation(subgizmo.config.rotation, subgizmo.config.translation)
-    } else {
-        Mat4::from_translation(subgizmo.config.translation)
-    };
-
+pub(crate) fn draw_translation_plane(subgizmo: &SubGizmo, ui: &Ui) {
     let painter = Painter3d::new(
-        subgizmo.ui.painter().clone(),
-        subgizmo.config.view_projection * transform,
+        ui.painter().clone(),
+        subgizmo.config.view_projection * translation_transform(subgizmo),
         subgizmo.config.viewport,
     );
 
-    let state = subgizmo.state();
-
-    let color = if state.focused {
-        subgizmo
-            .config
-            .visuals
-            .highlight_color
-            .unwrap_or_else(|| subgizmo.color())
-    } else {
-        subgizmo.color()
-    };
-
-    let alpha = if state.focused {
-        subgizmo.config.visuals.highlight_alpha
-    } else {
-        subgizmo.config.visuals.inactive_alpha
-    };
-
-    let color = Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), alpha);
+    let color = subgizmo.color();
 
     let scale = translation_plane_size(subgizmo) * 0.5;
     let a = translation_plane_binormal(subgizmo.direction) * scale;
@@ -218,40 +169,39 @@ pub(crate) fn draw_translation_plane(subgizmo: &SubGizmo) {
 /// If the subgizmo is active, returns the translation result.
 pub(crate) fn update_translation_plane(
     subgizmo: &SubGizmo,
+    ui: &Ui,
     ray: Ray,
-    interaction: &Response,
 ) -> Option<GizmoResult> {
-    let state = subgizmo.state();
+    let state = subgizmo.state::<TranslationState>(ui);
 
     let mut new_point = point_on_plane(
         subgizmo.normal(),
         translation_plane_global_origin(subgizmo),
         ray,
     )?;
-    let mut new_delta = new_point - state.translation.start_point;
+    let mut new_delta = new_point - state.start_point;
 
     let delta_length = new_delta.length();
     if subgizmo.config.snapping && delta_length > 1e-5 {
         new_delta = new_delta / delta_length
             * round_to_interval(delta_length, subgizmo.config.snap_distance);
-        new_point = state.translation.start_point + new_delta;
+        new_point = state.start_point + new_delta;
     }
 
     let (scale, rotation, mut translation) =
         subgizmo.config.model_matrix.to_scale_rotation_translation();
-    translation += new_point - state.translation.last_point;
+    translation += new_point - state.last_point;
 
-    subgizmo.update_state_with(|state| {
-        state.active = interaction.dragged_by(PointerButton::Primary);
-        state.translation.last_point = new_point;
-        state.translation.current_delta = new_delta;
+    subgizmo.update_state_with(ui, |state: &mut TranslationState| {
+        state.last_point = new_point;
+        state.current_delta = new_delta;
     });
 
     Some(GizmoResult {
         transform: Mat4::from_scale_rotation_translation(scale, rotation, translation)
             .to_cols_array_2d(),
         mode: GizmoMode::Translate,
-        value: state.translation.current_delta.to_array(),
+        value: state.current_delta.to_array(),
     })
 }
 
@@ -260,6 +210,16 @@ pub(crate) struct TranslationState {
     start_point: Vec3,
     last_point: Vec3,
     current_delta: Vec3,
+}
+
+impl WidgetData for TranslationState {}
+
+fn translation_transform(subgizmo: &SubGizmo) -> Mat4 {
+    if subgizmo.config.local_space() {
+        Mat4::from_rotation_translation(subgizmo.config.rotation, subgizmo.config.translation)
+    } else {
+        Mat4::from_translation(subgizmo.config.translation)
+    }
 }
 
 fn translation_plane_binormal(direction: GizmoDirection) -> Vec3 {
