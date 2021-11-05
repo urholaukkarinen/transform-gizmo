@@ -4,7 +4,9 @@ use egui::{Color32, Id, Ui};
 use glam::Vec3;
 
 use crate::rotation::{draw_rotation, pick_rotation, update_rotation};
-use crate::scale::{draw_scale, pick_scale, update_scale};
+use crate::scale::{
+    draw_scale, draw_scale_plane, pick_scale, pick_scale_plane, update_scale, update_scale_plane,
+};
 use crate::translation::{
     draw_translation, draw_translation_plane, pick_translation, pick_translation_plane,
     update_translation, update_translation_plane,
@@ -98,6 +100,7 @@ impl SubGizmo {
             SubGizmoKind::TranslationVector => pick_translation(self, ui, ray),
             SubGizmoKind::TranslationPlane => pick_translation_plane(self, ui, ray),
             SubGizmoKind::ScaleVector => pick_scale(self, ui, ray),
+            SubGizmoKind::ScalePlane => pick_scale_plane(self, ui, ray),
         }
     }
 
@@ -108,6 +111,7 @@ impl SubGizmo {
             SubGizmoKind::TranslationVector => update_translation(self, ui, ray),
             SubGizmoKind::TranslationPlane => update_translation_plane(self, ui, ray),
             SubGizmoKind::ScaleVector => update_scale(self, ui, ray),
+            SubGizmoKind::ScalePlane => update_scale_plane(self, ui, ray),
         }
     }
 
@@ -118,6 +122,7 @@ impl SubGizmo {
             SubGizmoKind::TranslationVector => draw_translation(self, ui),
             SubGizmoKind::TranslationPlane => draw_translation_plane(self, ui),
             SubGizmoKind::ScaleVector => draw_scale(self, ui),
+            SubGizmoKind::ScalePlane => draw_scale_plane(self, ui),
         }
     }
 }
@@ -132,4 +137,6 @@ pub(crate) enum SubGizmoKind {
     TranslationPlane,
     /// Scale along a vector
     ScaleVector,
+    /// Scale along a plane
+    ScalePlane,
 }

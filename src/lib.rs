@@ -287,7 +287,7 @@ impl Gizmo {
     }
 
     /// Create subgizmos for scale
-    fn new_scale(&self) -> [SubGizmo; 3] {
+    fn new_scale(&self) -> [SubGizmo; 6] {
         [
             SubGizmo::new(
                 self.id.with("sx"),
@@ -306,6 +306,24 @@ impl Gizmo {
                 self.config,
                 GizmoDirection::Z,
                 SubGizmoKind::ScaleVector,
+            ),
+            SubGizmo::new(
+                self.id.with("syz"),
+                self.config,
+                GizmoDirection::X,
+                SubGizmoKind::ScalePlane,
+            ),
+            SubGizmo::new(
+                self.id.with("sxz"),
+                self.config,
+                GizmoDirection::Y,
+                SubGizmoKind::ScalePlane,
+            ),
+            SubGizmo::new(
+                self.id.with("sxy"),
+                self.config,
+                GizmoDirection::Z,
+                SubGizmoKind::ScalePlane,
             ),
         ]
     }
