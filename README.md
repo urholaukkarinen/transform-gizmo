@@ -9,7 +9,8 @@
 [Try it out in a web demo](https://urholaukkarinen.github.io/egui-gizmo/)
 
 ![Rotation](media/rotation.gif)
-![Rotation](media/translation.png)
+![Translation](media/translation.png)
+![Scale](media/scale.png)
 
 ## Usage
 

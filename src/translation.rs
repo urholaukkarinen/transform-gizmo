@@ -42,15 +42,9 @@ pub(crate) fn pick_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option
 }
 
 pub(crate) fn draw_translation(subgizmo: &SubGizmo, ui: &Ui) {
-    let transform = if subgizmo.config.local_space() {
-        Mat4::from_rotation_translation(subgizmo.config.rotation, subgizmo.config.translation)
-    } else {
-        Mat4::from_translation(subgizmo.config.translation)
-    };
-
     let painter = Painter3d::new(
         ui.painter().clone(),
-        subgizmo.config.view_projection * transform,
+        subgizmo.config.view_projection * translation_transform(subgizmo),
         subgizmo.config.viewport,
     );
 
@@ -248,7 +242,7 @@ fn translation_transform(subgizmo: &SubGizmo) -> Mat4 {
     }
 }
 
-fn translation_plane_binormal(direction: GizmoDirection) -> Vec3 {
+pub(crate) fn translation_plane_binormal(direction: GizmoDirection) -> Vec3 {
     match direction {
         GizmoDirection::X => Vec3::Y,
         GizmoDirection::Y => Vec3::Z,
@@ -257,7 +251,7 @@ fn translation_plane_binormal(direction: GizmoDirection) -> Vec3 {
     }
 }
 
-fn translation_plane_tangent(direction: GizmoDirection) -> Vec3 {
+pub(crate) fn translation_plane_tangent(direction: GizmoDirection) -> Vec3 {
     match direction {
         GizmoDirection::X => Vec3::Z,
         GizmoDirection::Y => Vec3::X,
@@ -266,12 +260,12 @@ fn translation_plane_tangent(direction: GizmoDirection) -> Vec3 {
     }
 }
 
-fn translation_plane_size(subgizmo: &SubGizmo) -> f32 {
+pub(crate) fn translation_plane_size(subgizmo: &SubGizmo) -> f32 {
     subgizmo.config.scale_factor
         * (subgizmo.config.visuals.gizmo_size * 0.1 + subgizmo.config.visuals.stroke_width * 2.0)
 }
 
-fn translation_plane_local_origin(subgizmo: &SubGizmo) -> Vec3 {
+pub(crate) fn translation_plane_local_origin(subgizmo: &SubGizmo) -> Vec3 {
     let offset = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size * 0.4;
 
     let a = translation_plane_binormal(subgizmo.direction);
@@ -279,7 +273,7 @@ fn translation_plane_local_origin(subgizmo: &SubGizmo) -> Vec3 {
     (a + b) * offset
 }
 
-fn translation_plane_global_origin(subgizmo: &SubGizmo) -> Vec3 {
+pub(crate) fn translation_plane_global_origin(subgizmo: &SubGizmo) -> Vec3 {
     let mut origin = translation_plane_local_origin(subgizmo);
     if subgizmo.config.local_space() {
         origin = subgizmo.config.rotation * origin;

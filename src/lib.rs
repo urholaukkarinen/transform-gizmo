@@ -38,6 +38,7 @@ use crate::subgizmo::{SubGizmo, SubGizmoKind};
 mod math;
 mod painter;
 mod rotation;
+mod scale;
 mod subgizmo;
 mod translation;
 
@@ -45,6 +46,8 @@ mod translation;
 pub const DEFAULT_SNAP_ANGLE: f32 = PI / 32.0;
 /// The default snapping distance for translation
 pub const DEFAULT_SNAP_DISTANCE: f32 = 0.1;
+/// The default snapping distance for scale
+pub const DEFAULT_SNAP_SCALE: f32 = 0.1;
 
 /// Maximum number of subgizmos in a single gizmo.
 /// A subgizmo array of this size is allocated from stack,
@@ -122,6 +125,12 @@ impl Gizmo {
         self
     }
 
+    /// Snap distance to use for scaling when snapping is enabled
+    pub fn snap_scale(mut self, snap_scale: f32) -> Self {
+        self.config.snap_scale = snap_scale;
+        self
+    }
+
     /// Visual configuration of the gizmo, such as colors and size
     pub fn visuals(mut self, visuals: GizmoVisuals) -> Self {
         self.config.visuals = visuals;
@@ -139,6 +148,7 @@ impl Gizmo {
         match self.config.mode {
             GizmoMode::Rotate => self.add_subgizmos(self.new_rotation()),
             GizmoMode::Translate => self.add_subgizmos(self.new_translation()),
+            GizmoMode::Scale => self.add_subgizmos(self.new_scale()),
         };
 
         let mut result = None;
@@ -276,6 +286,48 @@ impl Gizmo {
         ]
     }
 
+    /// Create subgizmos for scale
+    fn new_scale(&self) -> [SubGizmo; 6] {
+        [
+            SubGizmo::new(
+                self.id.with("sx"),
+                self.config,
+                GizmoDirection::X,
+                SubGizmoKind::ScaleVector,
+            ),
+            SubGizmo::new(
+                self.id.with("sy"),
+                self.config,
+                GizmoDirection::Y,
+                SubGizmoKind::ScaleVector,
+            ),
+            SubGizmo::new(
+                self.id.with("sz"),
+                self.config,
+                GizmoDirection::Z,
+                SubGizmoKind::ScaleVector,
+            ),
+            SubGizmo::new(
+                self.id.with("syz"),
+                self.config,
+                GizmoDirection::X,
+                SubGizmoKind::ScalePlane,
+            ),
+            SubGizmo::new(
+                self.id.with("sxz"),
+                self.config,
+                GizmoDirection::Y,
+                SubGizmoKind::ScalePlane,
+            ),
+            SubGizmo::new(
+                self.id.with("sxy"),
+                self.config,
+                GizmoDirection::Z,
+                SubGizmoKind::ScalePlane,
+            ),
+        ]
+    }
+
     /// Add given subgizmos to this gizmo
     fn add_subgizmos<const N: usize>(&mut self, subgizmos: [SubGizmo; N]) {
         let mut i = self.subgizmo_count;
@@ -327,6 +379,8 @@ pub enum GizmoMode {
     Rotate,
     /// Only translation
     Translate,
+    /// Only scale
+    Scale,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -401,10 +455,12 @@ pub(crate) struct GizmoConfig {
     pub snapping: bool,
     pub snap_angle: f32,
     pub snap_distance: f32,
+    pub snap_scale: f32,
     pub visuals: GizmoVisuals,
     //----------------------------------//
     pub rotation: Quat,
     pub translation: Vec3,
+    pub scale: Vec3,
     pub view_projection: Mat4,
     pub mvp: Mat4,
     pub scale_factor: f32,
@@ -424,10 +480,12 @@ impl Default for GizmoConfig {
             snapping: false,
             snap_angle: DEFAULT_SNAP_ANGLE,
             snap_distance: DEFAULT_SNAP_DISTANCE,
+            snap_scale: DEFAULT_SNAP_SCALE,
             visuals: GizmoVisuals::default(),
             //----------------------------------//
             rotation: Quat::IDENTITY,
             translation: Vec3::ZERO,
+            scale: Vec3::ONE,
             view_projection: Mat4::IDENTITY,
             mvp: Mat4::IDENTITY,
             scale_factor: 0.0,
@@ -445,9 +503,10 @@ impl GizmoConfig {
             self.viewport = ui.clip_rect();
         }
 
-        let (_, rotation, translation) = self.model_matrix.to_scale_rotation_translation();
+        let (scale, rotation, translation) = self.model_matrix.to_scale_rotation_translation();
         self.rotation = rotation;
         self.translation = translation;
+        self.scale = scale;
         self.view_projection = self.projection_matrix * self.view_matrix;
         self.mvp = self.projection_matrix * self.view_matrix * self.model_matrix;
 

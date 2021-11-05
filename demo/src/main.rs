@@ -90,6 +90,7 @@ async fn main() {
                         .show_ui(ui, |ui| {
                             ui.selectable_value(&mut gizmo_mode, GizmoMode::Rotate, "Rotate");
                             ui.selectable_value(&mut gizmo_mode, GizmoMode::Translate, "Translate");
+                            ui.selectable_value(&mut gizmo_mode, GizmoMode::Scale, "Scale");
                         });
                     ui.end_row();
 
@@ -270,7 +271,7 @@ fn show_gizmo_status(ui: &Ui, response: GizmoResult) {
     let text = match response.mode {
         GizmoMode::Rotate => format!("{:.1}°, {:.2} rad", length.to_degrees(), length),
 
-        GizmoMode::Translate => format!(
+        GizmoMode::Translate | GizmoMode::Scale => format!(
             "dX: {:.2}, dY: {:.2}, dZ: {:.2}",
             response.value[0], response.value[1], response.value[2]
         ),
