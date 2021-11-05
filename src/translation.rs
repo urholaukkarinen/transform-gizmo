@@ -89,18 +89,18 @@ pub(crate) fn update_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Opti
         new_point = state.start_point + new_delta;
     }
 
-    let (scale, rotation, mut translation) =
-        subgizmo.config.model_matrix.to_scale_rotation_translation();
-    translation += new_point - state.last_point;
-
     subgizmo.update_state_with(ui, |state: &mut TranslationState| {
         state.last_point = new_point;
         state.current_delta = new_delta;
     });
 
     Some(GizmoResult {
-        transform: Mat4::from_scale_rotation_translation(scale, rotation, translation)
-            .to_cols_array_2d(),
+        transform: Mat4::from_scale_rotation_translation(
+            subgizmo.config.scale,
+            subgizmo.config.rotation,
+            subgizmo.config.translation + new_point - state.last_point,
+        )
+        .to_cols_array_2d(),
         mode: GizmoMode::Translate,
         value: state.current_delta.to_array(),
     })
@@ -187,18 +187,18 @@ pub(crate) fn update_translation_plane(
         new_point = state.start_point + new_delta;
     }
 
-    let (scale, rotation, mut translation) =
-        subgizmo.config.model_matrix.to_scale_rotation_translation();
-    translation += new_point - state.last_point;
-
     subgizmo.update_state_with(ui, |state: &mut TranslationState| {
         state.last_point = new_point;
         state.current_delta = new_delta;
     });
 
     Some(GizmoResult {
-        transform: Mat4::from_scale_rotation_translation(scale, rotation, translation)
-            .to_cols_array_2d(),
+        transform: Mat4::from_scale_rotation_translation(
+            subgizmo.config.scale,
+            subgizmo.config.rotation,
+            subgizmo.config.translation + new_point - state.last_point,
+        )
+        .to_cols_array_2d(),
         mode: GizmoMode::Translate,
         value: state.current_delta.to_array(),
     })
