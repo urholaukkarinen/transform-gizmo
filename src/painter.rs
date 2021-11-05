@@ -69,6 +69,22 @@ impl Painter3d {
         self.painter.line_segment(points, stroke);
     }
 
+    pub fn arrow(&self, from: Vec3, to: Vec3, stroke: impl Into<Stroke>) {
+        let stroke = stroke.into();
+        let arrow_start = world_to_screen(self.viewport, self.mvp, from);
+        let arrow_end = world_to_screen(self.viewport, self.mvp, to);
+
+        if let Some((start, end)) = arrow_start.zip(arrow_end) {
+            let cross = (end - start).normalized().rot90() * stroke.width;
+
+            self.painter.add(Shape::convex_polygon(
+                vec![start - cross, start + cross, end],
+                stroke.color,
+                Stroke::none(),
+            ));
+        }
+    }
+
     pub fn polygon(&self, points: &[Vec3], fill: impl Into<Color32>, stroke: impl Into<Stroke>) {
         let points = points
             .iter()

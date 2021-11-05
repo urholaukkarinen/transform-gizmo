@@ -54,25 +54,17 @@ pub(crate) fn draw_translation(subgizmo: &SubGizmo, ui: &Ui) {
 
     let width = subgizmo.config.scale_factor * subgizmo.config.visuals.stroke_width;
     let length = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size;
-    let arrow_half_width = width * 2.0;
-    let arrow_length = arrow_half_width + length * 0.1;
+    let arrow_length = width * 2.4;
     let length = length - arrow_length;
 
     let start = direction * width;
     let end = direction * length;
 
     painter.line_segment(start, end, (subgizmo.config.visuals.stroke_width, color));
-
-    let cross = if subgizmo.config.local_space() {
-        direction.cross(subgizmo.config.rotation.inverse() * subgizmo.config.view_forward())
-    } else {
-        direction.cross(subgizmo.config.view_forward())
-    } * arrow_half_width;
-
-    painter.polygon(
-        &[end + cross, end - cross, end + (direction * arrow_length)],
-        color,
-        (0.0, color),
+    painter.arrow(
+        end,
+        end + direction * arrow_length,
+        (subgizmo.config.visuals.stroke_width * 1.2, color),
     );
 }
 
