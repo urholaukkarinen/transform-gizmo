@@ -8,6 +8,6 @@ license = "MIT"
 
 [dependencies]
 macroquad = "0.3.10"
-egui = "0.14.2"
-egui-macroquad = "0.6.1"
+egui = "0.15.0"
+egui-macroquad = "0.7.0"
 egui-gizmo = { path = ".." }
