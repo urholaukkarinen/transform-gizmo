@@ -9,16 +9,12 @@ use egui_gizmo::{
     DEFAULT_SNAP_DISTANCE,
 };
 
-#[cfg(target_arch = "wasm32")]
-const TEXTURE_PATH: &str = "crate.png";
-#[cfg(not(target_arch = "wasm32"))]
-const TEXTURE_PATH: &str = "docs/crate.png";
-
 const SOURCE_URL: &str = "https://github.com/urholaukkarinen/egui-gizmo/blob/main/demo/src/main.rs";
 
 #[macroquad::main("3D")]
 async fn main() {
-    let texture = load_texture(TEXTURE_PATH).await.unwrap();
+    let texture =
+        Texture2D::from_file_with_format(include_bytes!("../crate.png"), Some(ImageFormat::Png));
 
     let mut camera_angle: f32 = -FRAC_PI_4;
     let mut camera_y = 5.0;
