@@ -351,6 +351,12 @@ impl Gizmo {
         let mut origin = screen_to_world * Vec4::new(x, -y, -1.0, 1.0);
         origin /= origin.w;
         let mut target = screen_to_world * Vec4::new(x, -y, 1.0, 1.0);
+
+        // w is zero when far plane is set to infinity
+        if target.w.abs() < 1e-7 {
+            target.w = 1e-7;
+        }
+
         target /= target.w;
 
         let direction = target.sub(origin).xyz().normalize();
