@@ -553,11 +553,11 @@ struct GizmoState {
 
 pub(crate) trait WidgetData: Sized + Default + Copy + Clone + Send + Sync + 'static {
     fn load(ctx: &Context, gizmo_id: Id) -> Self {
-        *ctx.memory().id_data_temp.get_or_default(gizmo_id)
+        *ctx.memory().data.get_temp_mut_or_default(gizmo_id)
     }
 
     fn save(self, ctx: &Context, gizmo_id: Id) {
-        ctx.memory().id_data_temp.insert(gizmo_id, self);
+        ctx.memory().data.insert_temp(gizmo_id, self);
     }
 }
 
