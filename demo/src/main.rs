@@ -1,7 +1,7 @@
 use std::f32::consts::FRAC_PI_4;
 
 use egui::color_picker::Alpha;
-use egui::{pos2, Align2, Color32, LayerId, TextStyle, Ui, Widget};
+use egui::{pos2, Align2, Color32, LayerId, Ui, Widget, FontId};
 use macroquad::prelude::*;
 
 use egui_gizmo::{
@@ -256,7 +256,7 @@ fn instructions_text(ui: &Ui) {
         Align2::RIGHT_BOTTOM,
         "Move camera with (A, D, W, S)\n\
          Toggle snapping with Ctrl & Shift",
-        TextStyle::Body,
+        FontId::default(),
         Color32::GRAY,
     );
 }
@@ -278,7 +278,7 @@ fn show_gizmo_status(ui: &Ui, response: GizmoResult) {
         pos2(rect.left() + 10.0, rect.bottom() - 10.0),
         Align2::LEFT_BOTTOM,
         text,
-        TextStyle::Heading,
+        FontId::default(),
         Color32::WHITE,
     );
 }
