@@ -1,6 +1,6 @@
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
-use egui::{Color32, Ui};
+use egui::Ui;
 use glam::{Mat4, Quat, Vec2, Vec3};
 
 use crate::math::{ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen};
@@ -61,7 +61,6 @@ pub(crate) fn draw_rotation(subgizmo: &SubGizmo, ui: &Ui) {
     );
 
     let color = subgizmo.color();
-    let fill_color = Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), 10);
     let stroke = (config.visuals.stroke_width, color);
 
     let radius = arc_radius(subgizmo);
@@ -84,14 +83,6 @@ pub(crate) fn draw_rotation(subgizmo: &SubGizmo, ui: &Ui) {
                 Vec3::new(end_angle.cos() * radius, 0.0, end_angle.sin() * radius),
             ],
             stroke,
-        );
-
-        painter.sector(
-            radius,
-            start_angle,
-            end_angle,
-            fill_color,
-            (0.0, Color32::TRANSPARENT),
         );
 
         painter.circle(radius, stroke);

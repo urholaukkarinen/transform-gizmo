@@ -108,38 +108,6 @@ impl Painter3d {
         }
     }
 
-    pub fn sector(
-        &self,
-        radius: f32,
-        start_angle: f32,
-        end_angle: f32,
-        fill: impl Into<Color32>,
-        stroke: impl Into<Stroke>,
-    ) -> ShapeIdx {
-        let angle_delta = end_angle - start_angle;
-        let step_count = steps(angle_delta.abs());
-        let mut points = Vec::with_capacity(step_count);
-
-        let step_size = angle_delta / (step_count - 1) as f32;
-
-        points.push(Vec3::new(0.0, 0.0, 0.0));
-        for step in (0..step_count).map(|i| step_size * i as f32) {
-            // TODO optimize? cos sin only once before loop
-            let x = f32::cos(start_angle + step) * radius;
-            let z = f32::sin(start_angle + step) * radius;
-
-            points.push(Vec3::new(x, 0.0, z));
-        }
-
-        let points = points
-            .into_iter()
-            .filter_map(|point| self.vec3_to_pos2(point))
-            .collect::<Vec<_>>();
-
-        self.painter
-            .add(Shape::convex_polygon(points, fill, stroke))
-    }
-
     fn vec3_to_pos2(&self, vec: Vec3) -> Option<Pos2> {
         world_to_screen(self.viewport, self.mvp, vec)
     }
