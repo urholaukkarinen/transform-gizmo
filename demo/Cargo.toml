@@ -7,7 +7,7 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
-macroquad = "0.3.6"
-egui = "0.17.0"
-egui-macroquad = "0.9.0"
+macroquad = "0.3.16"
+egui = "0.18.1"
+egui-macroquad = "0.11.0"
 egui-gizmo = { path = ".." }
