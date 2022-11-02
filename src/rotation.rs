@@ -30,7 +30,10 @@ pub(crate) fn pick_rotation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f3
     let angle = if subgizmo.direction == GizmoDirection::Screen {
         f32::atan2(tangent.cross(normal).dot(offset), tangent.dot(offset))
     } else {
-        let forward = config.view_forward();
+        let mut forward = config.view_forward();
+        if config.left_handed {
+            forward *= -1.0;
+        }
         f32::atan2(offset.cross(forward).dot(normal), offset.dot(forward))
     };
 
@@ -174,7 +177,10 @@ fn rotation_matrix(subgizmo: &SubGizmo) -> Mat4 {
 
         let tangent = tangent(subgizmo);
         let normal = subgizmo.normal();
-        let forward = config.view_forward();
+        let mut forward = config.view_forward();
+        if config.left_handed {
+            forward *= -1.0;
+        }
         let angle = f32::atan2(tangent.cross(forward).dot(normal), tangent.dot(forward));
 
         // Rotate towards the camera, along the rotation axis.

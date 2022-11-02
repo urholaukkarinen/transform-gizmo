@@ -472,6 +472,7 @@ pub(crate) struct GizmoConfig {
     pub scale_factor: f32,
     /// How close the mouse pointer needs to be to a subgizmo before it is focused
     pub focus_distance: f32,
+    pub left_handed: bool,
 }
 
 impl Default for GizmoConfig {
@@ -496,6 +497,7 @@ impl Default for GizmoConfig {
             mvp: Mat4::IDENTITY,
             scale_factor: 0.0,
             focus_distance: 0.0,
+            left_handed: false,
         }
     }
 }
@@ -521,6 +523,12 @@ impl GizmoConfig {
                 * 2.0;
 
         self.focus_distance = self.scale_factor * (self.visuals.stroke_width / 2.0 + 5.0);
+
+        self.left_handed = if self.projection_matrix.z_axis.w == 0.0 {
+            self.projection_matrix.z_axis.z > 0.0
+        } else {
+            self.projection_matrix.z_axis.w > 0.0
+        };
     }
 
     /// Forward vector of the view camera

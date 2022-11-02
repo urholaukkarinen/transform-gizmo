@@ -1,7 +1,7 @@
 use std::f32::consts::FRAC_PI_4;
 
 use egui::color_picker::Alpha;
-use egui::{pos2, Align2, Color32, LayerId, Ui, Widget, FontId};
+use egui::{pos2, Align2, Color32, FontId, LayerId, Ui, Widget};
 use macroquad::prelude::*;
 
 use egui_gizmo::{
@@ -174,10 +174,12 @@ async fn main() {
                 .show(egui_ctx, |ui| {
                     ui.with_layer_id(LayerId::background(), |ui| {
                         // Snapping is enabled with ctrl key.
-                        let snapping = ui.input().modifiers.command;
+                        let snapping = is_key_down(KeyCode::LeftControl);
+                        let precise_snap = snapping && is_key_down(KeyCode::LeftShift);
+
                         // Snap angle to use for rotation when snapping is enabled.
                         // Smaller snap angle is used when shift key is pressed.
-                        let snap_angle = if ui.input().modifiers.shift {
+                        let snap_angle = if precise_snap {
                             DEFAULT_SNAP_ANGLE / 2.0
                         } else {
                             DEFAULT_SNAP_ANGLE
@@ -185,7 +187,7 @@ async fn main() {
 
                         // Snap distance to use for translation when snapping is enabled.
                         // Smaller snap distance is used when shift key is pressed.
-                        let snap_distance = if ui.input().modifiers.shift {
+                        let snap_distance = if precise_snap {
                             DEFAULT_SNAP_DISTANCE / 2.0
                         } else {
                             DEFAULT_SNAP_DISTANCE
