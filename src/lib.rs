@@ -155,8 +155,8 @@ impl Gizmo {
         let mut state = GizmoState::load(ui.ctx(), self.id);
 
         if let Some(pointer_ray) = self.pointer_ray(ui) {
-            let interaction = ui.interact(self.config.viewport, self.id, Sense::click_and_drag());
-            let dragging = interaction.dragged_by(PointerButton::Primary);
+            let viewport = self.config.viewport;
+            let id = self.id;
 
             // If there is no active subgizmo, find which one of them
             // is under the mouse pointer, if any.
@@ -164,6 +164,8 @@ impl Gizmo {
                 if let Some(subgizmo) = self.pick_subgizmo(ui, pointer_ray) {
                     subgizmo.focused = true;
 
+                    let interaction = ui.interact(viewport, id, Sense::click_and_drag());
+                    let dragging = interaction.dragged_by(PointerButton::Primary);
                     if interaction.drag_started() && dragging {
                         state.active_subgizmo_id = Some(subgizmo.id);
                     }
@@ -175,7 +177,7 @@ impl Gizmo {
                 .and_then(|id| self.subgizmos_mut().find(|subgizmo| subgizmo.id == id));
 
             if let Some(subgizmo) = active_subgizmo {
-                if dragging {
+                if ui.input().pointer.primary_down() {
                     subgizmo.active = true;
                     subgizmo.focused = true;
                     result = subgizmo.update(ui, pointer_ray);
