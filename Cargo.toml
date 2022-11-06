@@ -1,6 +1,6 @@
 [package]
 name = "egui-gizmo"
-version = "0.8.1"
+version = "0.8.2"
 authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 edition = "2021"
 
