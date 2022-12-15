@@ -16,8 +16,8 @@ keywords = ["egui", "3d", "gizmo"]
 members = ["demo"]
 
 [dependencies]
-egui = "0.19"
-glam = "0.21"
+egui = "0.20"
+glam = "0.22"
 
 [profile.release]
 opt-level = 2
