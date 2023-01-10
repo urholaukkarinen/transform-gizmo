@@ -80,7 +80,7 @@ impl Painter3d {
             self.painter.add(Shape::convex_polygon(
                 vec![start - cross, start + cross, end],
                 stroke.color,
-                Stroke::none(),
+                Stroke::NONE,
             ));
         }
     }

@@ -154,7 +154,7 @@ pub(crate) fn draw_translation_plane(subgizmo: &SubGizmo, ui: &Ui) {
             origin - b + a,
         ],
         color,
-        Stroke::none(),
+        Stroke::NONE,
     );
 }
 
