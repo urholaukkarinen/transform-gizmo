@@ -152,6 +152,7 @@ impl Gizmo {
         };
 
         let mut result = None;
+        let mut active_subgizmo = None;
         let mut state = GizmoState::load(ui.ctx(), self.id);
 
         if let Some(pointer_ray) = self.pointer_ray(ui) {
@@ -172,11 +173,11 @@ impl Gizmo {
                 }
             }
 
-            let active_subgizmo = state
+            active_subgizmo = state
                 .active_subgizmo_id
                 .and_then(|id| self.subgizmos_mut().find(|subgizmo| subgizmo.id == id));
 
-            if let Some(subgizmo) = active_subgizmo {
+            if let Some(subgizmo) = active_subgizmo.as_mut() {
                 if ui.input().pointer.primary_down() {
                     subgizmo.active = true;
                     subgizmo.focused = true;
@@ -187,15 +188,25 @@ impl Gizmo {
             }
         }
 
+        if let Some((subgizmo, result)) = active_subgizmo.zip(result) {
+            subgizmo.config.translation = result.translation;
+            subgizmo.config.rotation = result.rotation;
+            subgizmo.config.scale = result.scale;
+        }
+
         state.save(ui.ctx(), self.id);
 
+        self.draw_subgizmos(ui, &mut state);
+
+        result
+    }
+
+    fn draw_subgizmos(&self, ui: &mut Ui, state: &mut GizmoState) {
         for subgizmo in self.subgizmos() {
             if state.active_subgizmo_id.is_none() || subgizmo.active {
                 subgizmo.draw(ui);
             }
         }
-
-        result
     }
 
     /// Picks the subgizmo that is closest to the mouse pointer
@@ -373,12 +384,28 @@ impl Gizmo {
 /// Result of an active transformation
 #[derive(Debug, Copy, Clone)]
 pub struct GizmoResult {
-    /// Transformed model matrix
-    pub transform: [[f32; 4]; 4],
+    /// Updated scale
+    pub scale: Vec3,
+    /// Updated rotation
+    pub rotation: Quat,
+    /// Updated translation
+    pub translation: Vec3,
     /// Mode of the active subgizmo
     pub mode: GizmoMode,
-    /// Current rotation or translation for each axis, depending on the mode.
+    /// Total scale, rotation or translation of the current gizmo activation, depending on mode
     pub value: [f32; 3],
+}
+
+impl GizmoResult {
+    /// Updated transformation matrix
+    pub fn transform(&self) -> Mat4 {
+        Mat4::from_scale_rotation_translation(self.scale, self.rotation, self.translation)
+    }
+
+    /// Updated transformation matrix as an array in column major order.
+    pub fn transform_cols_array_2d(&self) -> [[f32; 4]; 4] {
+        self.transform().to_cols_array_2d()
+    }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]

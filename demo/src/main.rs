@@ -226,7 +226,8 @@ async fn main() {
                             // Response contains status of the active gizmo,
                             // including an updated model matrix.
 
-                            model_matrix = Mat4::from_cols_array_2d(&gizmo_response.transform);
+                            model_matrix =
+                                Mat4::from_cols_array(gizmo_response.transform().as_ref());
 
                             show_gizmo_status(ui, gizmo_response);
                         }

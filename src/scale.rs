@@ -83,13 +83,12 @@ pub(crate) fn update_scale(subgizmo: &SubGizmo, ui: &Ui, _ray: Ray) -> Option<Gi
 
     let offset = Vec3::ONE + (subgizmo.local_normal() * delta);
 
+    let new_scale = state.start_scale * offset;
+
     Some(GizmoResult {
-        transform: Mat4::from_scale_rotation_translation(
-            state.start_scale * offset,
-            subgizmo.config.rotation,
-            subgizmo.config.translation,
-        )
-        .to_cols_array_2d(),
+        scale: new_scale,
+        rotation: subgizmo.config.rotation,
+        translation: subgizmo.config.translation,
         mode: GizmoMode::Scale,
         value: offset.to_array(),
     })
@@ -137,13 +136,12 @@ pub(crate) fn update_scale_plane(subgizmo: &SubGizmo, ui: &Ui, _ray: Ray) -> Opt
 
     let offset = Vec3::ONE + (direction * delta);
 
+    let new_scale = state.start_scale * offset;
+
     Some(GizmoResult {
-        transform: Mat4::from_scale_rotation_translation(
-            state.start_scale * offset,
-            subgizmo.config.rotation,
-            subgizmo.config.translation,
-        )
-        .to_cols_array_2d(),
+        scale: new_scale,
+        rotation: subgizmo.config.rotation,
+        translation: subgizmo.config.translation,
         mode: GizmoMode::Scale,
         value: offset.to_array(),
     })
