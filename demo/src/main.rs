@@ -82,7 +82,7 @@ async fn main() {
                 .resizable(false)
                 .show(egui_ctx, |ui| {
                     egui::ComboBox::from_label("Mode")
-                        .selected_text(format!("{:?}", gizmo_mode))
+                        .selected_text(format!("{gizmo_mode:?}"))
                         .show_ui(ui, |ui| {
                             ui.selectable_value(&mut gizmo_mode, GizmoMode::Rotate, "Rotate");
                             ui.selectable_value(&mut gizmo_mode, GizmoMode::Translate, "Translate");
@@ -91,7 +91,7 @@ async fn main() {
                     ui.end_row();
 
                     egui::ComboBox::from_label("Orientation")
-                        .selected_text(format!("{:?}", gizmo_orientation))
+                        .selected_text(format!("{gizmo_orientation:?}"))
                         .show_ui(ui, |ui| {
                             ui.selectable_value(
                                 &mut gizmo_orientation,
@@ -226,7 +226,8 @@ async fn main() {
                             // Response contains status of the active gizmo,
                             // including an updated model matrix.
 
-                            model_matrix = Mat4::from_cols_array_2d(&gizmo_response.transform);
+                            model_matrix =
+                                Mat4::from_cols_array(gizmo_response.transform().as_ref());
 
                             show_gizmo_status(ui, gizmo_response);
                         }
