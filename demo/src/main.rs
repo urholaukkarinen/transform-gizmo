@@ -82,7 +82,7 @@ async fn main() {
                 .resizable(false)
                 .show(egui_ctx, |ui| {
                     egui::ComboBox::from_label("Mode")
-                        .selected_text(format!("{:?}", gizmo_mode))
+                        .selected_text(format!("{gizmo_mode:?}"))
                         .show_ui(ui, |ui| {
                             ui.selectable_value(&mut gizmo_mode, GizmoMode::Rotate, "Rotate");
                             ui.selectable_value(&mut gizmo_mode, GizmoMode::Translate, "Translate");
@@ -91,7 +91,7 @@ async fn main() {
                     ui.end_row();
 
                     egui::ComboBox::from_label("Orientation")
-                        .selected_text(format!("{:?}", gizmo_orientation))
+                        .selected_text(format!("{gizmo_orientation:?}"))
                         .show_ui(ui, |ui| {
                             ui.selectable_value(
                                 &mut gizmo_orientation,
