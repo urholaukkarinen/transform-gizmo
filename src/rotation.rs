@@ -191,7 +191,7 @@ fn rotation_matrix(subgizmo: &SubGizmo) -> Mat4 {
 }
 
 fn rotation_angle(subgizmo: &SubGizmo, ui: &Ui) -> Option<f32> {
-    let cursor_pos = ui.input().pointer.hover_pos()?;
+    let cursor_pos = ui.input(|i| i.pointer.hover_pos())?;
     let viewport = subgizmo.config.viewport;
     let gizmo_pos = world_to_screen(viewport, subgizmo.config.mvp, Vec3::new(0.0, 0.0, 0.0))?;
     let delta = Vec2::new(cursor_pos.x - gizmo_pos.x, cursor_pos.y - gizmo_pos.y).normalize();
