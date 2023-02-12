@@ -8,6 +8,6 @@ license = "MIT"
 
 [dependencies]
 macroquad = "0.3.25"
-egui = "0.20.1"
-egui-macroquad = { git = "https://github.com/matthiascy/egui-macroquad.git", rev = "069cbffb86c88b8bcf886fbf8eedbb4198a9fdc8" }
+egui = "0.21.0"
+egui-macroquad = { git = "https://github.com/ziloka/egui-macroquad.git", rev = "81216f2b1978f3954e837c7d15c60c8a726708e0" }
 egui-gizmo = { path = ".." }
