@@ -1,6 +1,6 @@
 [package]
 name = "egui-gizmo"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 edition = "2021"
 
@@ -16,7 +16,7 @@ keywords = ["egui", "3d", "gizmo"]
 members = ["demo"]
 
 [dependencies]
-egui = "0.20"
+egui = "0.21.0"
 glam = "0.22"
 
 [profile.release]

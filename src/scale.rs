@@ -192,7 +192,7 @@ pub(crate) fn scale_plane_global_origin(subgizmo: &SubGizmo) -> Vec3 {
 }
 
 fn distance_from_origin_2d(subgizmo: &SubGizmo, ui: &Ui) -> Option<f32> {
-    let cursor_pos = ui.input().pointer.hover_pos()?;
+    let cursor_pos = ui.input(|i| i.pointer.hover_pos())?;
     let viewport = subgizmo.config.viewport;
     let gizmo_pos = world_to_screen(viewport, subgizmo.config.mvp, Vec3::new(0.0, 0.0, 0.0))?;
 

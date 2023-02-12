@@ -178,7 +178,7 @@ impl Gizmo {
                 .and_then(|id| self.subgizmos_mut().find(|subgizmo| subgizmo.id == id));
 
             if let Some(subgizmo) = active_subgizmo.as_mut() {
-                if ui.input().pointer.primary_down() {
+                if ui.input(|i| i.pointer.primary_down()) {
                     subgizmo.active = true;
                     subgizmo.focused = true;
                     result = subgizmo.update(ui, pointer_ray);
@@ -354,7 +354,7 @@ impl Gizmo {
 
     /// Calculate a world space ray from current mouse position
     fn pointer_ray(&self, ui: &Ui) -> Option<Ray> {
-        let hover = ui.input().pointer.hover_pos()?;
+        let hover = ui.input(|i| i.pointer.hover_pos())?;
         let viewport = self.config.viewport;
 
         let x = ((hover.x - viewport.min.x) / viewport.width()) * 2.0 - 1.0;
@@ -590,11 +590,13 @@ struct GizmoState {
 
 pub(crate) trait WidgetData: Sized + Default + Copy + Clone + Send + Sync + 'static {
     fn load(ctx: &Context, gizmo_id: Id) -> Self {
-        *ctx.memory().data.get_temp_mut_or_default(gizmo_id)
+        ctx.memory_mut(|mem|{
+            *mem.data.get_temp_mut_or_default::<Self>(gizmo_id)
+        })
     }
 
     fn save(self, ctx: &Context, gizmo_id: Id) {
-        ctx.memory().data.insert_temp(gizmo_id, self);
+        ctx.memory_mut(|mem| mem.data.insert_temp(gizmo_id, self));
     }
 }
 
