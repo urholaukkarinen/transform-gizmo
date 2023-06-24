@@ -7,7 +7,7 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
-macroquad = "0.3.25"
-egui = "0.21.0"
-egui-macroquad = { git = "https://github.com/ziloka/egui-macroquad.git", rev = "81216f2b1978f3954e837c7d15c60c8a726708e0" }
+egui-macroquad = { git = "https://github.com/urholaukkarinen/egui-macroquad.git" }
+egui = "0.22.0"
 egui-gizmo = { path = ".." }
+macroquad = "0.3.25"
