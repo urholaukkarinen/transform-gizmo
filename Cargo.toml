@@ -17,7 +17,8 @@ members = ["demo"]
 
 [dependencies]
 egui = "0.23.0"
-glam = "0.24"
+glam = { version = "0.24", features = ["mint"] }
+mint = "0.5"
 
 [profile.release]
 opt-level = 2

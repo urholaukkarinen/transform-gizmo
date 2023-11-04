@@ -13,7 +13,7 @@ use crate::translation::{
 };
 use crate::{GizmoConfig, GizmoDirection, GizmoResult, Ray, WidgetData};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub(crate) struct SubGizmo {
     pub(crate) id: Id,
     pub(crate) config: GizmoConfig,
@@ -127,7 +127,7 @@ impl SubGizmo {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub(crate) enum SubGizmoKind {
     /// Rotation around an axis
     RotationAxis,

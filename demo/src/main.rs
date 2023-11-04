@@ -210,9 +210,9 @@ async fn main() {
                         };
 
                         let gizmo = Gizmo::new("My gizmo")
-                            .view_matrix(view_matrix.to_cols_array_2d())
-                            .projection_matrix(projection_matrix.to_cols_array_2d())
-                            .model_matrix(model_matrix.to_cols_array_2d())
+                            .view_matrix(view_matrix.to_cols_array_2d().into())
+                            .projection_matrix(projection_matrix.to_cols_array_2d().into())
+                            .model_matrix(model_matrix.to_cols_array_2d().into())
                             .mode(gizmo_mode)
                             .orientation(gizmo_orientation)
                             .snapping(snapping)

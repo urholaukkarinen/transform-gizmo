@@ -22,12 +22,12 @@ let gizmo = Gizmo::new("My gizmo")
     .mode(GizmoMode::Rotate);
 
 if let Some(response) = gizmo.interact(ui) {
-    model_matrix = response.transform.into();
+    model_matrix = response.transform();
 }
 ```
 
 For a more complete example, see the [demo source code](demo/src/main.rs).
 
-The gizmo accepts matrices as `Into<[[f32; 4]; 4]>`, which means it is easy to use with matrix types from various crates
+The gizmo exposes matrices and vectors as [mint](https://github.com/kvark/mint) types, which means it is easy to use with matrix types from various crates
 such as [nalgebra](https://github.com/dimforge/nalgebra), [glam](https://github.com/bitshifter/glam-rs)
-and [cgmath](https://github.com/rustgd/cgmath).
+and [cgmath](https://github.com/rustgd/cgmath). You may need to enable a `mint` feature, depending on the math library.
