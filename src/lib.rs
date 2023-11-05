@@ -15,13 +15,12 @@
 //!     .mode(GizmoMode::Rotate);
 //!
 //! if let Some(response) = gizmo.interact(ui) {
-//!     model_matrix = response.transform.into();
+//!     model_matrix = response.transform();
 //! }
 //! ```
 //! The gizmo can be placed inside a container such as a [`egui::Window`] or an [`egui::Area`].
 //! By default, the gizmo will use the ui clip rect as a viewport.
 //! The gizmo will apply transformations to the given model matrix.
-//! Result of the gizmo interaction includes the transformed 4x4 model matrix as a 2-dimensional array.
 
 #![warn(clippy::all)]
 
@@ -54,6 +53,7 @@ pub const DEFAULT_SNAP_SCALE: f32 = 0.1;
 /// even if the actual number of subgizmos is less.
 const MAX_SUBGIZMOS: usize = 6;
 
+#[derive(Debug)]
 pub struct Gizmo {
     id: Id,
     config: GizmoConfig,
@@ -72,20 +72,20 @@ impl Gizmo {
     }
 
     /// Matrix that specifies translation and rotation of the gizmo in world space
-    pub fn model_matrix(mut self, model_matrix: impl Into<[[f32; 4]; 4]>) -> Self {
-        self.config.model_matrix = Mat4::from_cols_array_2d(&model_matrix.into());
+    pub fn model_matrix(mut self, model_matrix: mint::ColumnMatrix4<f32>) -> Self {
+        self.config.model_matrix = Mat4::from(model_matrix);
         self
     }
 
     /// Matrix that specifies translation and rotation of the viewport camera
-    pub fn view_matrix(mut self, view_matrix: impl Into<[[f32; 4]; 4]>) -> Self {
-        self.config.view_matrix = Mat4::from_cols_array_2d(&view_matrix.into());
+    pub fn view_matrix(mut self, view_matrix: mint::ColumnMatrix4<f32>) -> Self {
+        self.config.view_matrix = Mat4::from(view_matrix);
         self
     }
 
     /// Matrix that specifies projection of the viewport
-    pub fn projection_matrix(mut self, projection_matrix: impl Into<[[f32; 4]; 4]>) -> Self {
-        self.config.projection_matrix = Mat4::from_cols_array_2d(&projection_matrix.into());
+    pub fn projection_matrix(mut self, projection_matrix: mint::ColumnMatrix4<f32>) -> Self {
+        self.config.projection_matrix = Mat4::from(projection_matrix);
         self
     }
 
@@ -189,9 +189,9 @@ impl Gizmo {
         }
 
         if let Some((subgizmo, result)) = active_subgizmo.zip(result) {
-            subgizmo.config.translation = result.translation;
-            subgizmo.config.rotation = result.rotation;
-            subgizmo.config.scale = result.scale;
+            subgizmo.config.translation = result.translation.into();
+            subgizmo.config.rotation = result.rotation.into();
+            subgizmo.config.scale = result.scale.into();
         }
 
         state.save(ui.ctx(), self.id);
@@ -385,11 +385,11 @@ impl Gizmo {
 #[derive(Debug, Copy, Clone)]
 pub struct GizmoResult {
     /// Updated scale
-    pub scale: Vec3,
+    pub scale: mint::Vector3<f32>,
     /// Updated rotation
-    pub rotation: Quat,
+    pub rotation: mint::Quaternion<f32>,
     /// Updated translation
-    pub translation: Vec3,
+    pub translation: mint::Vector3<f32>,
     /// Mode of the active subgizmo
     pub mode: GizmoMode,
     /// Total scale, rotation or translation of the current gizmo activation, depending on mode
@@ -397,14 +397,14 @@ pub struct GizmoResult {
 }
 
 impl GizmoResult {
-    /// Updated transformation matrix
-    pub fn transform(&self) -> Mat4 {
-        Mat4::from_scale_rotation_translation(self.scale, self.rotation, self.translation)
-    }
-
-    /// Updated transformation matrix as an array in column major order.
-    pub fn transform_cols_array_2d(&self) -> [[f32; 4]; 4] {
-        self.transform().to_cols_array_2d()
+    /// Updated transformation matrix in column major order.
+    pub fn transform(&self) -> mint::ColumnMatrix4<f32> {
+        Mat4::from_scale_rotation_translation(
+            self.scale.into(),
+            self.rotation.into(),
+            self.translation.into(),
+        )
+        .into()
     }
 }
 
@@ -590,9 +590,7 @@ struct GizmoState {
 
 pub(crate) trait WidgetData: Sized + Default + Copy + Clone + Send + Sync + 'static {
     fn load(ctx: &Context, gizmo_id: Id) -> Self {
-        ctx.memory_mut(|mem|{
-            *mem.data.get_temp_mut_or_default::<Self>(gizmo_id)
-        })
+        ctx.memory_mut(|mem| *mem.data.get_temp_mut_or_default::<Self>(gizmo_id))
     }
 
     fn save(self, ctx: &Context, gizmo_id: Id) {

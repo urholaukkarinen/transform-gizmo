@@ -138,9 +138,9 @@ pub(crate) fn update_rotation(subgizmo: &SubGizmo, ui: &Ui, _ray: Ray) -> Option
         Quat::from_axis_angle(subgizmo.normal(), -angle_delta) * subgizmo.config.rotation;
 
     Some(GizmoResult {
-        scale: subgizmo.config.scale,
-        rotation: new_rotation,
-        translation: subgizmo.config.translation,
+        scale: subgizmo.config.scale.into(),
+        rotation: new_rotation.into(),
+        translation: subgizmo.config.translation.into(),
         mode: GizmoMode::Rotate,
         value: (subgizmo.normal() * state.current_delta).to_array(),
     })

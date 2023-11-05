@@ -89,9 +89,9 @@ pub(crate) fn update_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Opti
     let new_translation = subgizmo.config.translation + new_point - state.last_point;
 
     Some(GizmoResult {
-        scale: subgizmo.config.scale,
-        rotation: subgizmo.config.rotation,
-        translation: new_translation,
+        scale: subgizmo.config.scale.into(),
+        rotation: subgizmo.config.rotation.into(),
+        translation: new_translation.into(),
         mode: GizmoMode::Translate,
         value: state.current_delta.to_array(),
     })
@@ -186,9 +186,9 @@ pub(crate) fn update_translation_plane(
     let new_translation = subgizmo.config.translation + new_point - state.last_point;
 
     Some(GizmoResult {
-        scale: subgizmo.config.scale,
-        rotation: subgizmo.config.rotation,
-        translation: new_translation,
+        scale: subgizmo.config.scale.into(),
+        rotation: subgizmo.config.rotation.into(),
+        translation: new_translation.into(),
         mode: GizmoMode::Translate,
         value: state.current_delta.to_array(),
     })

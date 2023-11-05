@@ -86,9 +86,9 @@ pub(crate) fn update_scale(subgizmo: &SubGizmo, ui: &Ui, _ray: Ray) -> Option<Gi
     let new_scale = state.start_scale * offset;
 
     Some(GizmoResult {
-        scale: new_scale,
-        rotation: subgizmo.config.rotation,
-        translation: subgizmo.config.translation,
+        scale: new_scale.into(),
+        rotation: subgizmo.config.rotation.into(),
+        translation: subgizmo.config.translation.into(),
         mode: GizmoMode::Scale,
         value: offset.to_array(),
     })
@@ -139,9 +139,9 @@ pub(crate) fn update_scale_plane(subgizmo: &SubGizmo, ui: &Ui, _ray: Ray) -> Opt
     let new_scale = state.start_scale * offset;
 
     Some(GizmoResult {
-        scale: new_scale,
-        rotation: subgizmo.config.rotation,
-        translation: subgizmo.config.translation,
+        scale: new_scale.into(),
+        rotation: subgizmo.config.rotation.into(),
+        translation: subgizmo.config.translation.into(),
         mode: GizmoMode::Scale,
         value: offset.to_array(),
     })
