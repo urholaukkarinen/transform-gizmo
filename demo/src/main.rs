@@ -1,7 +1,7 @@
 use std::f32::consts::FRAC_PI_4;
 
 use egui::color_picker::Alpha;
-use egui::{pos2, Align2, Color32, FontId, LayerId, Ui, Widget};
+use egui::{pos2, Align2, FontId, LayerId, Ui, Widget, Color32};
 use macroquad::prelude::*;
 
 use egui_gizmo::{
