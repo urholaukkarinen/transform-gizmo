@@ -1,13 +1,20 @@
 [package]
 name = "egui-gizmo-demo"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 edition = "2021"
 
 license = "MIT"
 
 [dependencies]
-egui-macroquad = { git = "https://github.com/urholaukkarinen/egui-macroquad.git", rev = "16c753b" }
-egui = "0.24.0"
+bevy = "0.12"
+egui = "0.24.1"
 egui-gizmo = { path = ".." }
-macroquad = "0.3.25"
+
+[dependencies.bevy_egui]
+git = "https://github.com/urholaukkarinen/bevy_egui.git"
+rev="42746602ef89bcbe19a9333e8804fac2b914fe95"
+
+[dependencies.bevy_infinite_grid]
+git = "https://github.com/pcwalton/bevy_infinite_grid.git"
+rev = "c752a23063b2b05163e307889eb276d6574115ab"
