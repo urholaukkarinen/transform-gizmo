@@ -10,7 +10,8 @@ description = "3d transform gizmo for the egui library"
 homepage = "https://github.com/urholaukkarinen/egui-gizmo"
 repository = "https://github.com/urholaukkarinen/egui-gizmo"
 categories = ["gui", "game-development", "game-engines"]
-keywords = ["egui", "3d", "gizmo"]
+keywords = ["egui", "gizmo"]
+exclude = ["/docs"]
 
 [workspace]
 members = ["demo"]
