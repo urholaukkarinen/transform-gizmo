@@ -15,13 +15,6 @@ use crate::camera::{setup_camera, update_camera};
 
 mod camera;
 
-#[cfg(target_arch = "wasm32")]
-extern crate wee_alloc;
-
-#[cfg(target_arch = "wasm32")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
 const SOURCE_URL: &str = "https://github.com/urholaukkarinen/egui-gizmo/blob/main/demo/src/main.rs";
 
 fn main() {

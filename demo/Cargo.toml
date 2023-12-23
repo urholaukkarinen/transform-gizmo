@@ -20,6 +20,3 @@ rev="42746602ef89bcbe19a9333e8804fac2b914fe95"
 [dependencies.bevy_infinite_grid]
 git = "https://github.com/pcwalton/bevy_infinite_grid.git"
 rev = "c752a23063b2b05163e307889eb276d6574115ab"
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wee_alloc = "0.4.5"

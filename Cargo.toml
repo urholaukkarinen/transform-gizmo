@@ -20,3 +20,7 @@ members = ["demo"]
 egui = "0.24.1"
 glam = { version = "0.24", features = ["mint"] }
 mint = "0.5"
+
+[profile.release]
+opt-level = "s"
+lto = "thin"
