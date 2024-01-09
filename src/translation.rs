@@ -1,5 +1,5 @@
 use egui::{Stroke, Ui};
-use glam::{Mat4, Vec3};
+use glam::{DMat4, DVec3};
 
 use crate::math::{
     intersect_plane, ray_to_plane_origin, ray_to_ray, round_to_interval, segment_to_segment,
@@ -10,12 +10,13 @@ use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray, WidgetData};
 
 /// Picks given translation subgizmo. If the subgizmo is close enough to
 /// the mouse pointer, distance from camera to the subgizmo is returned.
-pub(crate) fn pick_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f32> {
+pub(crate) fn pick_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f64> {
     let origin = subgizmo.config.translation;
     let dir = subgizmo.normal();
     let scale = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size;
-    let length = scale;
-    let ray_length = 10000.0;
+    let length = scale as f64;
+
+    let ray_length = 1e+14;
 
     let (ray_t, subgizmo_t) = segment_to_segment(
         ray.origin,
@@ -31,10 +32,10 @@ pub(crate) fn pick_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option
     subgizmo.update_state_with(ui, |state: &mut TranslationState| {
         state.start_point = subgizmo_point;
         state.last_point = subgizmo_point;
-        state.current_delta = Vec3::ZERO;
+        state.current_delta = DVec3::ZERO;
     });
 
-    if dist <= subgizmo.config.focus_distance {
+    if dist <= subgizmo.config.focus_distance as f64 {
         Some(ray.origin.distance(ray_point))
     } else {
         None
@@ -57,13 +58,13 @@ pub(crate) fn draw_translation(subgizmo: &SubGizmo, ui: &Ui) {
     let arrow_length = width * 2.4;
     let length = length - arrow_length;
 
-    let start = direction * width;
-    let end = direction * length;
+    let start = direction * width as f64;
+    let end = direction * length as f64;
 
     painter.line_segment(start, end, (subgizmo.config.visuals.stroke_width, color));
     painter.arrow(
         end,
-        end + direction * arrow_length,
+        end + direction * arrow_length as f64,
         (subgizmo.config.visuals.stroke_width * 1.2, color),
     );
 }
@@ -89,18 +90,19 @@ pub(crate) fn update_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Opti
     let new_translation = subgizmo.config.translation + new_point - state.last_point;
 
     Some(GizmoResult {
-        scale: subgizmo.config.scale.into(),
-        rotation: subgizmo.config.rotation.into(),
-        translation: new_translation.into(),
+        scale: subgizmo.config.scale.as_vec3().into(),
+        rotation: subgizmo.config.rotation.as_f32().into(),
+        translation: new_translation.as_vec3().into(),
         mode: GizmoMode::Translate,
-        value: state.current_delta.to_array(),
+        value: state.current_delta.as_vec3().to_array(),
     })
 }
 
-fn snap_translation_vector(subgizmo: &SubGizmo, new_delta: Vec3) -> Vec3 {
+fn snap_translation_vector(subgizmo: &SubGizmo, new_delta: DVec3) -> DVec3 {
     let delta_length = new_delta.length();
     if delta_length > 1e-5 {
-        new_delta / delta_length * round_to_interval(delta_length, subgizmo.config.snap_distance)
+        new_delta / delta_length
+            * round_to_interval(delta_length, subgizmo.config.snap_distance as f64)
     } else {
         new_delta
     }
@@ -108,7 +110,7 @@ fn snap_translation_vector(subgizmo: &SubGizmo, new_delta: Vec3) -> Vec3 {
 
 /// Picks given translation plane subgizmo. If the subgizmo is close enough to
 /// the mouse pointer, distance from camera to the subgizmo is returned.
-pub(crate) fn pick_translation_plane(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f32> {
+pub(crate) fn pick_translation_plane(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f64> {
     let origin = translation_plane_global_origin(subgizmo);
 
     let normal = subgizmo.normal();
@@ -120,7 +122,7 @@ pub(crate) fn pick_translation_plane(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> 
     subgizmo.update_state_with(ui, |state: &mut TranslationState| {
         state.start_point = ray_point;
         state.last_point = ray_point;
-        state.current_delta = Vec3::ZERO;
+        state.current_delta = DVec3::ZERO;
     });
 
     if dist_from_origin <= translation_plane_size(subgizmo) {
@@ -186,15 +188,15 @@ pub(crate) fn update_translation_plane(
     let new_translation = subgizmo.config.translation + new_point - state.last_point;
 
     Some(GizmoResult {
-        scale: subgizmo.config.scale.into(),
-        rotation: subgizmo.config.rotation.into(),
-        translation: new_translation.into(),
+        scale: subgizmo.config.scale.as_vec3().into(),
+        rotation: subgizmo.config.rotation.as_f32().into(),
+        translation: new_translation.as_vec3().into(),
         mode: GizmoMode::Translate,
-        value: state.current_delta.to_array(),
+        value: state.current_delta.as_vec3().to_array(),
     })
 }
 
-fn snap_translation_plane(subgizmo: &SubGizmo, new_delta: Vec3) -> Vec3 {
+fn snap_translation_plane(subgizmo: &SubGizmo, new_delta: DVec3) -> DVec3 {
     let mut binormal = translation_plane_binormal(subgizmo.direction);
     let mut tangent = translation_plane_tangent(subgizmo.direction);
     if subgizmo.config.local_space() {
@@ -208,8 +210,10 @@ fn snap_translation_plane(subgizmo: &SubGizmo, new_delta: Vec3) -> Vec3 {
     let n = subgizmo.normal();
 
     if lb > 1e-5 && lt > 1e-5 {
-        binormal * round_to_interval(lt, subgizmo.config.snap_distance) * (ct / lt).dot(n)
-            + tangent * round_to_interval(lb, subgizmo.config.snap_distance) * (cb / lb).dot(n)
+        binormal * round_to_interval(lt, subgizmo.config.snap_distance as f64) * (ct / lt).dot(n)
+            + tangent
+                * round_to_interval(lb, subgizmo.config.snap_distance as f64)
+                * (cb / lb).dot(n)
     } else {
         new_delta
     }
@@ -217,53 +221,54 @@ fn snap_translation_plane(subgizmo: &SubGizmo, new_delta: Vec3) -> Vec3 {
 
 #[derive(Default, Debug, Copy, Clone)]
 pub(crate) struct TranslationState {
-    start_point: Vec3,
-    last_point: Vec3,
-    current_delta: Vec3,
+    start_point: DVec3,
+    last_point: DVec3,
+    current_delta: DVec3,
 }
 
 impl WidgetData for TranslationState {}
 
-fn translation_transform(subgizmo: &SubGizmo) -> Mat4 {
+fn translation_transform(subgizmo: &SubGizmo) -> DMat4 {
     if subgizmo.config.local_space() {
-        Mat4::from_rotation_translation(subgizmo.config.rotation, subgizmo.config.translation)
+        DMat4::from_rotation_translation(subgizmo.config.rotation, subgizmo.config.translation)
     } else {
-        Mat4::from_translation(subgizmo.config.translation)
+        DMat4::from_translation(subgizmo.config.translation)
     }
 }
 
-pub(crate) fn translation_plane_binormal(direction: GizmoDirection) -> Vec3 {
+pub(crate) fn translation_plane_binormal(direction: GizmoDirection) -> DVec3 {
     match direction {
-        GizmoDirection::X => Vec3::Y,
-        GizmoDirection::Y => Vec3::Z,
-        GizmoDirection::Z => Vec3::X,
-        GizmoDirection::Screen => Vec3::X, // Unused
+        GizmoDirection::X => DVec3::Y,
+        GizmoDirection::Y => DVec3::Z,
+        GizmoDirection::Z => DVec3::X,
+        GizmoDirection::Screen => DVec3::X, // Unused
     }
 }
 
-pub(crate) fn translation_plane_tangent(direction: GizmoDirection) -> Vec3 {
+pub(crate) fn translation_plane_tangent(direction: GizmoDirection) -> DVec3 {
     match direction {
-        GizmoDirection::X => Vec3::Z,
-        GizmoDirection::Y => Vec3::X,
-        GizmoDirection::Z => Vec3::Y,
-        GizmoDirection::Screen => Vec3::X, // Unused
+        GizmoDirection::X => DVec3::Z,
+        GizmoDirection::Y => DVec3::X,
+        GizmoDirection::Z => DVec3::Y,
+        GizmoDirection::Screen => DVec3::X, // Unused
     }
 }
 
-pub(crate) fn translation_plane_size(subgizmo: &SubGizmo) -> f32 {
-    subgizmo.config.scale_factor
-        * (subgizmo.config.visuals.gizmo_size * 0.1 + subgizmo.config.visuals.stroke_width * 2.0)
+pub(crate) fn translation_plane_size(subgizmo: &SubGizmo) -> f64 {
+    (subgizmo.config.scale_factor
+        * (subgizmo.config.visuals.gizmo_size * 0.1 + subgizmo.config.visuals.stroke_width * 2.0))
+        as f64
 }
 
-pub(crate) fn translation_plane_local_origin(subgizmo: &SubGizmo) -> Vec3 {
+pub(crate) fn translation_plane_local_origin(subgizmo: &SubGizmo) -> DVec3 {
     let offset = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size * 0.4;
 
     let a = translation_plane_binormal(subgizmo.direction);
     let b = translation_plane_tangent(subgizmo.direction);
-    (a + b) * offset
+    (a + b) * offset as f64
 }
 
-pub(crate) fn translation_plane_global_origin(subgizmo: &SubGizmo) -> Vec3 {
+pub(crate) fn translation_plane_global_origin(subgizmo: &SubGizmo) -> DVec3 {
     let mut origin = translation_plane_local_origin(subgizmo);
     if subgizmo.config.local_space() {
         origin = subgizmo.config.rotation * origin;
@@ -272,7 +277,7 @@ pub(crate) fn translation_plane_global_origin(subgizmo: &SubGizmo) -> Vec3 {
 }
 
 /// Finds the nearest point on line that points in translation subgizmo direction
-fn point_on_axis(subgizmo: &SubGizmo, ray: Ray) -> Vec3 {
+fn point_on_axis(subgizmo: &SubGizmo, ray: Ray) -> DVec3 {
     let origin = subgizmo.config.translation;
     let direction = subgizmo.normal();
 
@@ -281,7 +286,7 @@ fn point_on_axis(subgizmo: &SubGizmo, ray: Ray) -> Vec3 {
     origin + direction * subgizmo_t
 }
 
-fn point_on_plane(plane_normal: Vec3, plane_origin: Vec3, ray: Ray) -> Option<Vec3> {
+fn point_on_plane(plane_normal: DVec3, plane_origin: DVec3, ray: Ray) -> Option<DVec3> {
     let mut t = 0.0;
     if !intersect_plane(
         plane_normal,

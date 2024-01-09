@@ -1,15 +1,15 @@
 use egui::{Pos2, Rect};
-use glam::{Mat3, Mat4, Vec3, Vec4};
+use glam::{DMat3, DMat4, DVec3, DVec4};
 
 /// Creates a matrix that represents rotation between two 3d vectors
 ///
 /// Credit: https://www.iquilezles.org/www/articles/noacos/noacos.htm
-pub fn rotation_align(from: Vec3, to: Vec3) -> Mat3 {
+pub fn rotation_align(from: DVec3, to: DVec3) -> DMat3 {
     let v = from.cross(to);
     let c = from.dot(to);
     let k = 1.0 / (1.0 + c);
 
-    Mat3::from_cols_array(&[
+    DMat3::from_cols_array(&[
         v.x * v.x * k + c,
         v.x * v.y * k + v.z,
         v.x * v.z * k - v.y,
@@ -26,7 +26,7 @@ pub fn rotation_align(from: Vec3, to: Vec3) -> Mat3 {
 /// This can be used to determine the shortest distance between those two rays.
 ///
 /// Credit: Practical Geometry Algorithms by Daniel Sunday: http://geomalgorithms.com/code.html
-pub fn ray_to_ray(a1: Vec3, adir: Vec3, b1: Vec3, bdir: Vec3) -> (f32, f32) {
+pub fn ray_to_ray(a1: DVec3, adir: DVec3, b1: DVec3, bdir: DVec3) -> (f64, f64) {
     let b = adir.dot(bdir);
     let w = a1 - b1;
     let d = adir.dot(w);
@@ -50,7 +50,7 @@ pub fn ray_to_ray(a1: Vec3, adir: Vec3, b1: Vec3, bdir: Vec3) -> (f32, f32) {
 /// This can be used to determine the shortest distance between those two segments.
 ///
 /// Credit: Practical Geometry Algorithms by Daniel Sunday: http://geomalgorithms.com/code.html
-pub fn segment_to_segment(a1: Vec3, a2: Vec3, b1: Vec3, b2: Vec3) -> (f32, f32) {
+pub fn segment_to_segment(a1: DVec3, a2: DVec3, b1: DVec3, b2: DVec3) -> (f64, f64) {
     let da = a2 - a1;
     let db = b2 - b1;
     let la = da.length_squared();
@@ -115,11 +115,11 @@ pub fn segment_to_segment(a1: Vec3, a2: Vec3, b1: Vec3, b2: Vec3) -> (f32, f32) 
 
 /// Finds the intersection point of a ray and a plane
 pub fn intersect_plane(
-    plane_normal: Vec3,
-    plane_origin: Vec3,
-    ray_origin: Vec3,
-    ray_dir: Vec3,
-    t: &mut f32,
+    plane_normal: DVec3,
+    plane_origin: DVec3,
+    ray_origin: DVec3,
+    ray_dir: DVec3,
+    t: &mut f64,
 ) -> bool {
     let denom = plane_normal.dot(ray_dir);
 
@@ -134,30 +134,30 @@ pub fn intersect_plane(
 /// Finds the intersection point of a ray and a plane
 /// and distance from the intersection to the plane origin
 pub fn ray_to_plane_origin(
-    disc_normal: Vec3,
-    disc_origin: Vec3,
-    ray_origin: Vec3,
-    ray_dir: Vec3,
-) -> (f32, f32) {
+    disc_normal: DVec3,
+    disc_origin: DVec3,
+    ray_origin: DVec3,
+    ray_dir: DVec3,
+) -> (f64, f64) {
     let mut t = 0.0;
     if intersect_plane(disc_normal, disc_origin, ray_origin, ray_dir, &mut t) {
         let p = ray_origin + ray_dir * t;
         let v = p - disc_origin;
         let d2 = v.dot(v);
-        (t, f32::sqrt(d2))
+        (t, f64::sqrt(d2))
     } else {
-        (t, f32::MAX)
+        (t, f64::MAX)
     }
 }
 
 /// Rounds given value to the nearest interval
-pub fn round_to_interval(val: f32, interval: f32) -> f32 {
+pub fn round_to_interval(val: f64, interval: f64) -> f64 {
     (val / interval).round() * interval
 }
 
 /// Calculates 2d screen coordinates from 3d world coordinates
-pub fn world_to_screen(viewport: Rect, mvp: Mat4, pos: Vec3) -> Option<Pos2> {
-    let mut pos = mvp * Vec4::from((pos, 1.0));
+pub fn world_to_screen(viewport: Rect, mvp: DMat4, pos: DVec3) -> Option<Pos2> {
+    let mut pos = mvp * DVec4::from((pos, 1.0));
 
     if pos.w < 0.0 {
         return None;
@@ -169,7 +169,7 @@ pub fn world_to_screen(viewport: Rect, mvp: Mat4, pos: Vec3) -> Option<Pos2> {
     let center = viewport.center();
 
     Some(Pos2::new(
-        center.x + pos.x * viewport.width() / 2.0,
-        center.y + pos.y * viewport.height() / 2.0,
+        (center.x as f64 + pos.x * viewport.width() as f64 / 2.0) as f32,
+        (center.y as f64 + pos.y * viewport.height() as f64 / 2.0) as f32,
     ))
 }

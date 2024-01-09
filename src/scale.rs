@@ -1,5 +1,5 @@
 use egui::{Stroke, Ui};
-use glam::{Mat4, Vec3};
+use glam::{DMat4, DVec3};
 
 use crate::math::{ray_to_plane_origin, round_to_interval, segment_to_segment, world_to_screen};
 use crate::painter::Painter3d;
@@ -12,12 +12,13 @@ use crate::{GizmoMode, GizmoResult, Ray, WidgetData};
 
 /// Picks given scale subgizmo. If the subgizmo is close enough to
 /// the mouse pointer, distance from camera to the subgizmo is returned.
-pub(crate) fn pick_scale(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f32> {
+pub(crate) fn pick_scale(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f64> {
     let origin = subgizmo.config.translation;
     let dir = subgizmo.config.rotation * subgizmo.local_normal();
     let scale = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size;
-    let length = scale;
-    let ray_length = 1e+5;
+    let length = scale as f64;
+
+    let ray_length = 1e+14;
 
     let (ray_t, subgizmo_t) = segment_to_segment(
         ray.origin,
@@ -37,7 +38,7 @@ pub(crate) fn pick_scale(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f32> 
         state.start_delta = start_delta;
     });
 
-    if dist <= subgizmo.config.focus_distance {
+    if dist <= subgizmo.config.focus_distance as f64 {
         Some(ray.origin.distance(ray_point))
     } else {
         None
@@ -61,11 +62,15 @@ pub(crate) fn draw_scale(subgizmo: &SubGizmo, ui: &Ui) {
     let end_length = subgizmo.config.scale_factor * end_stroke_width;
     let length = length - end_length;
 
-    let start = direction * width;
-    let end = direction * length;
+    let start = direction * width as f64;
+    let end = direction * length as f64;
 
     painter.line_segment(start, end, (subgizmo.config.visuals.stroke_width, color));
-    painter.line_segment(end, end + direction * end_length, (end_stroke_width, color));
+    painter.line_segment(
+        end,
+        end + direction * end_length as f64,
+        (end_stroke_width, color),
+    );
 }
 
 /// Updates given scale subgizmo.
@@ -77,26 +82,26 @@ pub(crate) fn update_scale(subgizmo: &SubGizmo, ui: &Ui, _ray: Ray) -> Option<Gi
     delta /= state.start_delta;
 
     if subgizmo.config.snapping {
-        delta = round_to_interval(delta, subgizmo.config.snap_scale);
+        delta = round_to_interval(delta, subgizmo.config.snap_scale as f64);
     }
     delta = delta.max(1e-4) - 1.0;
 
-    let offset = Vec3::ONE + (subgizmo.local_normal() * delta);
+    let offset = DVec3::ONE + (subgizmo.local_normal() * delta);
 
     let new_scale = state.start_scale * offset;
 
     Some(GizmoResult {
-        scale: new_scale.into(),
-        rotation: subgizmo.config.rotation.into(),
-        translation: subgizmo.config.translation.into(),
+        scale: new_scale.as_vec3().into(),
+        rotation: subgizmo.config.rotation.as_f32().into(),
+        translation: subgizmo.config.translation.as_vec3().into(),
         mode: GizmoMode::Scale,
-        value: offset.to_array(),
+        value: offset.as_vec3().to_array(),
     })
 }
 
 /// Picks given scale plane subgizmo. If the subgizmo is close enough to
 /// the mouse pointer, distance from camera to the subgizmo is returned.
-pub(crate) fn pick_scale_plane(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f32> {
+pub(crate) fn pick_scale_plane(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f64> {
     let origin = scale_plane_global_origin(subgizmo);
 
     let normal = subgizmo.normal();
@@ -126,7 +131,7 @@ pub(crate) fn update_scale_plane(subgizmo: &SubGizmo, ui: &Ui, _ray: Ray) -> Opt
     delta /= state.start_delta;
 
     if subgizmo.config.snapping {
-        delta = round_to_interval(delta, subgizmo.config.snap_scale);
+        delta = round_to_interval(delta, subgizmo.config.snap_scale as f64);
     }
     delta = delta.max(1e-4) - 1.0;
 
@@ -134,16 +139,16 @@ pub(crate) fn update_scale_plane(subgizmo: &SubGizmo, ui: &Ui, _ray: Ray) -> Opt
     let tangent = translation_plane_tangent(subgizmo.direction);
     let direction = (binormal + tangent).normalize();
 
-    let offset = Vec3::ONE + (direction * delta);
+    let offset = DVec3::ONE + (direction * delta);
 
     let new_scale = state.start_scale * offset;
 
     Some(GizmoResult {
-        scale: new_scale.into(),
-        rotation: subgizmo.config.rotation.into(),
-        translation: subgizmo.config.translation.into(),
+        scale: new_scale.as_vec3().into(),
+        rotation: subgizmo.config.rotation.as_f32().into(),
+        translation: subgizmo.config.translation.as_vec3().into(),
         mode: GizmoMode::Scale,
-        value: offset.to_array(),
+        value: offset.as_vec3().to_array(),
     })
 }
 
@@ -176,25 +181,25 @@ pub(crate) fn draw_scale_plane(subgizmo: &SubGizmo, ui: &Ui) {
 
 #[derive(Default, Debug, Copy, Clone)]
 pub(crate) struct ScaleState {
-    start_scale: Vec3,
-    start_delta: f32,
+    start_scale: DVec3,
+    start_delta: f64,
 }
 
 impl WidgetData for ScaleState {}
 
-fn scale_transform(subgizmo: &SubGizmo) -> Mat4 {
-    Mat4::from_rotation_translation(subgizmo.config.rotation, subgizmo.config.translation)
+fn scale_transform(subgizmo: &SubGizmo) -> DMat4 {
+    DMat4::from_rotation_translation(subgizmo.config.rotation, subgizmo.config.translation)
 }
 
-pub(crate) fn scale_plane_global_origin(subgizmo: &SubGizmo) -> Vec3 {
+pub(crate) fn scale_plane_global_origin(subgizmo: &SubGizmo) -> DVec3 {
     let origin = translation_plane_local_origin(subgizmo);
     subgizmo.config.rotation * origin + subgizmo.config.translation
 }
 
-fn distance_from_origin_2d(subgizmo: &SubGizmo, ui: &Ui) -> Option<f32> {
+fn distance_from_origin_2d(subgizmo: &SubGizmo, ui: &Ui) -> Option<f64> {
     let cursor_pos = ui.input(|i| i.pointer.hover_pos())?;
     let viewport = subgizmo.config.viewport;
-    let gizmo_pos = world_to_screen(viewport, subgizmo.config.mvp, Vec3::new(0.0, 0.0, 0.0))?;
+    let gizmo_pos = world_to_screen(viewport, subgizmo.config.mvp, DVec3::new(0.0, 0.0, 0.0))?;
 
-    Some(cursor_pos.distance(gizmo_pos))
+    Some(cursor_pos.distance(gizmo_pos) as f64)
 }

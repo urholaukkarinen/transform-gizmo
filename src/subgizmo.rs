@@ -1,7 +1,7 @@
 use std::hash::Hash;
 
 use egui::{Color32, Id, Ui};
-use glam::Vec3;
+use glam::DVec3;
 
 use crate::rotation::{draw_rotation, pick_rotation, update_rotation};
 use crate::scale::{
@@ -42,16 +42,16 @@ impl SubGizmo {
         }
     }
 
-    pub fn local_normal(&self) -> Vec3 {
+    pub fn local_normal(&self) -> DVec3 {
         match self.direction {
-            GizmoDirection::X => Vec3::X,
-            GizmoDirection::Y => Vec3::Y,
-            GizmoDirection::Z => Vec3::Z,
+            GizmoDirection::X => DVec3::X,
+            GizmoDirection::Y => DVec3::Y,
+            GizmoDirection::Z => DVec3::Z,
             GizmoDirection::Screen => -self.config.view_forward(),
         }
     }
 
-    pub fn normal(&self) -> Vec3 {
+    pub fn normal(&self) -> DVec3 {
         let mut normal = self.local_normal();
 
         if self.config.local_space() && self.direction != GizmoDirection::Screen {
@@ -94,7 +94,7 @@ impl SubGizmo {
         state.save(ui.ctx(), self.id);
     }
 
-    pub fn pick(&self, ui: &Ui, ray: Ray) -> Option<f32> {
+    pub fn pick(&self, ui: &Ui, ray: Ray) -> Option<f64> {
         match self.kind {
             SubGizmoKind::RotationAxis => pick_rotation(self, ui, ray),
             SubGizmoKind::TranslationVector => pick_translation(self, ui, ray),

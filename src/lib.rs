@@ -30,7 +30,7 @@ use std::hash::Hash;
 use std::ops::Sub;
 
 use egui::{Color32, Context, Id, PointerButton, Rect, Sense, Ui};
-use glam::{Mat4, Quat, Vec3, Vec4, Vec4Swizzles};
+use glam::{DMat4, DQuat, DVec3, DVec4, Mat4, Quat, Vec3, Vec4Swizzles};
 
 use crate::subgizmo::{SubGizmo, SubGizmoKind};
 
@@ -73,19 +73,19 @@ impl Gizmo {
 
     /// Matrix that specifies translation and rotation of the gizmo in world space
     pub fn model_matrix(mut self, model_matrix: mint::ColumnMatrix4<f32>) -> Self {
-        self.config.model_matrix = Mat4::from(model_matrix);
+        self.config.model_matrix = Mat4::from(model_matrix).as_dmat4();
         self
     }
 
     /// Matrix that specifies translation and rotation of the viewport camera
     pub fn view_matrix(mut self, view_matrix: mint::ColumnMatrix4<f32>) -> Self {
-        self.config.view_matrix = Mat4::from(view_matrix);
+        self.config.view_matrix = Mat4::from(view_matrix).as_dmat4();
         self
     }
 
     /// Matrix that specifies projection of the viewport
     pub fn projection_matrix(mut self, projection_matrix: mint::ColumnMatrix4<f32>) -> Self {
-        self.config.projection_matrix = Mat4::from(projection_matrix);
+        self.config.projection_matrix = Mat4::from(projection_matrix).as_dmat4();
         self
     }
 
@@ -189,9 +189,9 @@ impl Gizmo {
         }
 
         if let Some((subgizmo, result)) = active_subgizmo.zip(result) {
-            subgizmo.config.translation = result.translation.into();
-            subgizmo.config.rotation = result.rotation.into();
-            subgizmo.config.scale = result.scale.into();
+            subgizmo.config.translation = Vec3::from(result.translation).as_dvec3();
+            subgizmo.config.rotation = Quat::from(result.rotation).as_f64();
+            subgizmo.config.scale = Vec3::from(result.scale).as_dvec3();
         }
 
         state.save(ui.ctx(), self.id);
@@ -357,13 +357,13 @@ impl Gizmo {
         let hover = ui.input(|i| i.pointer.hover_pos())?;
         let viewport = self.config.viewport;
 
-        let x = ((hover.x - viewport.min.x) / viewport.width()) * 2.0 - 1.0;
-        let y = ((hover.y - viewport.min.y) / viewport.height()) * 2.0 - 1.0;
+        let x = (((hover.x - viewport.min.x) / viewport.width()) * 2.0 - 1.0) as f64;
+        let y = (((hover.y - viewport.min.y) / viewport.height()) * 2.0 - 1.0) as f64;
 
-        let screen_to_world = self.config.view_projection.inverse();
-        let mut origin = screen_to_world * Vec4::new(x, -y, -1.0, 1.0);
+        let screen_to_world: DMat4 = self.config.view_projection.inverse();
+        let mut origin = screen_to_world * DVec4::new(x, -y, -1.0, 1.0);
         origin /= origin.w;
-        let mut target = screen_to_world * Vec4::new(x, -y, 1.0, 1.0);
+        let mut target = screen_to_world * DVec4::new(x, -y, 1.0, 1.0);
 
         // w is zero when far plane is set to infinity
         if target.w.abs() < 1e-7 {
@@ -481,9 +481,9 @@ impl Default for GizmoVisuals {
 
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct GizmoConfig {
-    pub view_matrix: Mat4,
-    pub projection_matrix: Mat4,
-    pub model_matrix: Mat4,
+    pub view_matrix: DMat4,
+    pub projection_matrix: DMat4,
+    pub model_matrix: DMat4,
     pub viewport: Rect,
     pub mode: GizmoMode,
     pub orientation: GizmoOrientation,
@@ -493,11 +493,11 @@ pub(crate) struct GizmoConfig {
     pub snap_scale: f32,
     pub visuals: GizmoVisuals,
     //----------------------------------//
-    pub rotation: Quat,
-    pub translation: Vec3,
-    pub scale: Vec3,
-    pub view_projection: Mat4,
-    pub mvp: Mat4,
+    pub rotation: DQuat,
+    pub translation: DVec3,
+    pub scale: DVec3,
+    pub view_projection: DMat4,
+    pub mvp: DMat4,
     pub scale_factor: f32,
     /// How close the mouse pointer needs to be to a subgizmo before it is focused
     pub focus_distance: f32,
@@ -507,9 +507,9 @@ pub(crate) struct GizmoConfig {
 impl Default for GizmoConfig {
     fn default() -> Self {
         Self {
-            view_matrix: Mat4::IDENTITY,
-            projection_matrix: Mat4::IDENTITY,
-            model_matrix: Mat4::IDENTITY,
+            view_matrix: DMat4::IDENTITY,
+            projection_matrix: DMat4::IDENTITY,
+            model_matrix: DMat4::IDENTITY,
             viewport: Rect::NOTHING,
             mode: GizmoMode::Rotate,
             orientation: GizmoOrientation::Global,
@@ -519,11 +519,11 @@ impl Default for GizmoConfig {
             snap_scale: DEFAULT_SNAP_SCALE,
             visuals: GizmoVisuals::default(),
             //----------------------------------//
-            rotation: Quat::IDENTITY,
-            translation: Vec3::ZERO,
-            scale: Vec3::ONE,
-            view_projection: Mat4::IDENTITY,
-            mvp: Mat4::IDENTITY,
+            rotation: DQuat::IDENTITY,
+            translation: DVec3::ZERO,
+            scale: DVec3::ONE,
+            view_projection: DMat4::IDENTITY,
+            mvp: DMat4::IDENTITY,
             scale_factor: 0.0,
             focus_distance: 0.0,
             left_handed: false,
@@ -547,9 +547,10 @@ impl GizmoConfig {
         self.view_projection = self.projection_matrix * self.view_matrix;
         self.mvp = self.projection_matrix * self.view_matrix * self.model_matrix;
 
-        self.scale_factor =
-            self.mvp.as_ref()[15] / self.projection_matrix.as_ref()[0] / self.viewport.width()
-                * 2.0;
+        self.scale_factor = self.mvp.as_ref()[15] as f32
+            / self.projection_matrix.as_ref()[0] as f32
+            / self.viewport.width()
+            * 2.0;
 
         self.focus_distance = self.scale_factor * (self.visuals.stroke_width / 2.0 + 5.0);
 
@@ -561,12 +562,12 @@ impl GizmoConfig {
     }
 
     /// Forward vector of the view camera
-    pub(crate) fn view_forward(&self) -> Vec3 {
+    pub(crate) fn view_forward(&self) -> DVec3 {
         self.view_matrix.row(2).xyz()
     }
 
     /// Right vector of the view camera
-    pub(crate) fn view_right(&self) -> Vec3 {
+    pub(crate) fn view_right(&self) -> DVec3 {
         self.view_matrix.row(0).xyz()
     }
 
@@ -578,8 +579,8 @@ impl GizmoConfig {
 
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct Ray {
-    origin: Vec3,
-    direction: Vec3,
+    origin: DVec3,
+    direction: DVec3,
 }
 
 /// Gizmo state that is saved between frames
