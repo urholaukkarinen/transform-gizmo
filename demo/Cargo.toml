@@ -7,7 +7,7 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
-egui = "0.24.1"
+egui = "0.25"
 egui-gizmo = { path = ".." }
 
 [dependencies.bevy]
@@ -15,7 +15,7 @@ version = "0.12.1"
 
 [dependencies.bevy_egui]
 git = "https://github.com/urholaukkarinen/bevy_egui.git"
-rev="42746602ef89bcbe19a9333e8804fac2b914fe95"
+rev="bc3dd1559e24ca0178ed1d2dfef07cb784437505"
 
 [dependencies.bevy_infinite_grid]
 git = "https://github.com/pcwalton/bevy_infinite_grid.git"
