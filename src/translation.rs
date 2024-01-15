@@ -1,5 +1,6 @@
-use egui::{Stroke, Ui};
+use egui::{Color32, Stroke, Ui};
 use glam::{DMat4, DVec3};
+use std::ops::RangeInclusive;
 
 use crate::math::{
     intersect_plane, ray_to_plane_origin, ray_to_ray, round_to_interval, segment_to_segment,
@@ -7,6 +8,9 @@ use crate::math::{
 use crate::painter::Painter3d;
 use crate::subgizmo::SubGizmo;
 use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray, WidgetData};
+
+const ARROW_FADE: RangeInclusive<f64> = (0.95)..=(0.99);
+const PLANE_FADE: RangeInclusive<f64> = (0.70)..=(0.86);
 
 /// Picks given translation subgizmo. If the subgizmo is close enough to
 /// the mouse pointer, distance from camera to the subgizmo is returned.
@@ -29,13 +33,22 @@ pub(crate) fn pick_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option
     let subgizmo_point = origin + dir * length * subgizmo_t;
     let dist = (ray_point - subgizmo_point).length();
 
+    let dot = subgizmo
+        .config
+        .gizmo_view_forward
+        .dot(subgizmo.normal())
+        .abs();
+    let visibility =
+        (1.0 - (dot - *ARROW_FADE.start()) / (*ARROW_FADE.end() - *ARROW_FADE.start())).min(1.0);
+
     subgizmo.update_state_with(ui, |state: &mut TranslationState| {
         state.start_point = subgizmo_point;
         state.last_point = subgizmo_point;
         state.current_delta = DVec3::ZERO;
+        state.visibility = visibility;
     });
 
-    if dist <= subgizmo.config.focus_distance as f64 {
+    if visibility > 0.0 && dist <= subgizmo.config.focus_distance as f64 {
         Some(ray.origin.distance(ray_point))
     } else {
         None
@@ -43,6 +56,22 @@ pub(crate) fn pick_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option
 }
 
 pub(crate) fn draw_translation(subgizmo: &SubGizmo, ui: &Ui) {
+    let state = subgizmo.state::<TranslationState>(ui);
+
+    if state.visibility <= 0.0001 {
+        return;
+    }
+
+    let mut color = subgizmo.color();
+    if state.visibility < 1.0 {
+        color = Color32::from_rgba_unmultiplied(
+            color.r(),
+            color.g(),
+            color.b(),
+            (state.visibility * 255.0) as u8,
+        );
+    }
+
     let painter = Painter3d::new(
         ui.painter().clone(),
         subgizmo.config.view_projection * translation_transform(subgizmo),
@@ -50,8 +79,6 @@ pub(crate) fn draw_translation(subgizmo: &SubGizmo, ui: &Ui) {
     );
 
     let direction = subgizmo.local_normal();
-
-    let color = subgizmo.color();
 
     let width = subgizmo.config.scale_factor * subgizmo.config.visuals.stroke_width;
     let length = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size;
@@ -119,13 +146,23 @@ pub(crate) fn pick_translation_plane(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> 
 
     let ray_point = ray.origin + ray.direction * t;
 
+    let dot = subgizmo
+        .config
+        .gizmo_view_forward
+        .dot(subgizmo.normal())
+        .abs();
+    let visibility = (1.0
+        - ((1.0 - dot) - *PLANE_FADE.start()) / (*PLANE_FADE.end() - *PLANE_FADE.start()))
+    .min(1.0);
+
     subgizmo.update_state_with(ui, |state: &mut TranslationState| {
         state.start_point = ray_point;
         state.last_point = ray_point;
         state.current_delta = DVec3::ZERO;
+        state.visibility = visibility;
     });
 
-    if dist_from_origin <= translation_plane_size(subgizmo) {
+    if visibility > 0.0 && dist_from_origin <= translation_plane_size(subgizmo) {
         Some(t)
     } else {
         None
@@ -133,13 +170,27 @@ pub(crate) fn pick_translation_plane(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> 
 }
 
 pub(crate) fn draw_translation_plane(subgizmo: &SubGizmo, ui: &Ui) {
+    let state = subgizmo.state::<TranslationState>(ui);
+
+    if state.visibility <= 0.0001 {
+        return;
+    }
+
+    let mut color = subgizmo.color();
+    if state.visibility < 1.0 {
+        color = Color32::from_rgba_unmultiplied(
+            color.r(),
+            color.g(),
+            color.b(),
+            (state.visibility * 255.0) as u8,
+        );
+    }
+
     let painter = Painter3d::new(
         ui.painter().clone(),
         subgizmo.config.view_projection * translation_transform(subgizmo),
         subgizmo.config.viewport,
     );
-
-    let color = subgizmo.color();
 
     let scale = translation_plane_size(subgizmo) * 0.5;
     let a = translation_plane_binormal(subgizmo.direction) * scale;
@@ -224,6 +275,7 @@ pub(crate) struct TranslationState {
     start_point: DVec3,
     last_point: DVec3,
     current_delta: DVec3,
+    visibility: f64,
 }
 
 impl WidgetData for TranslationState {}
