@@ -1,4 +1,4 @@
-use egui::{Color32, Stroke, Ui};
+use egui::{Stroke, Ui};
 use glam::{DMat4, DVec3};
 use std::ops::RangeInclusive;
 
@@ -48,7 +48,7 @@ pub(crate) fn pick_scale(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f64> 
     subgizmo.update_state_with(ui, |state: &mut ScaleState| {
         state.start_scale = subgizmo.config.scale;
         state.start_delta = start_delta;
-        state.visibility = visibility;
+        state.visibility = visibility as _;
     });
 
     if visibility > 0.0 && dist <= subgizmo.config.focus_distance as f64 {
@@ -65,15 +65,7 @@ pub(crate) fn draw_scale(subgizmo: &SubGizmo, ui: &Ui) {
         return;
     }
 
-    let mut color = subgizmo.color();
-    if state.visibility < 1.0 {
-        color = Color32::from_rgba_unmultiplied(
-            color.r(),
-            color.g(),
-            color.b(),
-            (state.visibility * 255.0) as u8,
-        );
-    }
+    let color = subgizmo.color().gamma_multiply(state.visibility);
 
     let painter = Painter3d::new(
         ui.painter().clone(),
@@ -149,7 +141,7 @@ pub(crate) fn pick_scale_plane(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option
     subgizmo.update_state_with(ui, |state: &mut ScaleState| {
         state.start_scale = subgizmo.config.scale;
         state.start_delta = start_delta;
-        state.visibility = visibility;
+        state.visibility = visibility as _;
     });
 
     if visibility > 0.0 && dist_from_origin <= translation_plane_size(subgizmo) {
@@ -196,15 +188,7 @@ pub(crate) fn draw_scale_plane(subgizmo: &SubGizmo, ui: &Ui) {
         return;
     }
 
-    let mut color = subgizmo.color();
-    if state.visibility < 1.0 {
-        color = Color32::from_rgba_unmultiplied(
-            color.r(),
-            color.g(),
-            color.b(),
-            (state.visibility * 255.0) as u8,
-        );
-    }
+    let color = subgizmo.color().gamma_multiply(state.visibility);
 
     let painter = Painter3d::new(
         ui.painter().clone(),
@@ -234,7 +218,7 @@ pub(crate) fn draw_scale_plane(subgizmo: &SubGizmo, ui: &Ui) {
 pub(crate) struct ScaleState {
     start_scale: DVec3,
     start_delta: f64,
-    visibility: f64,
+    visibility: f32,
 }
 
 impl WidgetData for ScaleState {}

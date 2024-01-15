@@ -1,4 +1,4 @@
-use egui::{Color32, Stroke, Ui};
+use egui::{Stroke, Ui};
 use glam::{DMat4, DVec3};
 use std::ops::RangeInclusive;
 
@@ -45,7 +45,7 @@ pub(crate) fn pick_translation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option
         state.start_point = subgizmo_point;
         state.last_point = subgizmo_point;
         state.current_delta = DVec3::ZERO;
-        state.visibility = visibility;
+        state.visibility = visibility as _;
     });
 
     if visibility > 0.0 && dist <= subgizmo.config.focus_distance as f64 {
@@ -62,15 +62,7 @@ pub(crate) fn draw_translation(subgizmo: &SubGizmo, ui: &Ui) {
         return;
     }
 
-    let mut color = subgizmo.color();
-    if state.visibility < 1.0 {
-        color = Color32::from_rgba_unmultiplied(
-            color.r(),
-            color.g(),
-            color.b(),
-            (state.visibility * 255.0) as u8,
-        );
-    }
+    let color = subgizmo.color().gamma_multiply(state.visibility);
 
     let painter = Painter3d::new(
         ui.painter().clone(),
@@ -159,7 +151,7 @@ pub(crate) fn pick_translation_plane(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> 
         state.start_point = ray_point;
         state.last_point = ray_point;
         state.current_delta = DVec3::ZERO;
-        state.visibility = visibility;
+        state.visibility = visibility as _;
     });
 
     if visibility > 0.0 && dist_from_origin <= translation_plane_size(subgizmo) {
@@ -176,15 +168,7 @@ pub(crate) fn draw_translation_plane(subgizmo: &SubGizmo, ui: &Ui) {
         return;
     }
 
-    let mut color = subgizmo.color();
-    if state.visibility < 1.0 {
-        color = Color32::from_rgba_unmultiplied(
-            color.r(),
-            color.g(),
-            color.b(),
-            (state.visibility * 255.0) as u8,
-        );
-    }
+    let color = subgizmo.color().gamma_multiply(state.visibility);
 
     let painter = Painter3d::new(
         ui.painter().clone(),
@@ -275,7 +259,7 @@ pub(crate) struct TranslationState {
     start_point: DVec3,
     last_point: DVec3,
     current_delta: DVec3,
-    visibility: f64,
+    visibility: f32,
 }
 
 impl WidgetData for TranslationState {}
