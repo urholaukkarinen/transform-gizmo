@@ -1,5 +1,6 @@
 use egui::{Stroke, Ui};
 use glam::{DMat4, DVec3};
+use std::ops::RangeInclusive;
 
 use crate::math::{ray_to_plane_origin, round_to_interval, segment_to_segment, world_to_screen};
 use crate::painter::Painter3d;
@@ -9,6 +10,9 @@ use crate::translation::{
     translation_plane_tangent,
 };
 use crate::{GizmoMode, GizmoResult, Ray, WidgetData};
+
+const ARROW_FADE: RangeInclusive<f64> = (0.95)..=(0.99);
+const PLANE_FADE: RangeInclusive<f64> = (0.70)..=(0.86);
 
 /// Picks given scale subgizmo. If the subgizmo is close enough to
 /// the mouse pointer, distance from camera to the subgizmo is returned.
@@ -33,12 +37,21 @@ pub(crate) fn pick_scale(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f64> 
 
     let start_delta = distance_from_origin_2d(subgizmo, ui)?;
 
+    let dot = subgizmo
+        .config
+        .gizmo_view_forward
+        .dot(subgizmo.normal())
+        .abs();
+    let visibility =
+        (1.0 - (dot - *ARROW_FADE.start()) / (*ARROW_FADE.end() - *ARROW_FADE.start())).min(1.0);
+
     subgizmo.update_state_with(ui, |state: &mut ScaleState| {
         state.start_scale = subgizmo.config.scale;
         state.start_delta = start_delta;
+        state.visibility = visibility as _;
     });
 
-    if dist <= subgizmo.config.focus_distance as f64 {
+    if visibility > 0.0 && dist <= subgizmo.config.focus_distance as f64 {
         Some(ray.origin.distance(ray_point))
     } else {
         None
@@ -46,6 +59,14 @@ pub(crate) fn pick_scale(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f64> 
 }
 
 pub(crate) fn draw_scale(subgizmo: &SubGizmo, ui: &Ui) {
+    let state = subgizmo.state::<ScaleState>(ui);
+
+    if state.visibility <= 0.0001 {
+        return;
+    }
+
+    let color = subgizmo.color().gamma_multiply(state.visibility);
+
     let painter = Painter3d::new(
         ui.painter().clone(),
         subgizmo.config.view_projection * scale_transform(subgizmo),
@@ -53,8 +74,6 @@ pub(crate) fn draw_scale(subgizmo: &SubGizmo, ui: &Ui) {
     );
 
     let direction = subgizmo.local_normal();
-
-    let color = subgizmo.color();
 
     let width = subgizmo.config.scale_factor * subgizmo.config.visuals.stroke_width;
     let length = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size;
@@ -110,12 +129,22 @@ pub(crate) fn pick_scale_plane(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option
 
     let start_delta = distance_from_origin_2d(subgizmo, ui)?;
 
+    let dot = subgizmo
+        .config
+        .gizmo_view_forward
+        .dot(subgizmo.normal())
+        .abs();
+    let visibility = (1.0
+        - ((1.0 - dot) - *PLANE_FADE.start()) / (*PLANE_FADE.end() - *PLANE_FADE.start()))
+    .min(1.0);
+
     subgizmo.update_state_with(ui, |state: &mut ScaleState| {
         state.start_scale = subgizmo.config.scale;
         state.start_delta = start_delta;
+        state.visibility = visibility as _;
     });
 
-    if dist_from_origin <= translation_plane_size(subgizmo) {
+    if visibility > 0.0 && dist_from_origin <= translation_plane_size(subgizmo) {
         Some(t)
     } else {
         None
@@ -153,13 +182,19 @@ pub(crate) fn update_scale_plane(subgizmo: &SubGizmo, ui: &Ui, _ray: Ray) -> Opt
 }
 
 pub(crate) fn draw_scale_plane(subgizmo: &SubGizmo, ui: &Ui) {
+    let state = subgizmo.state::<ScaleState>(ui);
+
+    if state.visibility <= 0.0001 {
+        return;
+    }
+
+    let color = subgizmo.color().gamma_multiply(state.visibility);
+
     let painter = Painter3d::new(
         ui.painter().clone(),
         subgizmo.config.view_projection * scale_transform(subgizmo),
         subgizmo.config.viewport,
     );
-
-    let color = subgizmo.color();
 
     let scale = translation_plane_size(subgizmo) * 0.5;
     let a = translation_plane_binormal(subgizmo.direction) * scale;
@@ -183,6 +218,7 @@ pub(crate) fn draw_scale_plane(subgizmo: &SubGizmo, ui: &Ui) {
 pub(crate) struct ScaleState {
     start_scale: DVec3,
     start_delta: f64,
+    visibility: f32,
 }
 
 impl WidgetData for ScaleState {}

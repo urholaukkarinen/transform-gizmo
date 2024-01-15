@@ -29,8 +29,9 @@ use std::f32::consts::PI;
 use std::hash::Hash;
 use std::ops::Sub;
 
+use crate::math::{screen_to_world, world_to_screen};
 use egui::{Color32, Context, Id, PointerButton, Rect, Sense, Ui};
-use glam::{DMat4, DQuat, DVec3, DVec4, Mat4, Quat, Vec3, Vec4Swizzles};
+use glam::{DMat4, DQuat, DVec3, Mat4, Quat, Vec3, Vec4Swizzles};
 
 use crate::subgizmo::{SubGizmo, SubGizmoKind};
 
@@ -355,29 +356,14 @@ impl Gizmo {
     /// Calculate a world space ray from current mouse position
     fn pointer_ray(&self, ui: &Ui) -> Option<Ray> {
         let hover = ui.input(|i| i.pointer.hover_pos())?;
-        let viewport = self.config.viewport;
 
-        let x = (((hover.x - viewport.min.x) / viewport.width()) * 2.0 - 1.0) as f64;
-        let y = (((hover.y - viewport.min.y) / viewport.height()) * 2.0 - 1.0) as f64;
+        let mat = self.config.view_projection.inverse();
+        let origin = screen_to_world(self.config.viewport, mat, hover, -1.0);
+        let target = screen_to_world(self.config.viewport, mat, hover, 1.0);
 
-        let screen_to_world: DMat4 = self.config.view_projection.inverse();
-        let mut origin = screen_to_world * DVec4::new(x, -y, -1.0, 1.0);
-        origin /= origin.w;
-        let mut target = screen_to_world * DVec4::new(x, -y, 1.0, 1.0);
+        let direction = target.sub(origin).normalize();
 
-        // w is zero when far plane is set to infinity
-        if target.w.abs() < 1e-7 {
-            target.w = 1e-7;
-        }
-
-        target /= target.w;
-
-        let direction = target.sub(origin).xyz().normalize();
-
-        Some(Ray {
-            origin: origin.xyz(),
-            direction,
-        })
+        Some(Ray { origin, direction })
     }
 }
 
@@ -498,6 +484,7 @@ pub(crate) struct GizmoConfig {
     pub scale: DVec3,
     pub view_projection: DMat4,
     pub mvp: DMat4,
+    pub gizmo_view_forward: DVec3,
     pub scale_factor: f32,
     /// How close the mouse pointer needs to be to a subgizmo before it is focused
     pub focus_distance: f32,
@@ -524,6 +511,7 @@ impl Default for GizmoConfig {
             scale: DVec3::ONE,
             view_projection: DMat4::IDENTITY,
             mvp: DMat4::IDENTITY,
+            gizmo_view_forward: DVec3::ONE,
             scale_factor: 0.0,
             focus_distance: 0.0,
             left_handed: false,
@@ -559,6 +547,18 @@ impl GizmoConfig {
         } else {
             self.projection_matrix.z_axis.w > 0.0
         };
+
+        let gizmo_screen_pos =
+            world_to_screen(self.viewport, self.mvp, self.translation).unwrap_or_default();
+
+        let gizmo_view_near = screen_to_world(
+            self.viewport,
+            self.view_projection.inverse(),
+            gizmo_screen_pos,
+            -1.0,
+        );
+
+        self.gizmo_view_forward = (gizmo_view_near - self.translation).normalize_or_zero();
     }
 
     /// Forward vector of the view camera

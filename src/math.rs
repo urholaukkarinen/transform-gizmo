@@ -1,5 +1,5 @@
 use egui::{Pos2, Rect};
-use glam::{DMat3, DMat4, DVec3, DVec4};
+use glam::{DMat3, DMat4, DVec3, DVec4, Vec4Swizzles};
 
 /// Creates a matrix that represents rotation between two 3d vectors
 ///
@@ -172,4 +172,21 @@ pub fn world_to_screen(viewport: Rect, mvp: DMat4, pos: DVec3) -> Option<Pos2> {
         (center.x as f64 + pos.x * viewport.width() as f64 / 2.0) as f32,
         (center.y as f64 + pos.y * viewport.height() as f64 / 2.0) as f32,
     ))
+}
+
+/// Calculates 3d world coordinates from 2d screen coordinates
+pub fn screen_to_world(viewport: Rect, mat: DMat4, pos: Pos2, z: f64) -> DVec3 {
+    let x = (((pos.x - viewport.min.x) / viewport.width()) * 2.0 - 1.0) as f64;
+    let y = (((pos.y - viewport.min.y) / viewport.height()) * 2.0 - 1.0) as f64;
+
+    let mut world_pos = mat * DVec4::new(x, -y, z, 1.0);
+
+    // w is zero when far plane is set to infinity
+    if world_pos.w.abs() < 1e-7 {
+        world_pos.w = 1e-7;
+    }
+
+    world_pos /= world_pos.w;
+
+    return world_pos.xyz();
 }

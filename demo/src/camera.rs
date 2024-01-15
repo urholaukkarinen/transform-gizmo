@@ -64,6 +64,12 @@ pub fn update_camera(
     }
     for ev in ev_scroll.read() {
         scroll += ev.y;
+
+        scroll /= if cfg!(target_arch = "wasm32") {
+            100.0
+        } else {
+            2.0
+        };
     }
     if input_mouse.just_released(orbit_button) || input_mouse.just_pressed(orbit_button) {
         orbit_button_changed = true;
