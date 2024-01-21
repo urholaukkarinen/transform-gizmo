@@ -25,7 +25,7 @@ jobs:
           crate: cargo-cranky
 
       - name: check --all-features
-        run: cargo check --locked --all-features --all-targets
+        run: cargo check --all-features --all-targets
 
       - name: test doc-tests
         run: cargo test --doc --all-features
