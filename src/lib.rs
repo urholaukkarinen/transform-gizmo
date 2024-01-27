@@ -22,8 +22,6 @@
 //! By default, the gizmo will use the ui clip rect as a viewport.
 //! The gizmo will apply transformations to the given model matrix.
 
-#![warn(clippy::all)]
-
 use std::cmp::Ordering;
 use std::f32::consts::PI;
 use std::hash::Hash;
@@ -37,10 +35,7 @@ use crate::subgizmo::{SubGizmo, SubGizmoKind};
 
 mod math;
 mod painter;
-mod rotation;
-mod scale;
 mod subgizmo;
-mod translation;
 
 /// The default snapping distance for rotation in radians
 pub const DEFAULT_SNAP_ANGLE: f32 = PI / 32.0;
@@ -345,7 +340,8 @@ impl Gizmo {
     /// Add given subgizmos to this gizmo
     fn add_subgizmos<const N: usize>(&mut self, subgizmos: [SubGizmo; N]) {
         let mut i = self.subgizmo_count;
-        for subgizmo in subgizmos.into_iter() {
+
+        for subgizmo in subgizmos {
             self.subgizmos[i] = Some(subgizmo);
             i += 1;
         }
@@ -573,7 +569,7 @@ impl GizmoConfig {
 
     /// Whether local orientation is used
     pub(crate) fn local_space(&self) -> bool {
-        self.orientation == GizmoOrientation::Local
+        self.orientation == GizmoOrientation::Local || self.mode == GizmoMode::Scale
     }
 }
 

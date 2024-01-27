@@ -1,17 +1,41 @@
 use std::hash::Hash;
+use std::ops::{Deref, DerefMut};
 
 use egui::{Color32, Id, Ui};
 use glam::DVec3;
 
-use crate::rotation::{draw_rotation, pick_rotation, update_rotation};
-use crate::scale::{
-    draw_scale, draw_scale_plane, pick_scale, pick_scale_plane, update_scale, update_scale_plane,
-};
-use crate::translation::{
-    draw_translation, draw_translation_plane, pick_translation, pick_translation_plane,
-    update_translation, update_translation_plane,
-};
+use self::rotation::{draw_rotation, pick_rotation, update_rotation};
+use self::scale::{pick_scale, update_scale};
+use self::translation::{pick_translation, update_translation};
+use crate::subgizmo::common::{draw_arrow, draw_plane, pick_arrow, pick_plane};
 use crate::{GizmoConfig, GizmoDirection, GizmoResult, Ray, WidgetData};
+
+mod common;
+mod rotation;
+mod scale;
+mod translation;
+
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct SubGizmoState<T: Default + Copy + Clone> {
+    inner: T,
+    visibility: f32,
+}
+
+impl<T: Default + Copy + Clone> Deref for SubGizmoState<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<T: Default + Copy + Clone> DerefMut for SubGizmoState<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
+impl<T> WidgetData for SubGizmoState<T> where T: Default + Copy + Clone + Send + Sync + 'static {}
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct SubGizmo {
@@ -84,11 +108,18 @@ impl SubGizmo {
         color.linear_multiply(alpha)
     }
 
-    pub fn state<T: WidgetData>(&self, ui: &Ui) -> T {
-        T::load(ui.ctx(), self.id)
+    pub fn state<T: Default + Copy + Clone + Send + Sync + 'static>(
+        &self,
+        ui: &Ui,
+    ) -> SubGizmoState<T> {
+        <_ as WidgetData>::load(ui.ctx(), self.id)
     }
 
-    pub fn update_state_with<T: WidgetData>(&self, ui: &Ui, fun: impl FnOnce(&mut T)) {
+    pub fn update_state_with<T: Default + Copy + Clone + Send + Sync + 'static>(
+        &self,
+        ui: &Ui,
+        fun: impl FnOnce(&mut SubGizmoState<T>),
+    ) {
         let mut state = self.state::<T>(ui);
         fun(&mut state);
         state.save(ui.ctx(), self.id);
@@ -97,10 +128,10 @@ impl SubGizmo {
     pub fn pick(&self, ui: &Ui, ray: Ray) -> Option<f64> {
         match self.kind {
             SubGizmoKind::RotationAxis => pick_rotation(self, ui, ray),
-            SubGizmoKind::TranslationVector => pick_translation(self, ui, ray),
-            SubGizmoKind::TranslationPlane => pick_translation_plane(self, ui, ray),
-            SubGizmoKind::ScaleVector => pick_scale(self, ui, ray),
-            SubGizmoKind::ScalePlane => pick_scale_plane(self, ui, ray),
+            SubGizmoKind::TranslationVector => pick_translation(self, ui, ray, pick_arrow),
+            SubGizmoKind::TranslationPlane => pick_translation(self, ui, ray, pick_plane),
+            SubGizmoKind::ScaleVector => pick_scale(self, ui, ray, pick_arrow),
+            SubGizmoKind::ScalePlane => pick_scale(self, ui, ray, pick_plane),
         }
     }
 
@@ -108,10 +139,10 @@ impl SubGizmo {
     pub fn update(&self, ui: &Ui, ray: Ray) -> Option<GizmoResult> {
         match self.kind {
             SubGizmoKind::RotationAxis => update_rotation(self, ui, ray),
-            SubGizmoKind::TranslationVector => update_translation(self, ui, ray),
-            SubGizmoKind::TranslationPlane => update_translation_plane(self, ui, ray),
-            SubGizmoKind::ScaleVector => update_scale(self, ui, ray),
-            SubGizmoKind::ScalePlane => update_scale_plane(self, ui, ray),
+            SubGizmoKind::TranslationVector | SubGizmoKind::TranslationPlane => {
+                update_translation(self, ui, ray)
+            }
+            SubGizmoKind::ScaleVector | SubGizmoKind::ScalePlane => update_scale(self, ui),
         }
     }
 
@@ -119,15 +150,13 @@ impl SubGizmo {
     pub fn draw(&self, ui: &Ui) {
         match self.kind {
             SubGizmoKind::RotationAxis => draw_rotation(self, ui),
-            SubGizmoKind::TranslationVector => draw_translation(self, ui),
-            SubGizmoKind::TranslationPlane => draw_translation_plane(self, ui),
-            SubGizmoKind::ScaleVector => draw_scale(self, ui),
-            SubGizmoKind::ScalePlane => draw_scale_plane(self, ui),
+            SubGizmoKind::TranslationVector | SubGizmoKind::ScaleVector => draw_arrow(self, ui),
+            SubGizmoKind::TranslationPlane | SubGizmoKind::ScalePlane => draw_plane(self, ui),
         }
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum SubGizmoKind {
     /// Rotation around an axis
     RotationAxis,

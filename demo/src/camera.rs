@@ -12,7 +12,7 @@ pub struct PanOrbitCamera {
 
 impl Default for PanOrbitCamera {
     fn default() -> Self {
-        PanOrbitCamera {
+        Self {
             focus: Vec3::ZERO,
             radius: 5.0,
             upside_down: false,
@@ -75,7 +75,7 @@ pub fn update_camera(
         orbit_button_changed = true;
     }
 
-    for (mut pan_orbit, mut transform, projection) in query.iter_mut() {
+    for (mut pan_orbit, mut transform, projection) in &mut query {
         if orbit_button_changed {
             // only check for upside down when orbiting started or ended this frame
             // if the camera is "upside" down, panning horizontally would be inverted, so invert the input to make it correct

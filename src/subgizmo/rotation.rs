@@ -5,7 +5,7 @@ use glam::{DMat4, DQuat, DVec2, DVec3};
 
 use crate::math::{ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen};
 use crate::painter::Painter3d;
-use crate::subgizmo::SubGizmo;
+use crate::subgizmo::{SubGizmo, SubGizmoState};
 use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray, WidgetData};
 
 /// Picks given rotation subgizmo. If the subgizmo is close enough to
@@ -37,7 +37,7 @@ pub(crate) fn pick_rotation(subgizmo: &SubGizmo, ui: &Ui, ray: Ray) -> Option<f6
         f64::atan2(offset.cross(forward).dot(normal), offset.dot(forward))
     };
 
-    subgizmo.update_state_with(ui, |state: &mut RotationState| {
+    subgizmo.update_state_with(ui, |state: &mut SubGizmoState<RotationState>| {
         let rotation_angle = rotation_angle(subgizmo, ui).unwrap_or(0.0);
         state.start_axis_angle = angle as f32;
         state.start_rotation_angle = rotation_angle as f32;
@@ -129,7 +129,7 @@ pub(crate) fn update_rotation(subgizmo: &SubGizmo, ui: &Ui, _ray: Ray) -> Option
         angle_delta += TAU;
     }
 
-    subgizmo.update_state_with(ui, |state: &mut RotationState| {
+    subgizmo.update_state_with(ui, |state: &mut SubGizmoState<RotationState>| {
         state.last_rotation_angle = rotation_angle as f32;
         state.current_delta += angle_delta as f32;
     });
@@ -214,8 +214,7 @@ fn rotation_angle(subgizmo: &SubGizmo, ui: &Ui) -> Option<f64> {
 
 fn tangent(subgizmo: &SubGizmo) -> DVec3 {
     let mut tangent = match subgizmo.direction {
-        GizmoDirection::X => DVec3::Z,
-        GizmoDirection::Y => DVec3::Z,
+        GizmoDirection::X | GizmoDirection::Y => DVec3::Z,
         GizmoDirection::Z => -DVec3::Y,
         GizmoDirection::Screen => -subgizmo.config.view_right(),
     };
