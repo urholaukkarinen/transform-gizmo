@@ -3,10 +3,8 @@ use egui::{Stroke, Ui};
 use std::ops::RangeInclusive;
 
 use crate::painter::Painter3d;
-use crate::subgizmo::scale::ScaleState;
-use crate::subgizmo::translation::TranslationState;
-use crate::subgizmo::{SubGizmo, SubGizmoKind};
-use crate::{GizmoDirection, Ray};
+use crate::subgizmo::{SubGizmoConfig, SubGizmoState};
+use crate::{GizmoDirection, GizmoMode, Ray};
 use glam::{DMat4, DVec3};
 const ARROW_FADE: RangeInclusive<f64> = 0.95..=0.99;
 const PLANE_FADE: RangeInclusive<f64> = 0.70..=0.86;
@@ -19,7 +17,7 @@ pub(crate) struct PickResult {
     pub t: f64,
 }
 
-pub(crate) fn pick_arrow(subgizmo: &SubGizmo, ray: Ray) -> PickResult {
+pub(crate) fn pick_arrow<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ray: Ray) -> PickResult {
     let origin = subgizmo.config.translation;
     let dir = subgizmo.normal();
     let length = (subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size) as f64;
@@ -52,7 +50,7 @@ pub(crate) fn pick_arrow(subgizmo: &SubGizmo, ray: Ray) -> PickResult {
     }
 }
 
-pub(crate) fn pick_plane(subgizmo: &SubGizmo, ray: Ray) -> PickResult {
+pub(crate) fn pick_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ray: Ray) -> PickResult {
     let origin = plane_global_origin(subgizmo);
 
     let normal = subgizmo.normal();
@@ -80,18 +78,12 @@ pub(crate) fn pick_plane(subgizmo: &SubGizmo, ray: Ray) -> PickResult {
     }
 }
 
-pub(crate) fn draw_arrow(subgizmo: &SubGizmo, ui: &Ui) {
-    let visibility = if subgizmo.kind == SubGizmoKind::ScaleVector {
-        subgizmo.state::<ScaleState>(ui).visibility
-    } else {
-        subgizmo.state::<TranslationState>(ui).visibility
-    };
-
-    if visibility <= 0.0001 {
+pub(crate) fn draw_arrow<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui) {
+    if subgizmo.opacity <= 0.0001 {
         return;
     }
 
-    let color = subgizmo.color().gamma_multiply(visibility);
+    let color = subgizmo.color().gamma_multiply(subgizmo.opacity);
 
     let transform = if subgizmo.config.local_space() {
         DMat4::from_rotation_translation(subgizmo.config.rotation, subgizmo.config.translation)
@@ -113,7 +105,7 @@ pub(crate) fn draw_arrow(subgizmo: &SubGizmo, ui: &Ui) {
     let end = direction * length as f64;
     painter.line_segment(start, end, (subgizmo.config.visuals.stroke_width, color));
 
-    if subgizmo.kind == SubGizmoKind::ScaleVector {
+    if subgizmo.config.mode == GizmoMode::Scale {
         let end_stroke_width = subgizmo.config.visuals.stroke_width * 2.5;
         let end_length = subgizmo.config.scale_factor * end_stroke_width;
 
@@ -133,18 +125,12 @@ pub(crate) fn draw_arrow(subgizmo: &SubGizmo, ui: &Ui) {
     }
 }
 
-pub(crate) fn draw_plane(subgizmo: &SubGizmo, ui: &Ui) {
-    let visibility = if subgizmo.kind == SubGizmoKind::ScalePlane {
-        subgizmo.state::<ScaleState>(ui).visibility
-    } else {
-        subgizmo.state::<TranslationState>(ui).visibility
-    };
-
-    if visibility <= 0.0001 {
+pub(crate) fn draw_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui) {
+    if subgizmo.opacity <= 0.0001 {
         return;
     }
 
-    let color = subgizmo.color().gamma_multiply(visibility);
+    let color = subgizmo.color().gamma_multiply(subgizmo.opacity);
 
     let transform = if subgizmo.config.local_space() {
         DMat4::from_rotation_translation(subgizmo.config.rotation, subgizmo.config.translation)
@@ -193,13 +179,13 @@ pub(crate) fn plane_tangent(direction: GizmoDirection) -> DVec3 {
     }
 }
 
-pub(crate) fn plane_size(subgizmo: &SubGizmo) -> f64 {
+pub(crate) fn plane_size<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> f64 {
     (subgizmo.config.scale_factor
         * (subgizmo.config.visuals.gizmo_size * 0.1 + subgizmo.config.visuals.stroke_width * 2.0))
         as f64
 }
 
-pub(crate) fn plane_local_origin(subgizmo: &SubGizmo) -> DVec3 {
+pub(crate) fn plane_local_origin<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> DVec3 {
     let offset = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size * 0.4;
 
     let a = plane_binormal(subgizmo.direction);
@@ -207,7 +193,7 @@ pub(crate) fn plane_local_origin(subgizmo: &SubGizmo) -> DVec3 {
     (a + b) * offset as f64
 }
 
-pub(crate) fn plane_global_origin(subgizmo: &SubGizmo) -> DVec3 {
+pub(crate) fn plane_global_origin<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> DVec3 {
     let mut origin = plane_local_origin(subgizmo);
     if subgizmo.config.local_space() {
         origin = subgizmo.config.rotation * origin;

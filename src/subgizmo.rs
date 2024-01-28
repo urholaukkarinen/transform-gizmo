@@ -1,68 +1,94 @@
 use std::hash::Hash;
-use std::ops::{Deref, DerefMut};
+use std::marker::PhantomData;
 
 use egui::{Color32, Id, Ui};
 use glam::DVec3;
 
-use self::rotation::{draw_rotation, pick_rotation, update_rotation};
-use self::scale::{pick_scale, update_scale};
-use self::translation::{pick_translation, update_translation};
-use crate::subgizmo::common::{draw_arrow, draw_plane, pick_arrow, pick_plane};
 use crate::{GizmoConfig, GizmoDirection, GizmoResult, Ray, WidgetData};
+
+pub(crate) use rotation::RotationSubGizmo;
+pub(crate) use scale::ScaleSubGizmo;
+pub(crate) use translation::TranslationSubGizmo;
 
 mod common;
 mod rotation;
 mod scale;
 mod translation;
 
-#[derive(Default, Debug, Copy, Clone)]
-pub(crate) struct SubGizmoState<T: Default + Copy + Clone> {
-    inner: T,
-    visibility: f32,
-}
+pub(crate) trait SubGizmoState: Default + Copy + Clone + Send + Sync + 'static {}
+impl<T> WidgetData for T where T: SubGizmoState {}
 
-impl<T: Default + Copy + Clone> Deref for SubGizmoState<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl<T: Default + Copy + Clone> DerefMut for SubGizmoState<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
-    }
-}
-
-impl<T> WidgetData for SubGizmoState<T> where T: Default + Copy + Clone + Send + Sync + 'static {}
-
-#[derive(Copy, Clone, Debug)]
-pub(crate) struct SubGizmo {
-    pub(crate) id: Id,
+pub(crate) struct SubGizmoConfig<T> {
+    id: Id,
     pub(crate) config: GizmoConfig,
     pub(crate) direction: GizmoDirection,
-    pub(crate) kind: SubGizmoKind,
+    pub(crate) transform_kind: TransformKind,
     /// Whether this subgizmo is focused this frame
     pub(crate) focused: bool,
     /// Whether this subgizmo is active this frame
     pub(crate) active: bool,
+    /// Opacity of the subgizmo for this frame.
+    /// A fully invisible subgizmo cannot be interacted with.
+    pub(crate) opacity: f32,
+
+    _phantom: PhantomData<T>,
 }
 
-impl SubGizmo {
+pub(crate) trait SubGizmoBase: 'static {
+    fn id(&self) -> Id;
+    fn set_focused(&mut self, focused: bool);
+    fn set_active(&mut self, active: bool);
+    fn is_focused(&self) -> bool;
+    fn is_active(&self) -> bool;
+}
+
+impl<T: 'static> SubGizmoBase for SubGizmoConfig<T> {
+    fn id(&self) -> Id {
+        self.id
+    }
+
+    fn set_focused(&mut self, focused: bool) {
+        self.focused = focused;
+    }
+
+    fn set_active(&mut self, active: bool) {
+        self.active = active;
+    }
+
+    fn is_focused(&self) -> bool {
+        self.focused
+    }
+
+    fn is_active(&self) -> bool {
+        self.active
+    }
+}
+
+pub(crate) trait SubGizmo: SubGizmoBase {
+    fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64>;
+    fn update(&mut self, ui: &Ui, ray: Ray) -> Option<GizmoResult>;
+    fn draw(&self, ui: &Ui);
+}
+
+impl<T> SubGizmoConfig<T>
+where
+    T: SubGizmoState,
+{
     pub fn new(
         id_source: impl Hash,
         config: GizmoConfig,
         direction: GizmoDirection,
-        kind: SubGizmoKind,
+        kind: TransformKind,
     ) -> Self {
         Self {
             id: Id::new(id_source),
             config,
             direction,
-            kind,
+            transform_kind: kind,
             focused: false,
             active: false,
+            opacity: 0.0,
+            _phantom: Default::default(),
         }
     }
 
@@ -108,64 +134,19 @@ impl SubGizmo {
         color.linear_multiply(alpha)
     }
 
-    pub fn state<T: Default + Copy + Clone + Send + Sync + 'static>(
-        &self,
-        ui: &Ui,
-    ) -> SubGizmoState<T> {
+    pub fn state(&self, ui: &Ui) -> T {
         <_ as WidgetData>::load(ui.ctx(), self.id)
     }
 
-    pub fn update_state_with<T: Default + Copy + Clone + Send + Sync + 'static>(
-        &self,
-        ui: &Ui,
-        fun: impl FnOnce(&mut SubGizmoState<T>),
-    ) {
-        let mut state = self.state::<T>(ui);
+    pub fn update_state_with(&self, ui: &Ui, fun: impl FnOnce(&mut T)) {
+        let mut state = self.state(ui);
         fun(&mut state);
         state.save(ui.ctx(), self.id);
-    }
-
-    pub fn pick(&self, ui: &Ui, ray: Ray) -> Option<f64> {
-        match self.kind {
-            SubGizmoKind::RotationAxis => pick_rotation(self, ui, ray),
-            SubGizmoKind::TranslationVector => pick_translation(self, ui, ray, pick_arrow),
-            SubGizmoKind::TranslationPlane => pick_translation(self, ui, ray, pick_plane),
-            SubGizmoKind::ScaleVector => pick_scale(self, ui, ray, pick_arrow),
-            SubGizmoKind::ScalePlane => pick_scale(self, ui, ray, pick_plane),
-        }
-    }
-
-    /// Update this subgizmo based on pointer ray and interaction.
-    pub fn update(&self, ui: &Ui, ray: Ray) -> Option<GizmoResult> {
-        match self.kind {
-            SubGizmoKind::RotationAxis => update_rotation(self, ui, ray),
-            SubGizmoKind::TranslationVector | SubGizmoKind::TranslationPlane => {
-                update_translation(self, ui, ray)
-            }
-            SubGizmoKind::ScaleVector | SubGizmoKind::ScalePlane => update_scale(self, ui),
-        }
-    }
-
-    /// Draw this subgizmo
-    pub fn draw(&self, ui: &Ui) {
-        match self.kind {
-            SubGizmoKind::RotationAxis => draw_rotation(self, ui),
-            SubGizmoKind::TranslationVector | SubGizmoKind::ScaleVector => draw_arrow(self, ui),
-            SubGizmoKind::TranslationPlane | SubGizmoKind::ScalePlane => draw_plane(self, ui),
-        }
     }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum SubGizmoKind {
-    /// Rotation around an axis
-    RotationAxis,
-    /// Translation along a vector
-    TranslationVector,
-    /// Translation along a plane
-    TranslationPlane,
-    /// Scale along a vector
-    ScaleVector,
-    /// Scale along a plane
-    ScalePlane,
+pub(crate) enum TransformKind {
+    Axis,
+    Plane,
 }
