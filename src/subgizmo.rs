@@ -1,44 +1,109 @@
 use std::hash::Hash;
+use std::marker::PhantomData;
 
 use egui::{Color32, Id, Ui};
 use glam::DVec3;
 
-use crate::rotation::{draw_rotation, pick_rotation, update_rotation};
-use crate::scale::{
-    draw_scale, draw_scale_plane, pick_scale, pick_scale_plane, update_scale, update_scale_plane,
-};
-use crate::translation::{
-    draw_translation, draw_translation_plane, pick_translation, pick_translation_plane,
-    update_translation, update_translation_plane,
-};
 use crate::{GizmoConfig, GizmoDirection, GizmoResult, Ray, WidgetData};
 
-#[derive(Copy, Clone, Debug)]
-pub(crate) struct SubGizmo {
-    pub(crate) id: Id,
+pub(crate) use rotation::RotationSubGizmo;
+pub(crate) use scale::ScaleSubGizmo;
+pub(crate) use translation::TranslationSubGizmo;
+
+mod common;
+mod rotation;
+mod scale;
+mod translation;
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) enum TransformKind {
+    Axis,
+    Plane,
+}
+
+pub(crate) trait SubGizmoState: Default + Copy + Clone + Send + Sync + 'static {}
+impl<T> WidgetData for T where T: SubGizmoState {}
+
+pub(crate) struct SubGizmoConfig<T> {
+    id: Id,
     pub(crate) config: GizmoConfig,
     pub(crate) direction: GizmoDirection,
-    pub(crate) kind: SubGizmoKind,
+    pub(crate) transform_kind: TransformKind,
     /// Whether this subgizmo is focused this frame
     pub(crate) focused: bool,
     /// Whether this subgizmo is active this frame
     pub(crate) active: bool,
+    /// Opacity of the subgizmo for this frame.
+    /// A fully invisible subgizmo cannot be interacted with.
+    pub(crate) opacity: f32,
+
+    _phantom: PhantomData<T>,
 }
 
-impl SubGizmo {
+pub(crate) trait SubGizmoBase: 'static {
+    /// Identifier for this subgizmo. It should be unique across all subgizmos.
+    fn id(&self) -> Id;
+    /// Sets whether this subgizmo is currently focused
+    fn set_focused(&mut self, focused: bool);
+    /// Sets whether this subgizmo is currently active
+    fn set_active(&mut self, active: bool);
+    /// Returns true if this subgizmo is currently focused
+    fn is_focused(&self) -> bool;
+    /// Returns true if this subgizmo is currently active
+    fn is_active(&self) -> bool;
+}
+
+impl<T: 'static> SubGizmoBase for SubGizmoConfig<T> {
+    fn id(&self) -> Id {
+        self.id
+    }
+
+    fn set_focused(&mut self, focused: bool) {
+        self.focused = focused;
+    }
+
+    fn set_active(&mut self, active: bool) {
+        self.active = active;
+    }
+
+    fn is_focused(&self) -> bool {
+        self.focused
+    }
+
+    fn is_active(&self) -> bool {
+        self.active
+    }
+}
+
+pub(crate) trait SubGizmo: SubGizmoBase {
+    /// Pick the subgizmo based on pointer ray. If it is close enough to
+    /// the mouse pointer, distance from camera to the subgizmo is returned.
+    fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64>;
+    /// Update the subgizmo based on pointer ray and interaction.
+    fn update(&mut self, ui: &Ui, ray: Ray) -> Option<GizmoResult>;
+    /// Draw the subgizmo
+    fn draw(&self, ui: &Ui);
+}
+
+impl<T> SubGizmoConfig<T>
+where
+    T: SubGizmoState,
+{
     pub fn new(
         id_source: impl Hash,
         config: GizmoConfig,
         direction: GizmoDirection,
-        kind: SubGizmoKind,
+        transform_kind: TransformKind,
     ) -> Self {
         Self {
             id: Id::new(id_source),
             config,
             direction,
-            kind,
+            transform_kind,
             focused: false,
             active: false,
+            opacity: 0.0,
+            _phantom: Default::default(),
         }
     }
 
@@ -84,59 +149,13 @@ impl SubGizmo {
         color.linear_multiply(alpha)
     }
 
-    pub fn state<T: WidgetData>(&self, ui: &Ui) -> T {
-        T::load(ui.ctx(), self.id)
+    pub fn state(&self, ui: &Ui) -> T {
+        <_ as WidgetData>::load(ui.ctx(), self.id)
     }
 
-    pub fn update_state_with<T: WidgetData>(&self, ui: &Ui, fun: impl FnOnce(&mut T)) {
-        let mut state = self.state::<T>(ui);
+    pub fn update_state_with(&self, ui: &Ui, fun: impl FnOnce(&mut T)) {
+        let mut state = self.state(ui);
         fun(&mut state);
         state.save(ui.ctx(), self.id);
     }
-
-    pub fn pick(&self, ui: &Ui, ray: Ray) -> Option<f64> {
-        match self.kind {
-            SubGizmoKind::RotationAxis => pick_rotation(self, ui, ray),
-            SubGizmoKind::TranslationVector => pick_translation(self, ui, ray),
-            SubGizmoKind::TranslationPlane => pick_translation_plane(self, ui, ray),
-            SubGizmoKind::ScaleVector => pick_scale(self, ui, ray),
-            SubGizmoKind::ScalePlane => pick_scale_plane(self, ui, ray),
-        }
-    }
-
-    /// Update this subgizmo based on pointer ray and interaction.
-    pub fn update(&self, ui: &Ui, ray: Ray) -> Option<GizmoResult> {
-        match self.kind {
-            SubGizmoKind::RotationAxis => update_rotation(self, ui, ray),
-            SubGizmoKind::TranslationVector => update_translation(self, ui, ray),
-            SubGizmoKind::TranslationPlane => update_translation_plane(self, ui, ray),
-            SubGizmoKind::ScaleVector => update_scale(self, ui, ray),
-            SubGizmoKind::ScalePlane => update_scale_plane(self, ui, ray),
-        }
-    }
-
-    /// Draw this subgizmo
-    pub fn draw(&self, ui: &Ui) {
-        match self.kind {
-            SubGizmoKind::RotationAxis => draw_rotation(self, ui),
-            SubGizmoKind::TranslationVector => draw_translation(self, ui),
-            SubGizmoKind::TranslationPlane => draw_translation_plane(self, ui),
-            SubGizmoKind::ScaleVector => draw_scale(self, ui),
-            SubGizmoKind::ScalePlane => draw_scale_plane(self, ui),
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-pub(crate) enum SubGizmoKind {
-    /// Rotation around an axis
-    RotationAxis,
-    /// Translation along a vector
-    TranslationVector,
-    /// Translation along a plane
-    TranslationPlane,
-    /// Scale along a vector
-    ScaleVector,
-    /// Scale along a plane
-    ScalePlane,
 }

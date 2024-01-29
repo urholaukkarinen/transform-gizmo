@@ -1,0 +1,40 @@
+on: [push, pull_request]
+
+name: Rust
+
+jobs:
+  fmt-crank-check-test:
+    name: format + check + test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.72.0
+
+      - name: cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: fmt
+        run: cargo fmt --all -- --check
+
+      - name: install cargo-cranky
+        uses: baptiste0928/cargo-install@v1
+        with:
+          crate: cargo-cranky
+
+      - name: check --all-features
+        run: cargo check --all-features --all-targets
+
+      - name: test doc-tests
+        run: cargo test --doc --all-features
+
+      - name: test
+        run: cargo test --all-features
+
+      - name: cranky
+        run: cargo cranky --all-targets --all-features -- -D warnings
+
+      - name: cranky --release
+        run: cargo cranky --all-targets --all-features --release -- -D warnings

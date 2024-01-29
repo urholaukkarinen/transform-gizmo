@@ -20,3 +20,6 @@ rev="bc3dd1559e24ca0178ed1d2dfef07cb784437505"
 [dependencies.bevy_infinite_grid]
 git = "https://github.com/pcwalton/bevy_infinite_grid.git"
 rev = "c752a23063b2b05163e307889eb276d6574115ab"
+
+[lints]
+workspace = true

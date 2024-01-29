@@ -3,7 +3,7 @@ use glam::{DMat3, DMat4, DVec3, DVec4, Vec4Swizzles};
 
 /// Creates a matrix that represents rotation between two 3d vectors
 ///
-/// Credit: https://www.iquilezles.org/www/articles/noacos/noacos.htm
+/// Credit: <https://www.iquilezles.org/www/articles/noacos/noacos.htm>
 pub fn rotation_align(from: DVec3, to: DVec3) -> DMat3 {
     let v = from.cross(to);
     let c = from.dot(to);
@@ -25,7 +25,7 @@ pub fn rotation_align(from: DVec3, to: DVec3) -> DMat3 {
 /// Finds points on two rays that are closest to each other.
 /// This can be used to determine the shortest distance between those two rays.
 ///
-/// Credit: Practical Geometry Algorithms by Daniel Sunday: http://geomalgorithms.com/code.html
+/// Credit: Practical Geometry Algorithms by Daniel Sunday: <http://geomalgorithms.com/code.html>
 pub fn ray_to_ray(a1: DVec3, adir: DVec3, b1: DVec3, bdir: DVec3) -> (f64, f64) {
     let b = adir.dot(bdir);
     let w = a1 - b1;
@@ -49,7 +49,7 @@ pub fn ray_to_ray(a1: DVec3, adir: DVec3, b1: DVec3, bdir: DVec3) -> (f64, f64) 
 /// Finds points on two segments that are closest to each other.
 /// This can be used to determine the shortest distance between those two segments.
 ///
-/// Credit: Practical Geometry Algorithms by Daniel Sunday: http://geomalgorithms.com/code.html
+/// Credit: Practical Geometry Algorithms by Daniel Sunday: <http://geomalgorithms.com/code.html>
 pub fn segment_to_segment(a1: DVec3, a2: DVec3, b1: DVec3, b2: DVec3) -> (f64, f64) {
     let da = a2 - a1;
     let db = b2 - b1;
@@ -159,7 +159,7 @@ pub fn round_to_interval(val: f64, interval: f64) -> f64 {
 pub fn world_to_screen(viewport: Rect, mvp: DMat4, pos: DVec3) -> Option<Pos2> {
     let mut pos = mvp * DVec4::from((pos, 1.0));
 
-    if pos.w < 0.0 {
+    if pos.w < 1e-10 {
         return None;
     }
 
@@ -188,5 +188,5 @@ pub fn screen_to_world(viewport: Rect, mat: DMat4, pos: Pos2, z: f64) -> DVec3 {
 
     world_pos /= world_pos.w;
 
-    return world_pos.xyz();
+    world_pos.xyz()
 }

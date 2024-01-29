@@ -22,8 +22,6 @@
 //! By default, the gizmo will use the ui clip rect as a viewport.
 //! The gizmo will apply transformations to the given model matrix.
 
-#![warn(clippy::all)]
-
 use std::cmp::Ordering;
 use std::f32::consts::PI;
 use std::hash::Hash;
@@ -33,14 +31,13 @@ use crate::math::{screen_to_world, world_to_screen};
 use egui::{Color32, Context, Id, PointerButton, Rect, Sense, Ui};
 use glam::{DMat4, DQuat, DVec3, Mat4, Quat, Vec3, Vec4Swizzles};
 
-use crate::subgizmo::{SubGizmo, SubGizmoKind};
+use crate::subgizmo::{
+    RotationSubGizmo, ScaleSubGizmo, SubGizmo, TransformKind, TranslationSubGizmo,
+};
 
 mod math;
 mod painter;
-mod rotation;
-mod scale;
 mod subgizmo;
-mod translation;
 
 /// The default snapping distance for rotation in radians
 pub const DEFAULT_SNAP_ANGLE: f32 = PI / 32.0;
@@ -49,17 +46,10 @@ pub const DEFAULT_SNAP_DISTANCE: f32 = 0.1;
 /// The default snapping distance for scale
 pub const DEFAULT_SNAP_SCALE: f32 = 0.1;
 
-/// Maximum number of subgizmos in a single gizmo.
-/// A subgizmo array of this size is allocated from stack,
-/// even if the actual number of subgizmos is less.
-const MAX_SUBGIZMOS: usize = 6;
-
-#[derive(Debug)]
 pub struct Gizmo {
     id: Id,
     config: GizmoConfig,
-    subgizmos: [Option<SubGizmo>; MAX_SUBGIZMOS],
-    subgizmo_count: usize,
+    subgizmos: Vec<Box<dyn SubGizmo>>,
 }
 
 impl Gizmo {
@@ -68,7 +58,6 @@ impl Gizmo {
             id: Id::new(id_source),
             config: GizmoConfig::default(),
             subgizmos: Default::default(),
-            subgizmo_count: 0,
         }
     }
 
@@ -164,24 +153,26 @@ impl Gizmo {
             // is under the mouse pointer, if any.
             if state.active_subgizmo_id.is_none() {
                 if let Some(subgizmo) = self.pick_subgizmo(ui, pointer_ray) {
-                    subgizmo.focused = true;
+                    subgizmo.set_focused(true);
 
                     let interaction = ui.interact(viewport, id, Sense::click_and_drag());
                     let dragging = interaction.dragged_by(PointerButton::Primary);
                     if interaction.drag_started() && dragging {
-                        state.active_subgizmo_id = Some(subgizmo.id);
+                        state.active_subgizmo_id = Some(subgizmo.id());
                     }
                 }
             }
 
-            active_subgizmo = state
-                .active_subgizmo_id
-                .and_then(|id| self.subgizmos_mut().find(|subgizmo| subgizmo.id == id));
+            active_subgizmo = state.active_subgizmo_id.and_then(|id| {
+                self.subgizmos
+                    .iter_mut()
+                    .find(|subgizmo| subgizmo.id() == id)
+            });
 
             if let Some(subgizmo) = active_subgizmo.as_mut() {
                 if ui.input(|i| i.pointer.primary_down()) {
-                    subgizmo.active = true;
-                    subgizmo.focused = true;
+                    subgizmo.set_active(true);
+                    subgizmo.set_focused(true);
                     result = subgizmo.update(ui, pointer_ray);
                 } else {
                     state.active_subgizmo_id = None;
@@ -189,10 +180,10 @@ impl Gizmo {
             }
         }
 
-        if let Some((subgizmo, result)) = active_subgizmo.zip(result) {
-            subgizmo.config.translation = Vec3::from(result.translation).as_dvec3();
-            subgizmo.config.rotation = Quat::from(result.rotation).as_f64();
-            subgizmo.config.scale = Vec3::from(result.scale).as_dvec3();
+        if let Some((_, result)) = active_subgizmo.zip(result) {
+            self.config.translation = Vec3::from(result.translation).as_dvec3();
+            self.config.rotation = Quat::from(result.rotation).as_f64();
+            self.config.scale = Vec3::from(result.scale).as_dvec3();
         }
 
         state.save(ui.ctx(), self.id);
@@ -203,154 +194,141 @@ impl Gizmo {
     }
 
     fn draw_subgizmos(&self, ui: &mut Ui, state: &mut GizmoState) {
-        for subgizmo in self.subgizmos() {
-            if state.active_subgizmo_id.is_none() || subgizmo.active {
+        for subgizmo in &self.subgizmos {
+            if state.active_subgizmo_id.is_none() || subgizmo.is_active() {
                 subgizmo.draw(ui);
             }
         }
     }
 
     /// Picks the subgizmo that is closest to the mouse pointer
-    fn pick_subgizmo(&mut self, ui: &Ui, ray: Ray) -> Option<&mut SubGizmo> {
-        self.subgizmos_mut()
+    fn pick_subgizmo(&mut self, ui: &Ui, ray: Ray) -> Option<&mut Box<dyn SubGizmo>> {
+        self.subgizmos
+            .iter_mut()
             .filter_map(|subgizmo| subgizmo.pick(ui, ray).map(|t| (t, subgizmo)))
             .min_by(|(first, _), (second, _)| first.partial_cmp(second).unwrap_or(Ordering::Equal))
             .map(|(_, subgizmo)| subgizmo)
     }
 
-    /// Iterator to the subgizmos
-    fn subgizmos(&self) -> impl Iterator<Item = &SubGizmo> {
-        self.subgizmos.iter().flatten()
-    }
-
-    /// Mutable iterator to the subgizmos
-    fn subgizmos_mut(&mut self) -> impl Iterator<Item = &mut SubGizmo> {
-        self.subgizmos.iter_mut().flatten()
-    }
-
     /// Create subgizmos for rotation
-    fn new_rotation(&self) -> [SubGizmo; 4] {
+    fn new_rotation(&self) -> [RotationSubGizmo; 4] {
         [
-            SubGizmo::new(
+            RotationSubGizmo::new(
                 self.id.with("rx"),
                 self.config,
                 GizmoDirection::X,
-                SubGizmoKind::RotationAxis,
+                TransformKind::Axis,
             ),
-            SubGizmo::new(
+            RotationSubGizmo::new(
                 self.id.with("ry"),
                 self.config,
                 GizmoDirection::Y,
-                SubGizmoKind::RotationAxis,
+                TransformKind::Axis,
             ),
-            SubGizmo::new(
+            RotationSubGizmo::new(
                 self.id.with("rz"),
                 self.config,
                 GizmoDirection::Z,
-                SubGizmoKind::RotationAxis,
+                TransformKind::Axis,
             ),
-            SubGizmo::new(
+            RotationSubGizmo::new(
                 self.id.with("rs"),
                 self.config,
                 GizmoDirection::Screen,
-                SubGizmoKind::RotationAxis,
+                TransformKind::Axis,
             ),
         ]
     }
 
     /// Create subgizmos for translation
-    fn new_translation(&self) -> [SubGizmo; 6] {
+    fn new_translation(&self) -> [TranslationSubGizmo; 6] {
         [
-            SubGizmo::new(
+            TranslationSubGizmo::new(
                 self.id.with("tx"),
                 self.config,
                 GizmoDirection::X,
-                SubGizmoKind::TranslationVector,
+                TransformKind::Axis,
             ),
-            SubGizmo::new(
+            TranslationSubGizmo::new(
                 self.id.with("ty"),
                 self.config,
                 GizmoDirection::Y,
-                SubGizmoKind::TranslationVector,
+                TransformKind::Axis,
             ),
-            SubGizmo::new(
+            TranslationSubGizmo::new(
                 self.id.with("tz"),
                 self.config,
                 GizmoDirection::Z,
-                SubGizmoKind::TranslationVector,
+                TransformKind::Axis,
             ),
-            SubGizmo::new(
+            TranslationSubGizmo::new(
                 self.id.with("tyz"),
                 self.config,
                 GizmoDirection::X,
-                SubGizmoKind::TranslationPlane,
+                TransformKind::Plane,
             ),
-            SubGizmo::new(
+            TranslationSubGizmo::new(
                 self.id.with("txz"),
                 self.config,
                 GizmoDirection::Y,
-                SubGizmoKind::TranslationPlane,
+                TransformKind::Plane,
             ),
-            SubGizmo::new(
+            TranslationSubGizmo::new(
                 self.id.with("txy"),
                 self.config,
                 GizmoDirection::Z,
-                SubGizmoKind::TranslationPlane,
+                TransformKind::Plane,
             ),
         ]
     }
 
     /// Create subgizmos for scale
-    fn new_scale(&self) -> [SubGizmo; 6] {
+    fn new_scale(&self) -> [ScaleSubGizmo; 6] {
         [
-            SubGizmo::new(
+            ScaleSubGizmo::new(
                 self.id.with("sx"),
                 self.config,
                 GizmoDirection::X,
-                SubGizmoKind::ScaleVector,
+                TransformKind::Axis,
             ),
-            SubGizmo::new(
+            ScaleSubGizmo::new(
                 self.id.with("sy"),
                 self.config,
                 GizmoDirection::Y,
-                SubGizmoKind::ScaleVector,
+                TransformKind::Axis,
             ),
-            SubGizmo::new(
+            ScaleSubGizmo::new(
                 self.id.with("sz"),
                 self.config,
                 GizmoDirection::Z,
-                SubGizmoKind::ScaleVector,
+                TransformKind::Axis,
             ),
-            SubGizmo::new(
+            ScaleSubGizmo::new(
                 self.id.with("syz"),
                 self.config,
                 GizmoDirection::X,
-                SubGizmoKind::ScalePlane,
+                TransformKind::Plane,
             ),
-            SubGizmo::new(
+            ScaleSubGizmo::new(
                 self.id.with("sxz"),
                 self.config,
                 GizmoDirection::Y,
-                SubGizmoKind::ScalePlane,
+                TransformKind::Plane,
             ),
-            SubGizmo::new(
+            ScaleSubGizmo::new(
                 self.id.with("sxy"),
                 self.config,
                 GizmoDirection::Z,
-                SubGizmoKind::ScalePlane,
+                TransformKind::Plane,
             ),
         ]
     }
 
     /// Add given subgizmos to this gizmo
-    fn add_subgizmos<const N: usize>(&mut self, subgizmos: [SubGizmo; N]) {
-        let mut i = self.subgizmo_count;
-        for subgizmo in subgizmos.into_iter() {
-            self.subgizmos[i] = Some(subgizmo);
-            i += 1;
+    fn add_subgizmos<T: SubGizmo, const N: usize>(&mut self, subgizmos: [T; N]) {
+        for subgizmo in subgizmos {
+            self.subgizmos.push(Box::new(subgizmo));
         }
-
-        self.subgizmo_count = i;
     }
 
     /// Calculate a world space ray from current mouse position
@@ -566,6 +544,11 @@ impl GizmoConfig {
         self.view_matrix.row(2).xyz()
     }
 
+    /// Up vector of the view camera
+    pub(crate) fn view_up(&self) -> DVec3 {
+        self.view_matrix.row(1).xyz()
+    }
+
     /// Right vector of the view camera
     pub(crate) fn view_right(&self) -> DVec3 {
         self.view_matrix.row(0).xyz()
@@ -573,7 +556,7 @@ impl GizmoConfig {
 
     /// Whether local orientation is used
     pub(crate) fn local_space(&self) -> bool {
-        self.orientation == GizmoOrientation::Local
+        self.orientation == GizmoOrientation::Local || self.mode == GizmoMode::Scale
     }
 }
 
