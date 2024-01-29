@@ -544,6 +544,11 @@ impl GizmoConfig {
         self.view_matrix.row(2).xyz()
     }
 
+    /// Up vector of the view camera
+    pub(crate) fn view_up(&self) -> DVec3 {
+        self.view_matrix.row(1).xyz()
+    }
+
     /// Right vector of the view camera
     pub(crate) fn view_right(&self) -> DVec3 {
         self.view_matrix.row(0).xyz()

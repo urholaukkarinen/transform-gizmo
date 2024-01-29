@@ -30,11 +30,25 @@ impl Painter3d {
         end_angle: f64,
         stroke: impl Into<Stroke>,
     ) -> ShapeIdx {
-        let angle = end_angle - start_angle;
-        let step_count = steps(angle);
+        let mut closed = false;
+        let mut angle = end_angle - start_angle;
+
+        if angle <= -TAU {
+            angle = -TAU;
+            closed = true;
+        } else if angle >= TAU {
+            angle = TAU;
+            closed = true;
+        }
+
+        let mut step_count = steps(angle);
         let mut points = Vec::with_capacity(step_count);
 
         let step_size = angle / (step_count - 1) as f64;
+
+        if closed {
+            step_count -= 1;
+        }
 
         for step in (0..step_count).map(|i| step_size * i as f64) {
             let x = f64::cos(start_angle + step) * radius;
@@ -48,7 +62,11 @@ impl Painter3d {
             .filter_map(|point| self.vec3_to_pos2(point))
             .collect::<Vec<_>>();
 
-        self.painter.add(Shape::line(points, stroke))
+        self.painter.add(if closed {
+            Shape::closed_line(points, stroke)
+        } else {
+            Shape::line(points, stroke)
+        })
     }
 
     pub fn circle(&self, radius: f64, stroke: impl Into<Stroke>) -> ShapeIdx {

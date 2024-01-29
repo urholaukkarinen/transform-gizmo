@@ -1,7 +1,7 @@
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
 use egui::Ui;
-use glam::{DMat4, DQuat, DVec2, DVec3};
+use glam::{DMat3, DMat4, DQuat, DVec2, DVec3};
 
 use crate::math::{ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen};
 use crate::painter::Painter3d;
@@ -154,38 +154,46 @@ fn arc_angle(subgizmo: &SubGizmoConfig<RotationState>) -> f64 {
     let min_dot = 0.990;
     let max_dot = 0.995;
 
-    f64::min(1.0, f64::max(0.0, dot - min_dot) / (max_dot - min_dot)) * FRAC_PI_2 + FRAC_PI_2
+    let mut angle =
+        f64::min(1.0, f64::max(0.0, dot - min_dot) / (max_dot - min_dot)) * FRAC_PI_2 + FRAC_PI_2;
+    if (angle - PI).abs() < 1e-2 {
+        angle = PI;
+    }
+    angle
 }
 
 /// Calculates a matrix used when rendering the rotation axis.
 fn rotation_matrix(subgizmo: &SubGizmoConfig<RotationState>) -> DMat4 {
+    if subgizmo.direction == GizmoDirection::Screen {
+        let forward = subgizmo.config.view_forward();
+        let right = subgizmo.config.view_right();
+        let up = subgizmo.config.view_up();
+
+        let rotation = DQuat::from_mat3(&DMat3::from_cols(up, -forward, -right));
+
+        return DMat4::from_rotation_translation(rotation, subgizmo.config.translation);
+    }
+
     // First rotate towards the gizmo normal
     let local_normal = subgizmo.local_normal();
     let rotation = rotation_align(DVec3::Y, local_normal);
     let mut rotation = DQuat::from_mat3(&rotation);
     let config = subgizmo.config;
 
-    // TODO optimize this. Use same code for all axes if possible.
-
-    if subgizmo.direction != GizmoDirection::Screen {
-        if config.local_space() {
-            rotation = config.rotation * rotation;
-        }
-
-        let tangent = tangent(subgizmo);
-        let normal = subgizmo.normal();
-        let mut forward = config.view_forward();
-        if config.left_handed {
-            forward *= -1.0;
-        }
-        let angle = f64::atan2(tangent.cross(forward).dot(normal), tangent.dot(forward));
-
-        // Rotate towards the camera, along the rotation axis.
-        rotation = DQuat::from_axis_angle(normal, angle) * rotation;
-    } else {
-        let angle = f64::atan2(local_normal.x, local_normal.z) + FRAC_PI_2;
-        rotation = DQuat::from_axis_angle(local_normal, angle) * rotation;
+    if config.local_space() {
+        rotation = config.rotation * rotation;
     }
+
+    let tangent = tangent(subgizmo);
+    let normal = subgizmo.normal();
+    let mut forward = config.view_forward();
+    if config.left_handed {
+        forward *= -1.0;
+    }
+    let angle = f64::atan2(tangent.cross(forward).dot(normal), tangent.dot(forward));
+
+    // Rotate towards the camera, along the rotation axis.
+    rotation = DQuat::from_axis_angle(normal, angle) * rotation;
 
     DMat4::from_rotation_translation(rotation, config.translation)
 }

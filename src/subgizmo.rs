@@ -15,6 +15,12 @@ mod rotation;
 mod scale;
 mod translation;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) enum TransformKind {
+    Axis,
+    Plane,
+}
+
 pub(crate) trait SubGizmoState: Default + Copy + Clone + Send + Sync + 'static {}
 impl<T> WidgetData for T where T: SubGizmoState {}
 
@@ -35,10 +41,15 @@ pub(crate) struct SubGizmoConfig<T> {
 }
 
 pub(crate) trait SubGizmoBase: 'static {
+    /// Identifier for this subgizmo. It should be unique across all subgizmos.
     fn id(&self) -> Id;
+    /// Sets whether this subgizmo is currently focused
     fn set_focused(&mut self, focused: bool);
+    /// Sets whether this subgizmo is currently active
     fn set_active(&mut self, active: bool);
+    /// Returns true if this subgizmo is currently focused
     fn is_focused(&self) -> bool;
+    /// Returns true if this subgizmo is currently active
     fn is_active(&self) -> bool;
 }
 
@@ -65,8 +76,12 @@ impl<T: 'static> SubGizmoBase for SubGizmoConfig<T> {
 }
 
 pub(crate) trait SubGizmo: SubGizmoBase {
+    /// Pick the subgizmo based on pointer ray. If it is close enough to
+    /// the mouse pointer, distance from camera to the subgizmo is returned.
     fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64>;
+    /// Update the subgizmo based on pointer ray and interaction.
     fn update(&mut self, ui: &Ui, ray: Ray) -> Option<GizmoResult>;
+    /// Draw the subgizmo
     fn draw(&self, ui: &Ui);
 }
 
@@ -78,13 +93,13 @@ where
         id_source: impl Hash,
         config: GizmoConfig,
         direction: GizmoDirection,
-        kind: TransformKind,
+        transform_kind: TransformKind,
     ) -> Self {
         Self {
             id: Id::new(id_source),
             config,
             direction,
-            transform_kind: kind,
+            transform_kind,
             focused: false,
             active: false,
             opacity: 0.0,
@@ -143,10 +158,4 @@ where
         fun(&mut state);
         state.save(ui.ctx(), self.id);
     }
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum TransformKind {
-    Axis,
-    Plane,
 }

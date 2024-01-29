@@ -159,7 +159,7 @@ pub fn round_to_interval(val: f64, interval: f64) -> f64 {
 pub fn world_to_screen(viewport: Rect, mvp: DMat4, pos: DVec3) -> Option<Pos2> {
     let mut pos = mvp * DVec4::from((pos, 1.0));
 
-    if pos.w < 0.0 {
+    if pos.w < 1e-10 {
         return None;
     }
 

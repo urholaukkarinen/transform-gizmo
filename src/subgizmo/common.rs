@@ -6,6 +6,7 @@ use crate::painter::Painter3d;
 use crate::subgizmo::{SubGizmoConfig, SubGizmoState};
 use crate::{GizmoDirection, GizmoMode, Ray};
 use glam::{DMat4, DVec3};
+
 const ARROW_FADE: RangeInclusive<f64> = 0.95..=0.99;
 const PLANE_FADE: RangeInclusive<f64> = 0.70..=0.86;
 
