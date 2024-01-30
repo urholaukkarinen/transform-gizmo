@@ -178,7 +178,7 @@ pub(crate) fn draw_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui
     );
 
     let scale = plane_size(subgizmo) * 0.5;
-    let a = plane_binormal(subgizmo.direction) * scale;
+    let a = plane_bitangent(subgizmo.direction) * scale;
     let b = plane_tangent(subgizmo.direction) * scale;
     let origin = plane_local_origin(subgizmo);
 
@@ -222,7 +222,7 @@ pub(crate) fn draw_circle<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &U
     painter.circle(radius, stroke);
 }
 
-pub(crate) fn plane_binormal(direction: GizmoDirection) -> DVec3 {
+pub(crate) fn plane_bitangent(direction: GizmoDirection) -> DVec3 {
     match direction {
         GizmoDirection::X => DVec3::Y,
         GizmoDirection::Y => DVec3::Z,
@@ -249,7 +249,7 @@ pub(crate) fn plane_size<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> f64 
 pub(crate) fn plane_local_origin<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> DVec3 {
     let offset = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size * 0.5;
 
-    let a = plane_binormal(subgizmo.direction);
+    let a = plane_bitangent(subgizmo.direction);
     let b = plane_tangent(subgizmo.direction);
     (a + b) * offset as f64
 }

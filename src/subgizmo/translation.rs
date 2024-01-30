@@ -5,7 +5,7 @@ use crate::math::{intersect_plane, ray_to_ray, round_to_interval};
 
 use crate::subgizmo::common::{
     draw_arrow, draw_circle, draw_plane, inner_circle_radius, pick_arrow, pick_circle, pick_plane,
-    plane_binormal, plane_global_origin, plane_tangent,
+    plane_bitangent, plane_global_origin, plane_tangent,
 };
 use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoState, TransformKind};
 use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
@@ -129,20 +129,20 @@ fn snap_translation_vector(subgizmo: &SubGizmoConfig<TranslationState>, new_delt
 }
 
 fn snap_translation_plane(subgizmo: &SubGizmoConfig<TranslationState>, new_delta: DVec3) -> DVec3 {
-    let mut binormal = plane_binormal(subgizmo.direction);
+    let mut bitangent = plane_bitangent(subgizmo.direction);
     let mut tangent = plane_tangent(subgizmo.direction);
     if subgizmo.config.local_space() {
-        binormal = subgizmo.config.rotation * binormal;
+        bitangent = subgizmo.config.rotation * bitangent;
         tangent = subgizmo.config.rotation * tangent;
     }
-    let cb = new_delta.cross(-binormal);
+    let cb = new_delta.cross(-bitangent);
     let ct = new_delta.cross(tangent);
     let lb = cb.length();
     let lt = ct.length();
     let n = subgizmo.normal();
 
     if lb > 1e-5 && lt > 1e-5 {
-        binormal * round_to_interval(lt, subgizmo.config.snap_distance as f64) * (ct / lt).dot(n)
+        bitangent * round_to_interval(lt, subgizmo.config.snap_distance as f64) * (ct / lt).dot(n)
             + tangent
                 * round_to_interval(lb, subgizmo.config.snap_distance as f64)
                 * (cb / lb).dot(n)

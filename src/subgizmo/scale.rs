@@ -5,7 +5,7 @@ use crate::math::{round_to_interval, world_to_screen};
 
 use crate::subgizmo::common::{
     draw_arrow, draw_circle, draw_plane, inner_circle_radius, outer_circle_radius, pick_arrow,
-    pick_circle, pick_plane, plane_binormal, plane_tangent,
+    pick_circle, pick_plane, plane_bitangent, plane_tangent,
 };
 use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoState, TransformKind};
 use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
@@ -56,7 +56,7 @@ impl SubGizmo for ScaleSubGizmo {
             (TransformKind::Axis, _) => self.local_normal(),
             (TransformKind::Plane, GizmoDirection::Screen) => DVec3::ONE,
             (TransformKind::Plane, _) => {
-                (plane_binormal(self.direction) + plane_tangent(self.direction)).normalize()
+                (plane_bitangent(self.direction) + plane_tangent(self.direction)).normalize()
             }
         };
 
