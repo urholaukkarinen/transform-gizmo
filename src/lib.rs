@@ -241,8 +241,14 @@ impl Gizmo {
     }
 
     /// Create subgizmos for translation
-    fn new_translation(&self) -> [TranslationSubGizmo; 6] {
+    fn new_translation(&self) -> [TranslationSubGizmo; 7] {
         [
+            TranslationSubGizmo::new(
+                self.id.with("txs"),
+                self.config,
+                GizmoDirection::Screen,
+                TransformKind::Plane,
+            ),
             TranslationSubGizmo::new(
                 self.id.with("tx"),
                 self.config,
@@ -283,8 +289,14 @@ impl Gizmo {
     }
 
     /// Create subgizmos for scale
-    fn new_scale(&self) -> [ScaleSubGizmo; 6] {
+    fn new_scale(&self) -> [ScaleSubGizmo; 7] {
         [
+            ScaleSubGizmo::new(
+                self.id.with("txs"),
+                self.config,
+                GizmoDirection::Screen,
+                TransformKind::Plane,
+            ),
             ScaleSubGizmo::new(
                 self.id.with("sx"),
                 self.config,

@@ -4,18 +4,26 @@ use glam::DVec3;
 use crate::math::{round_to_interval, world_to_screen};
 
 use crate::subgizmo::common::{
-    draw_arrow, draw_plane, pick_arrow, pick_plane, plane_binormal, plane_tangent,
+    draw_arrow, draw_circle, draw_plane, inner_circle_radius, outer_circle_radius, pick_arrow,
+    pick_circle, pick_plane, plane_binormal, plane_tangent,
 };
 use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoState, TransformKind};
-use crate::{GizmoMode, GizmoResult, Ray};
+use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
 
 pub(crate) type ScaleSubGizmo = SubGizmoConfig<ScaleState>;
 
 impl SubGizmo for ScaleSubGizmo {
     fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
-        let pick_result = match self.transform_kind {
-            TransformKind::Axis => pick_arrow(self, ray),
-            TransformKind::Plane => pick_plane(self, ray),
+        let pick_result = match (self.transform_kind, self.direction) {
+            (TransformKind::Axis, _) => pick_arrow(self, ray),
+            (TransformKind::Plane, GizmoDirection::Screen) => {
+                let mut result = pick_circle(self, ray, inner_circle_radius(self), true);
+                if !result.picked {
+                    result = pick_circle(self, ray, outer_circle_radius(self), false);
+                }
+                result
+            }
+            (TransformKind::Plane, _) => pick_plane(self, ray),
         };
 
         let start_delta = distance_from_origin_2d(self, ui)?;
@@ -44,12 +52,12 @@ impl SubGizmo for ScaleSubGizmo {
         }
         delta = delta.max(1e-4) - 1.0;
 
-        let direction = if self.transform_kind == TransformKind::Plane {
-            let binormal = plane_binormal(self.direction);
-            let tangent = plane_tangent(self.direction);
-            (binormal + tangent).normalize()
-        } else {
-            self.local_normal()
+        let direction = match (self.transform_kind, self.direction) {
+            (TransformKind::Axis, _) => self.local_normal(),
+            (TransformKind::Plane, GizmoDirection::Screen) => DVec3::ONE,
+            (TransformKind::Plane, _) => {
+                (plane_binormal(self.direction) + plane_tangent(self.direction)).normalize()
+            }
         };
 
         let offset = DVec3::ONE + (direction * delta);
@@ -65,9 +73,13 @@ impl SubGizmo for ScaleSubGizmo {
     }
 
     fn draw(&self, ui: &Ui) {
-        match self.transform_kind {
-            TransformKind::Axis => draw_arrow(self, ui),
-            TransformKind::Plane => draw_plane(self, ui),
+        match (self.transform_kind, self.direction) {
+            (TransformKind::Axis, _) => draw_arrow(self, ui),
+            (TransformKind::Plane, GizmoDirection::Screen) => {
+                draw_circle(self, ui, inner_circle_radius(self));
+                draw_circle(self, ui, outer_circle_radius(self));
+            }
+            (TransformKind::Plane, _) => draw_plane(self, ui),
         }
     }
 }

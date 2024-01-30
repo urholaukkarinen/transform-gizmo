@@ -4,19 +4,22 @@ use glam::DVec3;
 use crate::math::{intersect_plane, ray_to_ray, round_to_interval};
 
 use crate::subgizmo::common::{
-    draw_arrow, draw_plane, pick_arrow, pick_plane, plane_binormal, plane_global_origin,
-    plane_tangent,
+    draw_arrow, draw_circle, draw_plane, inner_circle_radius, pick_arrow, pick_circle, pick_plane,
+    plane_binormal, plane_global_origin, plane_tangent,
 };
 use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoState, TransformKind};
-use crate::{GizmoMode, GizmoResult, Ray};
+use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
 
 pub(crate) type TranslationSubGizmo = SubGizmoConfig<TranslationState>;
 
 impl SubGizmo for TranslationSubGizmo {
     fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
-        let pick_result = match self.transform_kind {
-            TransformKind::Axis => pick_arrow(self, ray),
-            TransformKind::Plane => pick_plane(self, ray),
+        let pick_result = match (self.transform_kind, self.direction) {
+            (TransformKind::Axis, _) => pick_arrow(self, ray),
+            (TransformKind::Plane, GizmoDirection::Screen) => {
+                pick_circle(self, ray, inner_circle_radius(self), true)
+            }
+            (TransformKind::Plane, _) => pick_plane(self, ray),
         };
 
         self.opacity = pick_result.visibility as _;
@@ -71,9 +74,12 @@ impl SubGizmo for TranslationSubGizmo {
     }
 
     fn draw(&self, ui: &Ui) {
-        match self.transform_kind {
-            TransformKind::Axis => draw_arrow(self, ui),
-            TransformKind::Plane => draw_plane(self, ui),
+        match (self.transform_kind, self.direction) {
+            (TransformKind::Axis, _) => draw_arrow(self, ui),
+            (TransformKind::Plane, GizmoDirection::Screen) => {
+                draw_circle(self, ui, inner_circle_radius(self));
+            }
+            (TransformKind::Plane, _) => draw_plane(self, ui),
         }
     }
 }

@@ -5,6 +5,7 @@ use glam::{DMat3, DMat4, DQuat, DVec2, DVec3};
 
 use crate::math::{ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen};
 use crate::painter::Painter3d;
+use crate::subgizmo::common::outer_circle_radius;
 use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoState};
 use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
 
@@ -12,7 +13,7 @@ pub(crate) type RotationSubGizmo = SubGizmoConfig<RotationState>;
 
 impl SubGizmo for RotationSubGizmo {
     fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
-        let radius = arc_radius(self) as f64;
+        let radius = arc_radius(self);
         let config = self.config;
         let origin = config.translation;
         let normal = self.normal();
@@ -105,7 +106,7 @@ impl SubGizmo for RotationSubGizmo {
         let color = self.color();
         let stroke = (config.visuals.stroke_width, color);
 
-        let radius = arc_radius(self) as f64;
+        let radius = arc_radius(self);
 
         if !self.active {
             let angle = arc_angle(self);
@@ -220,7 +221,7 @@ fn rotation_angle(subgizmo: &SubGizmoConfig<RotationState>, ui: &Ui) -> Option<f
     Some(angle)
 }
 
-fn tangent(subgizmo: &SubGizmoConfig<RotationState>) -> DVec3 {
+pub fn tangent(subgizmo: &SubGizmoConfig<RotationState>) -> DVec3 {
     let mut tangent = match subgizmo.direction {
         GizmoDirection::X | GizmoDirection::Y => DVec3::Z,
         GizmoDirection::Z => -DVec3::Y,
@@ -234,15 +235,12 @@ fn tangent(subgizmo: &SubGizmoConfig<RotationState>) -> DVec3 {
     tangent
 }
 
-fn arc_radius(subgizmo: &SubGizmoConfig<RotationState>) -> f32 {
-    let mut radius = subgizmo.config.visuals.gizmo_size;
-
+fn arc_radius(subgizmo: &SubGizmoConfig<RotationState>) -> f64 {
     if subgizmo.direction == GizmoDirection::Screen {
-        // Screen axis should be a little bit larger
-        radius += subgizmo.config.visuals.stroke_width + 5.0;
+        outer_circle_radius(subgizmo)
+    } else {
+        (subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size) as f64
     }
-
-    subgizmo.config.scale_factor * radius
 }
 
 #[derive(Default, Debug, Copy, Clone)]

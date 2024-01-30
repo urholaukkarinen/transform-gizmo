@@ -5,7 +5,7 @@ use std::ops::RangeInclusive;
 use crate::painter::Painter3d;
 use crate::subgizmo::{SubGizmoConfig, SubGizmoState};
 use crate::{GizmoDirection, GizmoMode, Ray};
-use glam::{DMat4, DVec3};
+use glam::{DMat3, DMat4, DQuat, DVec3};
 
 const ARROW_FADE: RangeInclusive<f64> = 0.95..=0.99;
 const PLANE_FADE: RangeInclusive<f64> = 0.70..=0.86;
@@ -19,8 +19,11 @@ pub(crate) struct PickResult {
 }
 
 pub(crate) fn pick_arrow<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ray: Ray) -> PickResult {
-    let origin = subgizmo.config.translation;
+    let width = (subgizmo.config.scale_factor * subgizmo.config.visuals.stroke_width) as f64;
+
     let dir = subgizmo.normal();
+    let start = subgizmo.config.translation + (dir * (width * 0.5 + inner_circle_radius(subgizmo)));
+
     let length = (subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size) as f64;
 
     let ray_length = 1e+14;
@@ -28,12 +31,12 @@ pub(crate) fn pick_arrow<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ray: Ra
     let (ray_t, subgizmo_t) = segment_to_segment(
         ray.origin,
         ray.origin + ray.direction * ray_length,
-        origin,
-        origin + dir * length,
+        start,
+        start + dir * length,
     );
 
     let ray_point = ray.origin + ray.direction * ray_length * ray_t;
-    let subgizmo_point = origin + dir * length * subgizmo_t;
+    let subgizmo_point = start + dir * length * subgizmo_t;
     let dist = (ray_point - subgizmo_point).length();
 
     let dot = subgizmo.config.gizmo_view_forward.dot(dir).abs();
@@ -79,8 +82,37 @@ pub(crate) fn pick_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ray: Ra
     }
 }
 
+pub(crate) fn pick_circle<T: SubGizmoState>(
+    subgizmo: &SubGizmoConfig<T>,
+    ray: Ray,
+    radius: f64,
+    filled: bool,
+) -> PickResult {
+    let config = &subgizmo.config;
+    let origin = config.translation;
+    let normal = subgizmo.normal();
+
+    let (t, dist_from_gizmo_origin) =
+        ray_to_plane_origin(normal, origin, ray.origin, ray.direction);
+
+    let hit_pos = ray.origin + ray.direction * t;
+
+    let picked = if filled {
+        dist_from_gizmo_origin <= radius + config.focus_distance as f64
+    } else {
+        (dist_from_gizmo_origin - radius).abs() <= config.focus_distance as f64
+    };
+
+    PickResult {
+        subgizmo_point: hit_pos,
+        visibility: 1.0,
+        picked,
+        t,
+    }
+}
+
 pub(crate) fn draw_arrow<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui) {
-    if subgizmo.opacity <= 0.0001 {
+    if subgizmo.opacity <= 1e-4 {
         return;
     }
 
@@ -99,11 +131,11 @@ pub(crate) fn draw_arrow<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui
     );
 
     let direction = subgizmo.local_normal();
-    let width = subgizmo.config.scale_factor * subgizmo.config.visuals.stroke_width;
-    let length = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size;
+    let width = (subgizmo.config.scale_factor * subgizmo.config.visuals.stroke_width) as f64;
+    let length = (subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size) as f64;
 
-    let start = direction * width as f64;
-    let end = direction * length as f64;
+    let start = direction * (width * 0.5 + inner_circle_radius(subgizmo));
+    let end = direction * length;
     painter.line_segment(start, end, (subgizmo.config.visuals.stroke_width, color));
 
     if subgizmo.config.mode == GizmoMode::Scale {
@@ -120,14 +152,14 @@ pub(crate) fn draw_arrow<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui
 
         painter.arrow(
             end,
-            end + direction * arrow_length as f64,
+            end + direction * arrow_length,
             (subgizmo.config.visuals.stroke_width * 1.2, color),
         );
     }
 }
 
 pub(crate) fn draw_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui) {
-    if subgizmo.opacity <= 0.0001 {
+    if subgizmo.opacity <= 1e-4 {
         return;
     }
 
@@ -162,6 +194,34 @@ pub(crate) fn draw_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui
     );
 }
 
+pub(crate) fn draw_circle<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui, radius: f64) {
+    if subgizmo.opacity <= 1e-4 {
+        return;
+    }
+
+    let color = subgizmo.color().gamma_multiply(subgizmo.opacity);
+
+    let rotation = {
+        let forward = subgizmo.config.view_forward();
+        let right = subgizmo.config.view_right();
+        let up = subgizmo.config.view_up();
+
+        DQuat::from_mat3(&DMat3::from_cols(up, -forward, -right))
+    };
+
+    let transform = DMat4::from_rotation_translation(rotation, subgizmo.config.translation);
+
+    let painter = Painter3d::new(
+        ui.painter().clone(),
+        subgizmo.config.view_projection * transform,
+        subgizmo.config.viewport,
+    );
+
+    let stroke = (subgizmo.config.visuals.stroke_width, color);
+
+    painter.circle(radius, stroke);
+}
+
 pub(crate) fn plane_binormal(direction: GizmoDirection) -> DVec3 {
     match direction {
         GizmoDirection::X => DVec3::Y,
@@ -187,7 +247,7 @@ pub(crate) fn plane_size<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> f64 
 }
 
 pub(crate) fn plane_local_origin<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> DVec3 {
-    let offset = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size * 0.4;
+    let offset = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size * 0.5;
 
     let a = plane_binormal(subgizmo.direction);
     let b = plane_tangent(subgizmo.direction);
@@ -200,4 +260,16 @@ pub(crate) fn plane_global_origin<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>
         origin = subgizmo.config.rotation * origin;
     }
     origin + subgizmo.config.translation
+}
+
+/// Radius to use for inner circle subgizmos
+pub(crate) fn inner_circle_radius<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> f64 {
+    (subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size) as f64 * 0.2
+}
+
+/// Radius to use for outer circle subgizmos
+pub(crate) fn outer_circle_radius<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> f64 {
+    (subgizmo.config.scale_factor
+        * (subgizmo.config.visuals.gizmo_size + subgizmo.config.visuals.stroke_width * 5.0))
+        as f64
 }
