@@ -585,7 +585,8 @@ impl GizmoConfig {
 
     /// Whether local orientation is used
     pub(crate) fn local_space(&self) -> bool {
-        self.orientation == GizmoOrientation::Local
+        // Scale mode only works in local space
+        self.orientation == GizmoOrientation::Local || self.mode == GizmoMode::Scale
     }
 }
 
