@@ -23,32 +23,13 @@ impl Painter3d {
         }
     }
 
-    pub fn arc(
-        &self,
-        radius: f64,
-        start_angle: f64,
-        end_angle: f64,
-        stroke: impl Into<Stroke>,
-    ) -> ShapeIdx {
-        let mut closed = false;
-        let mut angle = end_angle - start_angle;
+    fn arc_points(&self, radius: f64, start_angle: f64, end_angle: f64) -> Vec<Pos2> {
+        let angle = f64::clamp(end_angle - start_angle, -TAU, TAU);
 
-        if angle <= -TAU {
-            angle = -TAU;
-            closed = true;
-        } else if angle >= TAU {
-            angle = TAU;
-            closed = true;
-        }
-
-        let mut step_count = steps(angle);
+        let step_count = steps(angle);
         let mut points = Vec::with_capacity(step_count);
 
         let step_size = angle / (step_count - 1) as f64;
-
-        if closed {
-            step_count -= 1;
-        }
 
         for step in (0..step_count).map(|i| step_size * i as f64) {
             let x = f64::cos(start_angle + step) * radius;
@@ -57,20 +38,45 @@ impl Painter3d {
             points.push(DVec3::new(x, 0.0, z));
         }
 
-        let points = points
+        points
             .into_iter()
             .filter_map(|point| self.vec3_to_pos2(point))
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>()
+    }
 
-        self.painter.add(if closed {
-            Shape::closed_line(points, stroke)
+    pub fn arc(
+        &self,
+        radius: f64,
+        start_angle: f64,
+        end_angle: f64,
+        stroke: impl Into<Stroke>,
+    ) -> ShapeIdx {
+        let mut points = self.arc_points(radius, start_angle, end_angle);
+
+        let closed = points
+            .first()
+            .zip(points.last())
+            .filter(|(first, last)| first.distance(**last) < 1e-2)
+            .is_some();
+
+        if closed {
+            points.pop();
+            self.painter.add(Shape::closed_line(points, stroke))
         } else {
-            Shape::line(points, stroke)
-        })
+            self.painter.add(Shape::line(points, stroke))
+        }
     }
 
     pub fn circle(&self, radius: f64, stroke: impl Into<Stroke>) -> ShapeIdx {
         self.arc(radius, 0.0, TAU, stroke)
+    }
+
+    pub fn filled_circle(&self, radius: f64, color: Color32) -> ShapeIdx {
+        let mut points = self.arc_points(radius, 0.0, TAU);
+        points.pop();
+
+        self.painter
+            .add(Shape::convex_polygon(points, color, Stroke::NONE))
     }
 
     pub fn line_segment(&self, from: DVec3, to: DVec3, stroke: impl Into<Stroke>) {

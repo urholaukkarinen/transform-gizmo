@@ -28,11 +28,14 @@ use std::hash::Hash;
 use std::ops::Sub;
 
 use crate::math::{screen_to_world, world_to_screen};
-use egui::{Color32, Context, Id, PointerButton, Rect, Sense, Ui};
+use egui::{Color32, Context, Id, PointerButton, Pos2, Rect, Sense, Ui};
 use glam::{DMat4, DQuat, DVec3, Mat4, Quat, Vec3, Vec4Swizzles};
 
+use crate::subgizmo::rotation::RotationParams;
+use crate::subgizmo::scale::ScaleParams;
+use crate::subgizmo::translation::TranslationParams;
 use crate::subgizmo::{
-    RotationSubGizmo, ScaleSubGizmo, SubGizmo, TransformKind, TranslationSubGizmo,
+    ArcballSubGizmo, RotationSubGizmo, ScaleSubGizmo, SubGizmo, TransformKind, TranslationSubGizmo,
 };
 
 mod math;
@@ -136,7 +139,10 @@ impl Gizmo {
 
         // Choose subgizmos based on the gizmo mode
         match self.config.mode {
-            GizmoMode::Rotate => self.add_subgizmos(self.new_rotation()),
+            GizmoMode::Rotate => {
+                self.add_subgizmos(self.new_rotation());
+                self.add_subgizmos(self.new_arcball());
+            }
             GizmoMode::Translate => self.add_subgizmos(self.new_translation()),
             GizmoMode::Scale => self.add_subgizmos(self.new_scale()),
         };
@@ -182,7 +188,7 @@ impl Gizmo {
 
         if let Some((_, result)) = active_subgizmo.zip(result) {
             self.config.translation = Vec3::from(result.translation).as_dvec3();
-            self.config.rotation = Quat::from(result.rotation).as_f64();
+            self.config.rotation = Quat::from(result.rotation).as_dquat();
             self.config.scale = Vec3::from(result.scale).as_dvec3();
         }
 
@@ -193,8 +199,8 @@ impl Gizmo {
         result
     }
 
-    fn draw_subgizmos(&self, ui: &mut Ui, state: &mut GizmoState) {
-        for subgizmo in &self.subgizmos {
+    fn draw_subgizmos(&mut self, ui: &mut Ui, state: &mut GizmoState) {
+        for subgizmo in &mut self.subgizmos {
             if state.active_subgizmo_id.is_none() || subgizmo.is_active() {
                 subgizmo.draw(ui);
             }
@@ -210,116 +216,165 @@ impl Gizmo {
             .map(|(_, subgizmo)| subgizmo)
     }
 
+    /// Create arcball subgizmo
+    fn new_arcball(&self) -> [ArcballSubGizmo; 1] {
+        [ArcballSubGizmo::new(self.id.with("arc"), self.config, ())]
+    }
+
     /// Create subgizmos for rotation
     fn new_rotation(&self) -> [RotationSubGizmo; 4] {
         [
             RotationSubGizmo::new(
                 self.id.with("rx"),
                 self.config,
-                GizmoDirection::X,
-                TransformKind::Axis,
+                RotationParams {
+                    direction: GizmoDirection::X,
+                },
             ),
             RotationSubGizmo::new(
                 self.id.with("ry"),
                 self.config,
-                GizmoDirection::Y,
-                TransformKind::Axis,
+                RotationParams {
+                    direction: GizmoDirection::Y,
+                },
             ),
             RotationSubGizmo::new(
                 self.id.with("rz"),
                 self.config,
-                GizmoDirection::Z,
-                TransformKind::Axis,
+                RotationParams {
+                    direction: GizmoDirection::Z,
+                },
             ),
             RotationSubGizmo::new(
                 self.id.with("rs"),
                 self.config,
-                GizmoDirection::Screen,
-                TransformKind::Axis,
+                RotationParams {
+                    direction: GizmoDirection::View,
+                },
             ),
         ]
     }
 
     /// Create subgizmos for translation
-    fn new_translation(&self) -> [TranslationSubGizmo; 6] {
+    fn new_translation(&self) -> [TranslationSubGizmo; 7] {
         [
+            TranslationSubGizmo::new(
+                self.id.with("txs"),
+                self.config,
+                TranslationParams {
+                    direction: GizmoDirection::View,
+                    transform_kind: TransformKind::Plane,
+                },
+            ),
             TranslationSubGizmo::new(
                 self.id.with("tx"),
                 self.config,
-                GizmoDirection::X,
-                TransformKind::Axis,
+                TranslationParams {
+                    direction: GizmoDirection::X,
+                    transform_kind: TransformKind::Axis,
+                },
             ),
             TranslationSubGizmo::new(
                 self.id.with("ty"),
                 self.config,
-                GizmoDirection::Y,
-                TransformKind::Axis,
+                TranslationParams {
+                    direction: GizmoDirection::Y,
+                    transform_kind: TransformKind::Axis,
+                },
             ),
             TranslationSubGizmo::new(
                 self.id.with("tz"),
                 self.config,
-                GizmoDirection::Z,
-                TransformKind::Axis,
+                TranslationParams {
+                    direction: GizmoDirection::Z,
+                    transform_kind: TransformKind::Axis,
+                },
             ),
             TranslationSubGizmo::new(
                 self.id.with("tyz"),
                 self.config,
-                GizmoDirection::X,
-                TransformKind::Plane,
+                TranslationParams {
+                    direction: GizmoDirection::X,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
             TranslationSubGizmo::new(
                 self.id.with("txz"),
                 self.config,
-                GizmoDirection::Y,
-                TransformKind::Plane,
+                TranslationParams {
+                    direction: GizmoDirection::Y,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
             TranslationSubGizmo::new(
                 self.id.with("txy"),
                 self.config,
-                GizmoDirection::Z,
-                TransformKind::Plane,
+                TranslationParams {
+                    direction: GizmoDirection::Z,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
         ]
     }
 
     /// Create subgizmos for scale
-    fn new_scale(&self) -> [ScaleSubGizmo; 6] {
+    fn new_scale(&self) -> [ScaleSubGizmo; 7] {
         [
+            ScaleSubGizmo::new(
+                self.id.with("txs"),
+                self.config,
+                ScaleParams {
+                    direction: GizmoDirection::View,
+                    transform_kind: TransformKind::Plane,
+                },
+            ),
             ScaleSubGizmo::new(
                 self.id.with("sx"),
                 self.config,
-                GizmoDirection::X,
-                TransformKind::Axis,
+                ScaleParams {
+                    direction: GizmoDirection::X,
+                    transform_kind: TransformKind::Axis,
+                },
             ),
             ScaleSubGizmo::new(
                 self.id.with("sy"),
                 self.config,
-                GizmoDirection::Y,
-                TransformKind::Axis,
+                ScaleParams {
+                    direction: GizmoDirection::Y,
+                    transform_kind: TransformKind::Axis,
+                },
             ),
             ScaleSubGizmo::new(
                 self.id.with("sz"),
                 self.config,
-                GizmoDirection::Z,
-                TransformKind::Axis,
+                ScaleParams {
+                    direction: GizmoDirection::Z,
+                    transform_kind: TransformKind::Axis,
+                },
             ),
             ScaleSubGizmo::new(
                 self.id.with("syz"),
                 self.config,
-                GizmoDirection::X,
-                TransformKind::Plane,
+                ScaleParams {
+                    direction: GizmoDirection::X,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
             ScaleSubGizmo::new(
                 self.id.with("sxz"),
                 self.config,
-                GizmoDirection::Y,
-                TransformKind::Plane,
+                ScaleParams {
+                    direction: GizmoDirection::Y,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
             ScaleSubGizmo::new(
                 self.id.with("sxy"),
                 self.config,
-                GizmoDirection::Z,
-                TransformKind::Plane,
+                ScaleParams {
+                    direction: GizmoDirection::Z,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
         ]
     }
@@ -333,15 +388,19 @@ impl Gizmo {
 
     /// Calculate a world space ray from current mouse position
     fn pointer_ray(&self, ui: &Ui) -> Option<Ray> {
-        let hover = ui.input(|i| i.pointer.hover_pos())?;
+        let screen_pos = ui.input(|i| i.pointer.hover_pos())?;
 
         let mat = self.config.view_projection.inverse();
-        let origin = screen_to_world(self.config.viewport, mat, hover, -1.0);
-        let target = screen_to_world(self.config.viewport, mat, hover, 1.0);
+        let origin = screen_to_world(self.config.viewport, mat, screen_pos, -1.0);
+        let target = screen_to_world(self.config.viewport, mat, screen_pos, 1.0);
 
         let direction = target.sub(origin).normalize();
 
-        Some(Ray { origin, direction })
+        Some(Ray {
+            screen_pos,
+            origin,
+            direction,
+        })
     }
 }
 
@@ -357,7 +416,7 @@ pub struct GizmoResult {
     /// Mode of the active subgizmo
     pub mode: GizmoMode,
     /// Total scale, rotation or translation of the current gizmo activation, depending on mode
-    pub value: [f32; 3],
+    pub value: Option<[f32; 3]>,
 }
 
 impl GizmoResult {
@@ -400,8 +459,8 @@ pub enum GizmoDirection {
     Y,
     /// Gizmo points in the Z-direction
     Z,
-    /// Gizmo points towards the screen
-    Screen,
+    /// Gizmo points in the view direction
+    View,
 }
 
 /// Controls the visual style of the gizmo
@@ -413,13 +472,13 @@ pub struct GizmoVisuals {
     pub y_color: Color32,
     /// Color of the z axis
     pub z_color: Color32,
-    /// Color of the screen direction axis
+    /// Color of the forward axis
     pub s_color: Color32,
     /// Alpha of the gizmo color when inactive
     pub inactive_alpha: f32,
     /// Alpha of the gizmo color when highlighted/active
     pub highlight_alpha: f32,
-    /// Color to use for highlighted and active axes. By default the axis color is used with `highlight_alpha`
+    /// Color to use for highlighted and active axes. By default, the axis color is used with `highlight_alpha`
     pub highlight_color: Option<Color32>,
     /// Width (thickness) of the gizmo strokes
     pub stroke_width: f32,
@@ -556,12 +615,14 @@ impl GizmoConfig {
 
     /// Whether local orientation is used
     pub(crate) fn local_space(&self) -> bool {
+        // Scale mode only works in local space
         self.orientation == GizmoOrientation::Local || self.mode == GizmoMode::Scale
     }
 }
 
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct Ray {
+    screen_pos: Pos2,
     origin: DVec3,
     direction: DVec3,
 }
