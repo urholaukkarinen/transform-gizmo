@@ -6,10 +6,12 @@ use glam::DVec3;
 
 use crate::{GizmoConfig, GizmoDirection, GizmoResult, Ray, WidgetData};
 
+pub(crate) use arcball::ArcballSubGizmo;
 pub(crate) use rotation::RotationSubGizmo;
 pub(crate) use scale::ScaleSubGizmo;
 pub(crate) use translation::TranslationSubGizmo;
 
+mod arcball;
 mod common;
 mod rotation;
 mod scale;
@@ -53,7 +55,7 @@ pub(crate) trait SubGizmoBase: 'static {
     fn is_active(&self) -> bool;
 }
 
-impl<T: 'static> SubGizmoBase for SubGizmoConfig<T> {
+impl<T: SubGizmoState> SubGizmoBase for SubGizmoConfig<T> {
     fn id(&self) -> Id {
         self.id
     }
@@ -82,7 +84,7 @@ pub(crate) trait SubGizmo: SubGizmoBase {
     /// Update the subgizmo based on pointer ray and interaction.
     fn update(&mut self, ui: &Ui, ray: Ray) -> Option<GizmoResult>;
     /// Draw the subgizmo
-    fn draw(&self, ui: &Ui);
+    fn draw(&mut self, ui: &Ui);
 }
 
 impl<T> SubGizmoConfig<T>

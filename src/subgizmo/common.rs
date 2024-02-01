@@ -4,7 +4,7 @@ use std::ops::RangeInclusive;
 
 use crate::painter::Painter3d;
 use crate::subgizmo::{SubGizmoConfig, SubGizmoState};
-use crate::{GizmoDirection, GizmoMode, Ray};
+use crate::{GizmoDirection, Ray};
 use glam::{DMat3, DMat4, DQuat, DVec3};
 
 const ARROW_FADE: RangeInclusive<f64> = 0.95..=0.99;
@@ -16,6 +16,12 @@ pub(crate) struct PickResult {
     pub visibility: f64,
     pub picked: bool,
     pub t: f64,
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub(crate) enum ArrowheadStyle {
+    Cone,
+    Square,
 }
 
 pub(crate) fn pick_arrow<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ray: Ray) -> PickResult {
@@ -111,7 +117,11 @@ pub(crate) fn pick_circle<T: SubGizmoState>(
     }
 }
 
-pub(crate) fn draw_arrow<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui) {
+pub(crate) fn draw_arrow<T: SubGizmoState>(
+    subgizmo: &SubGizmoConfig<T>,
+    ui: &Ui,
+    arrowhead_style: ArrowheadStyle,
+) {
     if subgizmo.opacity <= 1e-4 {
         return;
     }
@@ -138,23 +148,26 @@ pub(crate) fn draw_arrow<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui
     let end = direction * length;
     painter.line_segment(start, end, (subgizmo.config.visuals.stroke_width, color));
 
-    if subgizmo.config.mode == GizmoMode::Scale {
-        let end_stroke_width = subgizmo.config.visuals.stroke_width * 2.5;
-        let end_length = subgizmo.config.scale_factor * end_stroke_width;
+    match arrowhead_style {
+        ArrowheadStyle::Square => {
+            let end_stroke_width = subgizmo.config.visuals.stroke_width * 2.5;
+            let end_length = subgizmo.config.scale_factor * end_stroke_width;
 
-        painter.line_segment(
-            end,
-            end + direction * end_length as f64,
-            (end_stroke_width, color),
-        );
-    } else {
-        let arrow_length = width * 2.4;
+            painter.line_segment(
+                end,
+                end + direction * end_length as f64,
+                (end_stroke_width, color),
+            );
+        }
+        ArrowheadStyle::Cone => {
+            let arrow_length = width * 2.4;
 
-        painter.arrow(
-            end,
-            end + direction * arrow_length,
-            (subgizmo.config.visuals.stroke_width * 1.2, color),
-        );
+            painter.arrow(
+                end,
+                end + direction * arrow_length,
+                (subgizmo.config.visuals.stroke_width * 1.2, color),
+            );
+        }
     }
 }
 
@@ -194,7 +207,12 @@ pub(crate) fn draw_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui
     );
 }
 
-pub(crate) fn draw_circle<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui, radius: f64) {
+pub(crate) fn draw_circle<T: SubGizmoState>(
+    subgizmo: &SubGizmoConfig<T>,
+    ui: &Ui,
+    radius: f64,
+    filled: bool,
+) {
     if subgizmo.opacity <= 1e-4 {
         return;
     }
@@ -217,9 +235,11 @@ pub(crate) fn draw_circle<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &U
         subgizmo.config.viewport,
     );
 
-    let stroke = (subgizmo.config.visuals.stroke_width, color);
-
-    painter.circle(radius, stroke);
+    if filled {
+        painter.filled_circle(radius, color);
+    } else {
+        painter.circle(radius, (subgizmo.config.visuals.stroke_width, color));
+    }
 }
 
 pub(crate) fn plane_bitangent(direction: GizmoDirection) -> DVec3 {
@@ -270,6 +290,6 @@ pub(crate) fn inner_circle_radius<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>
 /// Radius to use for outer circle subgizmos
 pub(crate) fn outer_circle_radius<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> f64 {
     (subgizmo.config.scale_factor
-        * (subgizmo.config.visuals.gizmo_size + subgizmo.config.visuals.stroke_width * 5.0))
+        * (subgizmo.config.visuals.gizmo_size + subgizmo.config.visuals.stroke_width + 5.0))
         as f64
 }

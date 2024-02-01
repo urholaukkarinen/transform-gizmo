@@ -92,7 +92,7 @@ impl SubGizmo for RotationSubGizmo {
         })
     }
 
-    fn draw(&self, ui: &Ui) {
+    fn draw(&mut self, ui: &Ui) {
         let state = self.state(ui);
         let config = self.config;
 

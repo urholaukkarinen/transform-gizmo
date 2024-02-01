@@ -5,7 +5,7 @@ use crate::math::{intersect_plane, ray_to_ray, round_to_interval};
 
 use crate::subgizmo::common::{
     draw_arrow, draw_circle, draw_plane, inner_circle_radius, pick_arrow, pick_circle, pick_plane,
-    plane_bitangent, plane_global_origin, plane_tangent,
+    plane_bitangent, plane_global_origin, plane_tangent, ArrowheadStyle,
 };
 use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoState, TransformKind};
 use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
@@ -73,11 +73,11 @@ impl SubGizmo for TranslationSubGizmo {
         })
     }
 
-    fn draw(&self, ui: &Ui) {
+    fn draw(&mut self, ui: &Ui) {
         match (self.transform_kind, self.direction) {
-            (TransformKind::Axis, _) => draw_arrow(self, ui),
+            (TransformKind::Axis, _) => draw_arrow(self, ui, ArrowheadStyle::Cone),
             (TransformKind::Plane, GizmoDirection::Screen) => {
-                draw_circle(self, ui, inner_circle_radius(self));
+                draw_circle(self, ui, inner_circle_radius(self), false);
             }
             (TransformKind::Plane, _) => draw_plane(self, ui),
         }

@@ -28,11 +28,11 @@ use std::hash::Hash;
 use std::ops::Sub;
 
 use crate::math::{screen_to_world, world_to_screen};
-use egui::{Color32, Context, Id, PointerButton, Rect, Sense, Ui};
+use egui::{Color32, Context, Id, PointerButton, Pos2, Rect, Sense, Ui};
 use glam::{DMat4, DQuat, DVec3, Mat4, Quat, Vec3, Vec4Swizzles};
 
 use crate::subgizmo::{
-    RotationSubGizmo, ScaleSubGizmo, SubGizmo, TransformKind, TranslationSubGizmo,
+    ArcballSubGizmo, RotationSubGizmo, ScaleSubGizmo, SubGizmo, TransformKind, TranslationSubGizmo,
 };
 
 mod math;
@@ -136,7 +136,10 @@ impl Gizmo {
 
         // Choose subgizmos based on the gizmo mode
         match self.config.mode {
-            GizmoMode::Rotate => self.add_subgizmos(self.new_rotation()),
+            GizmoMode::Rotate => {
+                self.add_subgizmos(self.new_rotation());
+                self.add_subgizmos(self.new_arcball());
+            }
             GizmoMode::Translate => self.add_subgizmos(self.new_translation()),
             GizmoMode::Scale => self.add_subgizmos(self.new_scale()),
         };
@@ -193,8 +196,8 @@ impl Gizmo {
         result
     }
 
-    fn draw_subgizmos(&self, ui: &mut Ui, state: &mut GizmoState) {
-        for subgizmo in &self.subgizmos {
+    fn draw_subgizmos(&mut self, ui: &mut Ui, state: &mut GizmoState) {
+        for subgizmo in &mut self.subgizmos {
             if state.active_subgizmo_id.is_none() || subgizmo.is_active() {
                 subgizmo.draw(ui);
             }
@@ -208,6 +211,16 @@ impl Gizmo {
             .filter_map(|subgizmo| subgizmo.pick(ui, ray).map(|t| (t, subgizmo)))
             .min_by(|(first, _), (second, _)| first.partial_cmp(second).unwrap_or(Ordering::Equal))
             .map(|(_, subgizmo)| subgizmo)
+    }
+
+    /// Create arcball subgizmo
+    fn new_arcball(&self) -> [ArcballSubGizmo; 1] {
+        [ArcballSubGizmo::new(
+            self.id.with("arc"),
+            self.config,
+            GizmoDirection::Screen,
+            TransformKind::Axis,
+        )]
     }
 
     /// Create subgizmos for rotation
@@ -345,15 +358,19 @@ impl Gizmo {
 
     /// Calculate a world space ray from current mouse position
     fn pointer_ray(&self, ui: &Ui) -> Option<Ray> {
-        let hover = ui.input(|i| i.pointer.hover_pos())?;
+        let screen_pos = ui.input(|i| i.pointer.hover_pos())?;
 
         let mat = self.config.view_projection.inverse();
-        let origin = screen_to_world(self.config.viewport, mat, hover, -1.0);
-        let target = screen_to_world(self.config.viewport, mat, hover, 1.0);
+        let origin = screen_to_world(self.config.viewport, mat, screen_pos, -1.0);
+        let target = screen_to_world(self.config.viewport, mat, screen_pos, 1.0);
 
         let direction = target.sub(origin).normalize();
 
-        Some(Ray { origin, direction })
+        Some(Ray {
+            screen_pos,
+            origin,
+            direction,
+        })
     }
 }
 
@@ -568,12 +585,13 @@ impl GizmoConfig {
 
     /// Whether local orientation is used
     pub(crate) fn local_space(&self) -> bool {
-        self.orientation == GizmoOrientation::Local || self.mode == GizmoMode::Scale
+        self.orientation == GizmoOrientation::Local
     }
 }
 
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct Ray {
+    screen_pos: Pos2,
     origin: DVec3,
     direction: DVec3,
 }
