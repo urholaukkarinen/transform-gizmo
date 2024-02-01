@@ -11,6 +11,27 @@ use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
 
 pub(crate) type RotationSubGizmo = SubGizmoConfig<Rotation>;
 
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct RotationParams {
+    pub direction: GizmoDirection,
+}
+
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct RotationState {
+    start_axis_angle: f32,
+    start_rotation_angle: f32,
+    last_rotation_angle: f32,
+    current_delta: f32,
+}
+
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct Rotation;
+
+impl SubGizmoKind for Rotation {
+    type Params = RotationParams;
+    type State = RotationState;
+}
+
 impl SubGizmo for RotationSubGizmo {
     fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
         let radius = arc_radius(self);
@@ -250,25 +271,4 @@ fn arc_radius(subgizmo: &SubGizmoConfig<Rotation>) -> f64 {
     } else {
         (subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size) as f64
     }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub(crate) struct RotationParams {
-    pub direction: GizmoDirection,
-}
-
-#[derive(Default, Debug, Copy, Clone)]
-pub(crate) struct RotationState {
-    start_axis_angle: f32,
-    start_rotation_angle: f32,
-    last_rotation_angle: f32,
-    current_delta: f32,
-}
-
-#[derive(Default, Debug, Copy, Clone)]
-pub(crate) struct Rotation;
-
-impl SubGizmoKind for Rotation {
-    type Params = RotationParams;
-    type State = RotationState;
 }

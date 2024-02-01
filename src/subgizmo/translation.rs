@@ -13,6 +13,27 @@ use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
 
 pub(crate) type TranslationSubGizmo = SubGizmoConfig<Translation>;
 
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct TranslationParams {
+    pub direction: GizmoDirection,
+    pub transform_kind: TransformKind,
+}
+
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct TranslationState {
+    start_point: DVec3,
+    last_point: DVec3,
+    current_delta: DVec3,
+}
+
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct Translation;
+
+impl SubGizmoKind for Translation {
+    type Params = TranslationParams;
+    type State = TranslationState;
+}
+
 impl SubGizmo for TranslationSubGizmo {
     fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
         let pick_result = match (self.transform_kind, self.direction) {
@@ -93,27 +114,6 @@ impl SubGizmo for TranslationSubGizmo {
             (TransformKind::Plane, _) => draw_plane(self, ui, self.direction),
         }
     }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub(crate) struct TranslationParams {
-    pub direction: GizmoDirection,
-    pub transform_kind: TransformKind,
-}
-
-#[derive(Default, Debug, Copy, Clone)]
-pub(crate) struct TranslationState {
-    start_point: DVec3,
-    last_point: DVec3,
-    current_delta: DVec3,
-}
-
-#[derive(Default, Debug, Copy, Clone)]
-pub(crate) struct Translation;
-
-impl SubGizmoKind for Translation {
-    type Params = TranslationParams;
-    type State = TranslationState;
 }
 
 /// Finds the nearest point on line that points in translation subgizmo direction

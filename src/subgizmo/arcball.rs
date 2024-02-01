@@ -8,6 +8,21 @@ use crate::{GizmoConfig, GizmoMode, GizmoResult, Ray, WidgetData};
 
 pub(crate) type ArcballSubGizmo = SubGizmoConfig<Arcball>;
 
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct ArcballState {
+    last: Pos2,
+}
+
+impl WidgetData for ArcballState {}
+
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct Arcball;
+
+impl SubGizmoKind for Arcball {
+    type Params = ();
+    type State = ArcballState;
+}
+
 impl SubGizmo for ArcballSubGizmo {
     fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
         let pick_result = pick_circle(self, ray, arcball_radius(&self.config), true);
@@ -67,19 +82,4 @@ impl SubGizmo for ArcballSubGizmo {
 /// Radius to use for outer circle subgizmos
 pub(crate) fn arcball_radius(config: &GizmoConfig) -> f64 {
     (config.scale_factor * (config.visuals.gizmo_size + config.visuals.stroke_width - 5.0)) as f64
-}
-
-#[derive(Default, Debug, Copy, Clone)]
-pub(crate) struct ArcballState {
-    last: Pos2,
-}
-
-impl WidgetData for ArcballState {}
-
-#[derive(Default, Debug, Copy, Clone)]
-pub(crate) struct Arcball;
-
-impl SubGizmoKind for Arcball {
-    type Params = ();
-    type State = ArcballState;
 }

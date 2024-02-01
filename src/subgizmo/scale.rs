@@ -13,6 +13,26 @@ use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
 
 pub(crate) type ScaleSubGizmo = SubGizmoConfig<Scale>;
 
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct ScaleParams {
+    pub direction: GizmoDirection,
+    pub transform_kind: TransformKind,
+}
+
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct ScaleState {
+    start_scale: DVec3,
+    start_delta: f64,
+}
+
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct Scale;
+
+impl SubGizmoKind for Scale {
+    type Params = ScaleParams;
+    type State = ScaleState;
+}
+
 impl SubGizmo for ScaleSubGizmo {
     fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
         let pick_result = match (self.transform_kind, self.direction) {
@@ -97,26 +117,6 @@ impl SubGizmo for ScaleSubGizmo {
             (TransformKind::Plane, _) => draw_plane(self, ui, self.direction),
         }
     }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub(crate) struct ScaleParams {
-    pub direction: GizmoDirection,
-    pub transform_kind: TransformKind,
-}
-
-#[derive(Default, Debug, Copy, Clone)]
-pub(crate) struct ScaleState {
-    start_scale: DVec3,
-    start_delta: f64,
-}
-
-#[derive(Default, Debug, Copy, Clone)]
-pub(crate) struct Scale;
-
-impl SubGizmoKind for Scale {
-    type Params = ScaleParams;
-    type State = ScaleState;
 }
 
 fn distance_from_origin_2d<T: SubGizmoKind>(subgizmo: &SubGizmoConfig<T>, ui: &Ui) -> Option<f64> {
