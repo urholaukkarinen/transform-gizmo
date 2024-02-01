@@ -304,15 +304,20 @@ fn instructions_text(ui: &Ui) {
 }
 
 fn show_gizmo_status(ui: &Ui, response: GizmoResult) {
-    let length = Vec3::from(response.value).length();
+    let text = if let Some(value) = response.value {
+        match response.mode {
+            GizmoMode::Rotate => {
+                let length = Vec3::from(value).length();
+                format!("{:.1}°, {:.2} rad", length.to_degrees(), length)
+            }
 
-    let text = match response.mode {
-        GizmoMode::Rotate => format!("{:.1}°, {:.2} rad", length.to_degrees(), length),
-
-        GizmoMode::Translate | GizmoMode::Scale => format!(
-            "dX: {:.2}, dY: {:.2}, dZ: {:.2}",
-            response.value[0], response.value[1], response.value[2]
-        ),
+            GizmoMode::Translate | GizmoMode::Scale => format!(
+                "dX: {:.2}, dY: {:.2}, dZ: {:.2}",
+                value[0], value[1], value[2]
+            ),
+        }
+    } else {
+        String::new()
     };
 
     let rect = ui.clip_rect();

@@ -110,8 +110,10 @@ impl SubGizmo for RotationSubGizmo {
             rotation: new_rotation.as_f32().into(),
             translation: self.config.translation.as_vec3().into(),
             mode: GizmoMode::Rotate,
-            value: (gizmo_normal(&self.config, self.direction).as_vec3() * state.current_delta)
-                .to_array(),
+            value: Some(
+                (gizmo_normal(&self.config, self.direction).as_vec3() * state.current_delta)
+                    .to_array(),
+            ),
         })
     }
 

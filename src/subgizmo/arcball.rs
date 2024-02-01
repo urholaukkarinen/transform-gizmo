@@ -10,7 +10,7 @@ pub(crate) type ArcballSubGizmo = SubGizmoConfig<Arcball>;
 
 #[derive(Default, Debug, Copy, Clone)]
 pub(crate) struct ArcballState {
-    last: Pos2,
+    last_pos: Pos2,
 }
 
 impl WidgetData for ArcballState {}
@@ -31,7 +31,7 @@ impl SubGizmo for ArcballSubGizmo {
         }
 
         self.update_state_with(ui, |state: &mut ArcballState| {
-            state.last = ray.screen_pos;
+            state.last_pos = ray.screen_pos;
         });
 
         Some(pick_result.t)
@@ -40,14 +40,12 @@ impl SubGizmo for ArcballSubGizmo {
     fn update(&mut self, ui: &Ui, ray: Ray) -> Option<GizmoResult> {
         let state = self.state(ui);
 
-        let dir = ray.screen_pos - state.last;
-
-        // Not a typical ArcBall rotation, but instead always rotates the object in the direction of mouse movement
+        let dir = ray.screen_pos - state.last_pos;
 
         let quat = if dir.length_sq() > f32::EPSILON {
             let mat = self.config.view_projection.inverse();
             let a = screen_to_world(self.config.viewport, mat, ray.screen_pos, 0.0);
-            let b = screen_to_world(self.config.viewport, mat, state.last, 0.0);
+            let b = screen_to_world(self.config.viewport, mat, state.last_pos, 0.0);
             let origin = self.config.view_forward();
             let a = (a - origin).normalize();
             let b = (b - origin).normalize();
@@ -58,7 +56,7 @@ impl SubGizmo for ArcballSubGizmo {
         };
 
         self.update_state_with(ui, |state: &mut ArcballState| {
-            state.last = ray.screen_pos;
+            state.last_pos = ray.screen_pos;
         });
 
         let new_rotation = quat * self.config.rotation;
@@ -68,7 +66,7 @@ impl SubGizmo for ArcballSubGizmo {
             rotation: new_rotation.as_f32().into(),
             translation: self.config.translation.as_vec3().into(),
             mode: GizmoMode::Rotate,
-            value: [0.0; 3], // TODO
+            value: None,
         })
     }
 

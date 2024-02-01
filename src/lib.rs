@@ -416,7 +416,7 @@ pub struct GizmoResult {
     /// Mode of the active subgizmo
     pub mode: GizmoMode,
     /// Total scale, rotation or translation of the current gizmo activation, depending on mode
-    pub value: [f32; 3],
+    pub value: Option<[f32; 3]>,
 }
 
 impl GizmoResult {

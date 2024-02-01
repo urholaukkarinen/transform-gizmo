@@ -89,7 +89,7 @@ impl SubGizmo for ScaleSubGizmo {
             rotation: self.config.rotation.as_f32().into(),
             translation: self.config.translation.as_vec3().into(),
             mode: GizmoMode::Scale,
-            value: offset.as_vec3().to_array(),
+            value: Some(offset.as_vec3().to_array()),
         })
     }
 
