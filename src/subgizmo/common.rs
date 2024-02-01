@@ -70,7 +70,7 @@ pub(crate) fn pick_plane<T: SubGizmoKind>(
     ray: Ray,
     direction: GizmoDirection,
 ) -> PickResult {
-    let origin = plane_global_origin(subgizmo, direction);
+    let origin = plane_global_origin(&subgizmo.config, direction);
 
     let normal = gizmo_normal(&subgizmo.config, direction);
 
@@ -87,7 +87,7 @@ pub(crate) fn pick_plane<T: SubGizmoKind>(
         - ((1.0 - dot) - *PLANE_FADE.start()) / (*PLANE_FADE.end() - *PLANE_FADE.start()))
     .min(1.0);
 
-    let picked = visibility > 0.0 && dist_from_origin <= plane_size(subgizmo);
+    let picked = visibility > 0.0 && dist_from_origin <= plane_size(&subgizmo.config);
 
     PickResult {
         subgizmo_point: ray_point,
@@ -204,10 +204,10 @@ pub(crate) fn draw_plane<T: SubGizmoKind>(
         subgizmo.config.viewport,
     );
 
-    let scale = plane_size(subgizmo) * 0.5;
+    let scale = plane_size(&subgizmo.config) * 0.5;
     let a = plane_bitangent(direction) * scale;
     let b = plane_tangent(direction) * scale;
-    let origin = plane_local_origin(subgizmo, direction);
+    let origin = plane_local_origin(&subgizmo.config, direction);
 
     painter.polygon(
         &[
@@ -275,32 +275,25 @@ pub(crate) fn plane_tangent(direction: GizmoDirection) -> DVec3 {
     }
 }
 
-pub(crate) fn plane_size<T: SubGizmoKind>(subgizmo: &SubGizmoConfig<T>) -> f64 {
-    (subgizmo.config.scale_factor
-        * (subgizmo.config.visuals.gizmo_size * 0.1 + subgizmo.config.visuals.stroke_width * 2.0))
+pub(crate) fn plane_size(config: &GizmoConfig) -> f64 {
+    (config.scale_factor * (config.visuals.gizmo_size * 0.1 + config.visuals.stroke_width * 2.0))
         as f64
 }
 
-pub(crate) fn plane_local_origin<T: SubGizmoKind>(
-    subgizmo: &SubGizmoConfig<T>,
-    direction: GizmoDirection,
-) -> DVec3 {
-    let offset = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size * 0.5;
+pub(crate) fn plane_local_origin(config: &GizmoConfig, direction: GizmoDirection) -> DVec3 {
+    let offset = config.scale_factor * config.visuals.gizmo_size * 0.5;
 
     let a = plane_bitangent(direction);
     let b = plane_tangent(direction);
     (a + b) * offset as f64
 }
 
-pub(crate) fn plane_global_origin<T: SubGizmoKind>(
-    subgizmo: &SubGizmoConfig<T>,
-    direction: GizmoDirection,
-) -> DVec3 {
-    let mut origin = plane_local_origin(subgizmo, direction);
-    if subgizmo.config.local_space() {
-        origin = subgizmo.config.rotation * origin;
+pub(crate) fn plane_global_origin(config: &GizmoConfig, direction: GizmoDirection) -> DVec3 {
+    let mut origin = plane_local_origin(config, direction);
+    if config.local_space() {
+        origin = config.rotation * origin;
     }
-    origin + subgizmo.config.translation
+    origin + config.translation
 }
 
 /// Radius to use for inner circle subgizmos

@@ -67,7 +67,7 @@ impl SubGizmo for TranslationSubGizmo {
         } else {
             point_on_plane(
                 gizmo_normal(&self.config, self.direction),
-                plane_global_origin(self, self.direction),
+                plane_global_origin(&self.config, self.direction),
                 ray,
             )?
         };

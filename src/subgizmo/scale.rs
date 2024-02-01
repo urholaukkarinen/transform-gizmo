@@ -36,7 +36,6 @@ impl SubGizmoKind for Scale {
 impl SubGizmo for ScaleSubGizmo {
     fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
         let pick_result = match (self.transform_kind, self.direction) {
-            (TransformKind::Axis, _) => pick_arrow(self, ray, self.direction),
             (TransformKind::Plane, GizmoDirection::View) => {
                 let mut result = pick_circle(self, ray, inner_circle_radius(&self.config), true);
                 if !result.picked {
@@ -45,6 +44,7 @@ impl SubGizmo for ScaleSubGizmo {
                 result
             }
             (TransformKind::Plane, _) => pick_plane(self, ray, self.direction),
+            (TransformKind::Axis, _) => pick_arrow(self, ray, self.direction),
         };
 
         let start_delta = distance_from_origin_2d(self, ui)?;
