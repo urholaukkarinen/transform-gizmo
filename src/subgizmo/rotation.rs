@@ -5,18 +5,18 @@ use glam::{DMat3, DMat4, DQuat, DVec2, DVec3};
 
 use crate::math::{ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen};
 use crate::painter::Painter3d;
-use crate::subgizmo::common::outer_circle_radius;
-use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoState};
+use crate::subgizmo::common::{gizmo_color, gizmo_local_normal, gizmo_normal, outer_circle_radius};
+use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoKind};
 use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
 
-pub(crate) type RotationSubGizmo = SubGizmoConfig<RotationState>;
+pub(crate) type RotationSubGizmo = SubGizmoConfig<Rotation>;
 
 impl SubGizmo for RotationSubGizmo {
     fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
         let radius = arc_radius(self);
         let config = self.config;
         let origin = config.translation;
-        let normal = self.normal();
+        let normal = gizmo_normal(&self.config, self.direction);
         let tangent = tangent(self);
 
         let (t, dist_from_gizmo_origin) =
@@ -29,7 +29,7 @@ impl SubGizmo for RotationSubGizmo {
 
         let offset = (nearest_circle_pos - origin).normalize();
 
-        let angle = if self.direction == GizmoDirection::Screen {
+        let angle = if self.direction == GizmoDirection::View {
             f64::atan2(tangent.cross(normal).dot(offset), tangent.dot(offset))
         } else {
             let mut forward = config.view_forward();
@@ -81,14 +81,16 @@ impl SubGizmo for RotationSubGizmo {
         });
 
         let new_rotation =
-            DQuat::from_axis_angle(self.normal(), -angle_delta) * self.config.rotation;
+            DQuat::from_axis_angle(gizmo_normal(&self.config, self.direction), -angle_delta)
+                * self.config.rotation;
 
         Some(GizmoResult {
             scale: self.config.scale.as_vec3().into(),
             rotation: new_rotation.as_f32().into(),
             translation: self.config.translation.as_vec3().into(),
             mode: GizmoMode::Rotate,
-            value: (self.normal().as_vec3() * state.current_delta).to_array(),
+            value: (gizmo_normal(&self.config, self.direction).as_vec3() * state.current_delta)
+                .to_array(),
         })
     }
 
@@ -103,7 +105,7 @@ impl SubGizmo for RotationSubGizmo {
             config.viewport,
         );
 
-        let color = self.color();
+        let color = gizmo_color(self, self.direction);
         let stroke = (config.visuals.stroke_width, color);
 
         let radius = arc_radius(self);
@@ -150,8 +152,10 @@ impl SubGizmo for RotationSubGizmo {
 /// Calculates angle of the rotation axis arc.
 /// The arc is a semicircle, which turns into a full circle when viewed
 /// directly from the front.
-fn arc_angle(subgizmo: &SubGizmoConfig<RotationState>) -> f64 {
-    let dot = subgizmo.normal().dot(subgizmo.config.view_forward()).abs();
+fn arc_angle(subgizmo: &SubGizmoConfig<Rotation>) -> f64 {
+    let dot = gizmo_normal(&subgizmo.config, subgizmo.direction)
+        .dot(subgizmo.config.view_forward())
+        .abs();
     let min_dot = 0.990;
     let max_dot = 0.995;
 
@@ -164,8 +168,8 @@ fn arc_angle(subgizmo: &SubGizmoConfig<RotationState>) -> f64 {
 }
 
 /// Calculates a matrix used when rendering the rotation axis.
-fn rotation_matrix(subgizmo: &SubGizmoConfig<RotationState>) -> DMat4 {
-    if subgizmo.direction == GizmoDirection::Screen {
+fn rotation_matrix(subgizmo: &SubGizmoConfig<Rotation>) -> DMat4 {
+    if subgizmo.direction == GizmoDirection::View {
         let forward = subgizmo.config.view_forward();
         let right = subgizmo.config.view_right();
         let up = subgizmo.config.view_up();
@@ -176,7 +180,7 @@ fn rotation_matrix(subgizmo: &SubGizmoConfig<RotationState>) -> DMat4 {
     }
 
     // First rotate towards the gizmo normal
-    let local_normal = subgizmo.local_normal();
+    let local_normal = gizmo_local_normal(&subgizmo.config, subgizmo.direction);
     let rotation = rotation_align(DVec3::Y, local_normal);
     let mut rotation = DQuat::from_mat3(&rotation);
     let config = subgizmo.config;
@@ -186,7 +190,7 @@ fn rotation_matrix(subgizmo: &SubGizmoConfig<RotationState>) -> DMat4 {
     }
 
     let tangent = tangent(subgizmo);
-    let normal = subgizmo.normal();
+    let normal = gizmo_normal(&subgizmo.config, subgizmo.direction);
     let mut forward = config.view_forward();
     if config.left_handed {
         forward *= -1.0;
@@ -199,7 +203,7 @@ fn rotation_matrix(subgizmo: &SubGizmoConfig<RotationState>) -> DMat4 {
     DMat4::from_rotation_translation(rotation, config.translation)
 }
 
-fn rotation_angle(subgizmo: &SubGizmoConfig<RotationState>, ui: &Ui) -> Option<f64> {
+fn rotation_angle(subgizmo: &SubGizmoConfig<Rotation>, ui: &Ui) -> Option<f64> {
     let cursor_pos = ui.input(|i| i.pointer.hover_pos())?;
     let viewport = subgizmo.config.viewport;
     let gizmo_pos = world_to_screen(viewport, subgizmo.config.mvp, DVec3::new(0.0, 0.0, 0.0))?;
@@ -214,33 +218,43 @@ fn rotation_angle(subgizmo: &SubGizmoConfig<RotationState>, ui: &Ui) -> Option<f
     }
 
     let mut angle = f64::atan2(delta.y, delta.x);
-    if subgizmo.config.view_forward().dot(subgizmo.normal()) < 0.0 {
+    if subgizmo
+        .config
+        .view_forward()
+        .dot(gizmo_normal(&subgizmo.config, subgizmo.direction))
+        < 0.0
+    {
         angle *= -1.0;
     }
 
     Some(angle)
 }
 
-pub fn tangent(subgizmo: &SubGizmoConfig<RotationState>) -> DVec3 {
+fn tangent(subgizmo: &SubGizmoConfig<Rotation>) -> DVec3 {
     let mut tangent = match subgizmo.direction {
         GizmoDirection::X | GizmoDirection::Y => DVec3::Z,
         GizmoDirection::Z => -DVec3::Y,
-        GizmoDirection::Screen => -subgizmo.config.view_right(),
+        GizmoDirection::View => -subgizmo.config.view_right(),
     };
 
-    if subgizmo.config.local_space() && subgizmo.direction != GizmoDirection::Screen {
+    if subgizmo.config.local_space() && subgizmo.direction != GizmoDirection::View {
         tangent = subgizmo.config.rotation * tangent;
     }
 
     tangent
 }
 
-fn arc_radius(subgizmo: &SubGizmoConfig<RotationState>) -> f64 {
-    if subgizmo.direction == GizmoDirection::Screen {
-        outer_circle_radius(subgizmo)
+fn arc_radius(subgizmo: &SubGizmoConfig<Rotation>) -> f64 {
+    if subgizmo.direction == GizmoDirection::View {
+        outer_circle_radius(&subgizmo.config)
     } else {
         (subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size) as f64
     }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct RotationParams {
+    pub direction: GizmoDirection,
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -251,4 +265,10 @@ pub(crate) struct RotationState {
     current_delta: f32,
 }
 
-impl SubGizmoState for RotationState {}
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct Rotation;
+
+impl SubGizmoKind for Rotation {
+    type Params = RotationParams;
+    type State = RotationState;
+}

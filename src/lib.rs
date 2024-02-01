@@ -31,6 +31,9 @@ use crate::math::{screen_to_world, world_to_screen};
 use egui::{Color32, Context, Id, PointerButton, Pos2, Rect, Sense, Ui};
 use glam::{DMat4, DQuat, DVec3, Mat4, Quat, Vec3, Vec4Swizzles};
 
+use crate::subgizmo::rotation::RotationParams;
+use crate::subgizmo::scale::ScaleParams;
+use crate::subgizmo::translation::TranslationParams;
 use crate::subgizmo::{
     ArcballSubGizmo, RotationSubGizmo, ScaleSubGizmo, SubGizmo, TransformKind, TranslationSubGizmo,
 };
@@ -215,12 +218,7 @@ impl Gizmo {
 
     /// Create arcball subgizmo
     fn new_arcball(&self) -> [ArcballSubGizmo; 1] {
-        [ArcballSubGizmo::new(
-            self.id.with("arc"),
-            self.config,
-            GizmoDirection::Screen,
-            TransformKind::Axis,
-        )]
+        [ArcballSubGizmo::new(self.id.with("arc"), self.config, ())]
     }
 
     /// Create subgizmos for rotation
@@ -229,26 +227,30 @@ impl Gizmo {
             RotationSubGizmo::new(
                 self.id.with("rx"),
                 self.config,
-                GizmoDirection::X,
-                TransformKind::Axis,
+                RotationParams {
+                    direction: GizmoDirection::X,
+                },
             ),
             RotationSubGizmo::new(
                 self.id.with("ry"),
                 self.config,
-                GizmoDirection::Y,
-                TransformKind::Axis,
+                RotationParams {
+                    direction: GizmoDirection::Y,
+                },
             ),
             RotationSubGizmo::new(
                 self.id.with("rz"),
                 self.config,
-                GizmoDirection::Z,
-                TransformKind::Axis,
+                RotationParams {
+                    direction: GizmoDirection::Z,
+                },
             ),
             RotationSubGizmo::new(
                 self.id.with("rs"),
                 self.config,
-                GizmoDirection::Screen,
-                TransformKind::Axis,
+                RotationParams {
+                    direction: GizmoDirection::View,
+                },
             ),
         ]
     }
@@ -259,44 +261,58 @@ impl Gizmo {
             TranslationSubGizmo::new(
                 self.id.with("txs"),
                 self.config,
-                GizmoDirection::Screen,
-                TransformKind::Plane,
+                TranslationParams {
+                    direction: GizmoDirection::View,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
             TranslationSubGizmo::new(
                 self.id.with("tx"),
                 self.config,
-                GizmoDirection::X,
-                TransformKind::Axis,
+                TranslationParams {
+                    direction: GizmoDirection::X,
+                    transform_kind: TransformKind::Axis,
+                },
             ),
             TranslationSubGizmo::new(
                 self.id.with("ty"),
                 self.config,
-                GizmoDirection::Y,
-                TransformKind::Axis,
+                TranslationParams {
+                    direction: GizmoDirection::Y,
+                    transform_kind: TransformKind::Axis,
+                },
             ),
             TranslationSubGizmo::new(
                 self.id.with("tz"),
                 self.config,
-                GizmoDirection::Z,
-                TransformKind::Axis,
+                TranslationParams {
+                    direction: GizmoDirection::Z,
+                    transform_kind: TransformKind::Axis,
+                },
             ),
             TranslationSubGizmo::new(
                 self.id.with("tyz"),
                 self.config,
-                GizmoDirection::X,
-                TransformKind::Plane,
+                TranslationParams {
+                    direction: GizmoDirection::X,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
             TranslationSubGizmo::new(
                 self.id.with("txz"),
                 self.config,
-                GizmoDirection::Y,
-                TransformKind::Plane,
+                TranslationParams {
+                    direction: GizmoDirection::Y,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
             TranslationSubGizmo::new(
                 self.id.with("txy"),
                 self.config,
-                GizmoDirection::Z,
-                TransformKind::Plane,
+                TranslationParams {
+                    direction: GizmoDirection::Z,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
         ]
     }
@@ -307,44 +323,58 @@ impl Gizmo {
             ScaleSubGizmo::new(
                 self.id.with("txs"),
                 self.config,
-                GizmoDirection::Screen,
-                TransformKind::Plane,
+                ScaleParams {
+                    direction: GizmoDirection::View,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
             ScaleSubGizmo::new(
                 self.id.with("sx"),
                 self.config,
-                GizmoDirection::X,
-                TransformKind::Axis,
+                ScaleParams {
+                    direction: GizmoDirection::X,
+                    transform_kind: TransformKind::Axis,
+                },
             ),
             ScaleSubGizmo::new(
                 self.id.with("sy"),
                 self.config,
-                GizmoDirection::Y,
-                TransformKind::Axis,
+                ScaleParams {
+                    direction: GizmoDirection::Y,
+                    transform_kind: TransformKind::Axis,
+                },
             ),
             ScaleSubGizmo::new(
                 self.id.with("sz"),
                 self.config,
-                GizmoDirection::Z,
-                TransformKind::Axis,
+                ScaleParams {
+                    direction: GizmoDirection::Z,
+                    transform_kind: TransformKind::Axis,
+                },
             ),
             ScaleSubGizmo::new(
                 self.id.with("syz"),
                 self.config,
-                GizmoDirection::X,
-                TransformKind::Plane,
+                ScaleParams {
+                    direction: GizmoDirection::X,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
             ScaleSubGizmo::new(
                 self.id.with("sxz"),
                 self.config,
-                GizmoDirection::Y,
-                TransformKind::Plane,
+                ScaleParams {
+                    direction: GizmoDirection::Y,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
             ScaleSubGizmo::new(
                 self.id.with("sxy"),
                 self.config,
-                GizmoDirection::Z,
-                TransformKind::Plane,
+                ScaleParams {
+                    direction: GizmoDirection::Z,
+                    transform_kind: TransformKind::Plane,
+                },
             ),
         ]
     }
@@ -429,8 +459,8 @@ pub enum GizmoDirection {
     Y,
     /// Gizmo points in the Z-direction
     Z,
-    /// Gizmo points towards the screen
-    Screen,
+    /// Gizmo points in the view direction
+    View,
 }
 
 /// Controls the visual style of the gizmo
@@ -442,13 +472,13 @@ pub struct GizmoVisuals {
     pub y_color: Color32,
     /// Color of the z axis
     pub z_color: Color32,
-    /// Color of the screen direction axis
+    /// Color of the forward axis
     pub s_color: Color32,
     /// Alpha of the gizmo color when inactive
     pub inactive_alpha: f32,
     /// Alpha of the gizmo color when highlighted/active
     pub highlight_alpha: f32,
-    /// Color to use for highlighted and active axes. By default the axis color is used with `highlight_alpha`
+    /// Color to use for highlighted and active axes. By default, the axis color is used with `highlight_alpha`
     pub highlight_color: Option<Color32>,
     /// Width (thickness) of the gizmo strokes
     pub stroke_width: f32,

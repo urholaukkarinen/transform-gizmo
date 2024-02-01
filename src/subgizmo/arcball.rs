@@ -1,16 +1,16 @@
-use egui::{Pos2, Ui};
+use egui::{Color32, Pos2, Ui};
 use glam::DQuat;
 
 use crate::math::screen_to_world;
 use crate::subgizmo::common::{draw_circle, pick_circle};
-use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoState};
-use crate::{GizmoMode, GizmoResult, Ray};
+use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoKind};
+use crate::{GizmoConfig, GizmoMode, GizmoResult, Ray, WidgetData};
 
-pub(crate) type ArcballSubGizmo = SubGizmoConfig<ArcballState>;
+pub(crate) type ArcballSubGizmo = SubGizmoConfig<Arcball>;
 
 impl SubGizmo for ArcballSubGizmo {
     fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
-        let pick_result = pick_circle(self, ray, arcball_radius(self), true);
+        let pick_result = pick_circle(self, ray, arcball_radius(&self.config), true);
         if !pick_result.picked {
             return None;
         }
@@ -53,22 +53,20 @@ impl SubGizmo for ArcballSubGizmo {
             rotation: new_rotation.as_f32().into(),
             translation: self.config.translation.as_vec3().into(),
             mode: GizmoMode::Rotate,
-            value: self.normal().as_vec3().to_array(),
+            value: [0.0; 3], // TODO
         })
     }
 
     fn draw(&mut self, ui: &Ui) {
         self.opacity = if self.focused { 0.10 } else { 0.0 };
 
-        draw_circle(self, ui, arcball_radius(self), true);
+        draw_circle(self, ui, Color32::WHITE, arcball_radius(&self.config), true);
     }
 }
 
 /// Radius to use for outer circle subgizmos
-pub(crate) fn arcball_radius<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> f64 {
-    (subgizmo.config.scale_factor
-        * (subgizmo.config.visuals.gizmo_size + subgizmo.config.visuals.stroke_width - 5.0))
-        as f64
+pub(crate) fn arcball_radius(config: &GizmoConfig) -> f64 {
+    (config.scale_factor * (config.visuals.gizmo_size + config.visuals.stroke_width - 5.0)) as f64
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -76,4 +74,12 @@ pub(crate) struct ArcballState {
     last: Pos2,
 }
 
-impl SubGizmoState for ArcballState {}
+impl WidgetData for ArcballState {}
+
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct Arcball;
+
+impl SubGizmoKind for Arcball {
+    type Params = ();
+    type State = ArcballState;
+}

@@ -4,26 +4,27 @@ use glam::DVec3;
 use crate::math::{round_to_interval, world_to_screen};
 
 use crate::subgizmo::common::{
-    draw_arrow, draw_circle, draw_plane, inner_circle_radius, outer_circle_radius, pick_arrow,
-    pick_circle, pick_plane, plane_bitangent, plane_tangent, ArrowheadStyle,
+    draw_arrow, draw_circle, draw_plane, gizmo_color, gizmo_local_normal, inner_circle_radius,
+    outer_circle_radius, pick_arrow, pick_circle, pick_plane, plane_bitangent, plane_tangent,
+    ArrowheadStyle,
 };
-use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoState, TransformKind};
+use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoKind, TransformKind};
 use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
 
-pub(crate) type ScaleSubGizmo = SubGizmoConfig<ScaleState>;
+pub(crate) type ScaleSubGizmo = SubGizmoConfig<Scale>;
 
 impl SubGizmo for ScaleSubGizmo {
     fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
         let pick_result = match (self.transform_kind, self.direction) {
-            (TransformKind::Axis, _) => pick_arrow(self, ray),
-            (TransformKind::Plane, GizmoDirection::Screen) => {
-                let mut result = pick_circle(self, ray, inner_circle_radius(self), true);
+            (TransformKind::Axis, _) => pick_arrow(self, ray, self.direction),
+            (TransformKind::Plane, GizmoDirection::View) => {
+                let mut result = pick_circle(self, ray, inner_circle_radius(&self.config), true);
                 if !result.picked {
-                    result = pick_circle(self, ray, outer_circle_radius(self), false);
+                    result = pick_circle(self, ray, outer_circle_radius(&self.config), false);
                 }
                 result
             }
-            (TransformKind::Plane, _) => pick_plane(self, ray),
+            (TransformKind::Plane, _) => pick_plane(self, ray, self.direction),
         };
 
         let start_delta = distance_from_origin_2d(self, ui)?;
@@ -53,8 +54,8 @@ impl SubGizmo for ScaleSubGizmo {
         delta = delta.max(1e-4) - 1.0;
 
         let direction = match (self.transform_kind, self.direction) {
-            (TransformKind::Axis, _) => self.local_normal(),
-            (TransformKind::Plane, GizmoDirection::Screen) => DVec3::ONE,
+            (TransformKind::Axis, _) => gizmo_local_normal(&self.config, self.direction),
+            (TransformKind::Plane, GizmoDirection::View) => DVec3::ONE,
             (TransformKind::Plane, _) => {
                 (plane_bitangent(self.direction) + plane_tangent(self.direction)).normalize()
             }
@@ -74,14 +75,34 @@ impl SubGizmo for ScaleSubGizmo {
 
     fn draw(&mut self, ui: &Ui) {
         match (self.transform_kind, self.direction) {
-            (TransformKind::Axis, _) => draw_arrow(self, ui, ArrowheadStyle::Square),
-            (TransformKind::Plane, GizmoDirection::Screen) => {
-                draw_circle(self, ui, inner_circle_radius(self), false);
-                draw_circle(self, ui, outer_circle_radius(self), false);
+            (TransformKind::Axis, _) => {
+                draw_arrow(self, ui, self.direction, ArrowheadStyle::Square);
             }
-            (TransformKind::Plane, _) => draw_plane(self, ui),
+            (TransformKind::Plane, GizmoDirection::View) => {
+                draw_circle(
+                    self,
+                    ui,
+                    gizmo_color(self, self.direction),
+                    inner_circle_radius(&self.config),
+                    false,
+                );
+                draw_circle(
+                    self,
+                    ui,
+                    gizmo_color(self, self.direction),
+                    outer_circle_radius(&self.config),
+                    false,
+                );
+            }
+            (TransformKind::Plane, _) => draw_plane(self, ui, self.direction),
         }
     }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct ScaleParams {
+    pub direction: GizmoDirection,
+    pub transform_kind: TransformKind,
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -90,9 +111,15 @@ pub(crate) struct ScaleState {
     start_delta: f64,
 }
 
-impl SubGizmoState for ScaleState {}
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct Scale;
 
-fn distance_from_origin_2d<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui) -> Option<f64> {
+impl SubGizmoKind for Scale {
+    type Params = ScaleParams;
+    type State = ScaleState;
+}
+
+fn distance_from_origin_2d<T: SubGizmoKind>(subgizmo: &SubGizmoConfig<T>, ui: &Ui) -> Option<f64> {
     let cursor_pos = ui.input(|i| i.pointer.hover_pos())?;
     let viewport = subgizmo.config.viewport;
     let gizmo_pos = world_to_screen(viewport, subgizmo.config.mvp, DVec3::new(0.0, 0.0, 0.0))?;

@@ -1,10 +1,10 @@
 use crate::math::{ray_to_plane_origin, segment_to_segment};
-use egui::{Stroke, Ui};
+use egui::{Color32, Stroke, Ui};
 use std::ops::RangeInclusive;
 
 use crate::painter::Painter3d;
-use crate::subgizmo::{SubGizmoConfig, SubGizmoState};
-use crate::{GizmoDirection, Ray};
+use crate::subgizmo::{SubGizmoConfig, SubGizmoKind};
+use crate::{GizmoConfig, GizmoDirection, Ray};
 use glam::{DMat3, DMat4, DQuat, DVec3};
 
 const ARROW_FADE: RangeInclusive<f64> = 0.95..=0.99;
@@ -24,11 +24,16 @@ pub(crate) enum ArrowheadStyle {
     Square,
 }
 
-pub(crate) fn pick_arrow<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ray: Ray) -> PickResult {
+pub(crate) fn pick_arrow<T: SubGizmoKind>(
+    subgizmo: &SubGizmoConfig<T>,
+    ray: Ray,
+    direction: GizmoDirection,
+) -> PickResult {
     let width = (subgizmo.config.scale_factor * subgizmo.config.visuals.stroke_width) as f64;
 
-    let dir = subgizmo.normal();
-    let start = subgizmo.config.translation + (dir * (width * 0.5 + inner_circle_radius(subgizmo)));
+    let dir = gizmo_normal(&subgizmo.config, direction);
+    let start =
+        subgizmo.config.translation + (dir * (width * 0.5 + inner_circle_radius(&subgizmo.config)));
 
     let length = (subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size) as f64;
 
@@ -60,10 +65,14 @@ pub(crate) fn pick_arrow<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ray: Ra
     }
 }
 
-pub(crate) fn pick_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ray: Ray) -> PickResult {
-    let origin = plane_global_origin(subgizmo);
+pub(crate) fn pick_plane<T: SubGizmoKind>(
+    subgizmo: &SubGizmoConfig<T>,
+    ray: Ray,
+    direction: GizmoDirection,
+) -> PickResult {
+    let origin = plane_global_origin(subgizmo, direction);
 
-    let normal = subgizmo.normal();
+    let normal = gizmo_normal(&subgizmo.config, direction);
 
     let (t, dist_from_origin) = ray_to_plane_origin(normal, origin, ray.origin, ray.direction);
 
@@ -72,7 +81,7 @@ pub(crate) fn pick_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ray: Ra
     let dot = subgizmo
         .config
         .gizmo_view_forward
-        .dot(subgizmo.normal())
+        .dot(gizmo_normal(&subgizmo.config, direction))
         .abs();
     let visibility = (1.0
         - ((1.0 - dot) - *PLANE_FADE.start()) / (*PLANE_FADE.end() - *PLANE_FADE.start()))
@@ -88,7 +97,7 @@ pub(crate) fn pick_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ray: Ra
     }
 }
 
-pub(crate) fn pick_circle<T: SubGizmoState>(
+pub(crate) fn pick_circle<T: SubGizmoKind>(
     subgizmo: &SubGizmoConfig<T>,
     ray: Ray,
     radius: f64,
@@ -96,7 +105,7 @@ pub(crate) fn pick_circle<T: SubGizmoState>(
 ) -> PickResult {
     let config = &subgizmo.config;
     let origin = config.translation;
-    let normal = subgizmo.normal();
+    let normal = -subgizmo.config.view_forward();
 
     let (t, dist_from_gizmo_origin) =
         ray_to_plane_origin(normal, origin, ray.origin, ray.direction);
@@ -117,16 +126,17 @@ pub(crate) fn pick_circle<T: SubGizmoState>(
     }
 }
 
-pub(crate) fn draw_arrow<T: SubGizmoState>(
+pub(crate) fn draw_arrow<T: SubGizmoKind>(
     subgizmo: &SubGizmoConfig<T>,
     ui: &Ui,
+    direction: GizmoDirection,
     arrowhead_style: ArrowheadStyle,
 ) {
     if subgizmo.opacity <= 1e-4 {
         return;
     }
 
-    let color = subgizmo.color().gamma_multiply(subgizmo.opacity);
+    let color = gizmo_color(subgizmo, direction).gamma_multiply(subgizmo.opacity);
 
     let transform = if subgizmo.config.local_space() {
         DMat4::from_rotation_translation(subgizmo.config.rotation, subgizmo.config.translation)
@@ -140,11 +150,11 @@ pub(crate) fn draw_arrow<T: SubGizmoState>(
         subgizmo.config.viewport,
     );
 
-    let direction = subgizmo.local_normal();
+    let direction = gizmo_local_normal(&subgizmo.config, direction);
     let width = (subgizmo.config.scale_factor * subgizmo.config.visuals.stroke_width) as f64;
     let length = (subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size) as f64;
 
-    let start = direction * (width * 0.5 + inner_circle_radius(subgizmo));
+    let start = direction * (width * 0.5 + inner_circle_radius(&subgizmo.config));
     let end = direction * length;
     painter.line_segment(start, end, (subgizmo.config.visuals.stroke_width, color));
 
@@ -171,12 +181,16 @@ pub(crate) fn draw_arrow<T: SubGizmoState>(
     }
 }
 
-pub(crate) fn draw_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui) {
+pub(crate) fn draw_plane<T: SubGizmoKind>(
+    subgizmo: &SubGizmoConfig<T>,
+    ui: &Ui,
+    direction: GizmoDirection,
+) {
     if subgizmo.opacity <= 1e-4 {
         return;
     }
 
-    let color = subgizmo.color().gamma_multiply(subgizmo.opacity);
+    let color = gizmo_color(subgizmo, direction).gamma_multiply(subgizmo.opacity);
 
     let transform = if subgizmo.config.local_space() {
         DMat4::from_rotation_translation(subgizmo.config.rotation, subgizmo.config.translation)
@@ -191,9 +205,9 @@ pub(crate) fn draw_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui
     );
 
     let scale = plane_size(subgizmo) * 0.5;
-    let a = plane_bitangent(subgizmo.direction) * scale;
-    let b = plane_tangent(subgizmo.direction) * scale;
-    let origin = plane_local_origin(subgizmo);
+    let a = plane_bitangent(direction) * scale;
+    let b = plane_tangent(direction) * scale;
+    let origin = plane_local_origin(subgizmo, direction);
 
     painter.polygon(
         &[
@@ -207,9 +221,10 @@ pub(crate) fn draw_plane<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>, ui: &Ui
     );
 }
 
-pub(crate) fn draw_circle<T: SubGizmoState>(
+pub(crate) fn draw_circle<T: SubGizmoKind>(
     subgizmo: &SubGizmoConfig<T>,
     ui: &Ui,
+    color: Color32,
     radius: f64,
     filled: bool,
 ) {
@@ -217,7 +232,7 @@ pub(crate) fn draw_circle<T: SubGizmoState>(
         return;
     }
 
-    let color = subgizmo.color().gamma_multiply(subgizmo.opacity);
+    let color = color.gamma_multiply(subgizmo.opacity);
 
     let rotation = {
         let forward = subgizmo.config.view_forward();
@@ -247,7 +262,7 @@ pub(crate) fn plane_bitangent(direction: GizmoDirection) -> DVec3 {
         GizmoDirection::X => DVec3::Y,
         GizmoDirection::Y => DVec3::Z,
         GizmoDirection::Z => DVec3::X,
-        GizmoDirection::Screen => DVec3::ZERO, // Unused
+        GizmoDirection::View => DVec3::ZERO, // Unused
     }
 }
 
@@ -256,26 +271,32 @@ pub(crate) fn plane_tangent(direction: GizmoDirection) -> DVec3 {
         GizmoDirection::X => DVec3::Z,
         GizmoDirection::Y => DVec3::X,
         GizmoDirection::Z => DVec3::Y,
-        GizmoDirection::Screen => DVec3::ZERO, // Unused
+        GizmoDirection::View => DVec3::ZERO, // Unused
     }
 }
 
-pub(crate) fn plane_size<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> f64 {
+pub(crate) fn plane_size<T: SubGizmoKind>(subgizmo: &SubGizmoConfig<T>) -> f64 {
     (subgizmo.config.scale_factor
         * (subgizmo.config.visuals.gizmo_size * 0.1 + subgizmo.config.visuals.stroke_width * 2.0))
         as f64
 }
 
-pub(crate) fn plane_local_origin<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> DVec3 {
+pub(crate) fn plane_local_origin<T: SubGizmoKind>(
+    subgizmo: &SubGizmoConfig<T>,
+    direction: GizmoDirection,
+) -> DVec3 {
     let offset = subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size * 0.5;
 
-    let a = plane_bitangent(subgizmo.direction);
-    let b = plane_tangent(subgizmo.direction);
+    let a = plane_bitangent(direction);
+    let b = plane_tangent(direction);
     (a + b) * offset as f64
 }
 
-pub(crate) fn plane_global_origin<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> DVec3 {
-    let mut origin = plane_local_origin(subgizmo);
+pub(crate) fn plane_global_origin<T: SubGizmoKind>(
+    subgizmo: &SubGizmoConfig<T>,
+    direction: GizmoDirection,
+) -> DVec3 {
+    let mut origin = plane_local_origin(subgizmo, direction);
     if subgizmo.config.local_space() {
         origin = subgizmo.config.rotation * origin;
     }
@@ -283,13 +304,56 @@ pub(crate) fn plane_global_origin<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>
 }
 
 /// Radius to use for inner circle subgizmos
-pub(crate) fn inner_circle_radius<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> f64 {
-    (subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size) as f64 * 0.2
+pub(crate) fn inner_circle_radius(config: &GizmoConfig) -> f64 {
+    (config.scale_factor * config.visuals.gizmo_size) as f64 * 0.2
 }
 
 /// Radius to use for outer circle subgizmos
-pub(crate) fn outer_circle_radius<T: SubGizmoState>(subgizmo: &SubGizmoConfig<T>) -> f64 {
-    (subgizmo.config.scale_factor
-        * (subgizmo.config.visuals.gizmo_size + subgizmo.config.visuals.stroke_width + 5.0))
-        as f64
+pub(crate) fn outer_circle_radius(config: &GizmoConfig) -> f64 {
+    (config.scale_factor * (config.visuals.gizmo_size + config.visuals.stroke_width + 5.0)) as f64
+}
+
+pub fn gizmo_local_normal(config: &GizmoConfig, direction: GizmoDirection) -> DVec3 {
+    match direction {
+        GizmoDirection::X => DVec3::X,
+        GizmoDirection::Y => DVec3::Y,
+        GizmoDirection::Z => DVec3::Z,
+        GizmoDirection::View => -config.view_forward(),
+    }
+}
+
+pub fn gizmo_normal(config: &GizmoConfig, direction: GizmoDirection) -> DVec3 {
+    let mut normal = gizmo_local_normal(config, direction);
+
+    if config.local_space() && direction != GizmoDirection::View {
+        normal = config.rotation * normal;
+    }
+
+    normal
+}
+
+pub fn gizmo_color<T: SubGizmoKind>(
+    subgizmo: &SubGizmoConfig<T>,
+    direction: GizmoDirection,
+) -> Color32 {
+    let color = match direction {
+        GizmoDirection::X => subgizmo.config.visuals.x_color,
+        GizmoDirection::Y => subgizmo.config.visuals.y_color,
+        GizmoDirection::Z => subgizmo.config.visuals.z_color,
+        GizmoDirection::View => subgizmo.config.visuals.s_color,
+    };
+
+    let color = if subgizmo.focused {
+        subgizmo.config.visuals.highlight_color.unwrap_or(color)
+    } else {
+        color
+    };
+
+    let alpha = if subgizmo.focused {
+        subgizmo.config.visuals.highlight_alpha
+    } else {
+        subgizmo.config.visuals.inactive_alpha
+    };
+
+    color.linear_multiply(alpha)
 }
