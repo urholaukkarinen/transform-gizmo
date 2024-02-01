@@ -86,7 +86,7 @@ impl SubGizmo for ScaleSubGizmo {
 
         Some(GizmoResult {
             scale: new_scale.as_vec3().into(),
-            rotation: self.config.rotation.as_f32().into(),
+            rotation: self.config.rotation.as_quat().into(),
             translation: self.config.translation.as_vec3().into(),
             mode: GizmoMode::Scale,
             value: Some(offset.as_vec3().to_array()),

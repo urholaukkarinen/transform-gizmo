@@ -92,7 +92,7 @@ impl SubGizmo for TranslationSubGizmo {
 
         Some(GizmoResult {
             scale: self.config.scale.as_vec3().into(),
-            rotation: self.config.rotation.as_f32().into(),
+            rotation: self.config.rotation.as_quat().into(),
             translation: new_translation.as_vec3().into(),
             mode: GizmoMode::Translate,
             value: Some(state.current_delta.as_vec3().to_array()),

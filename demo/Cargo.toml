@@ -13,6 +13,10 @@ egui-gizmo = { path = ".." }
 [dependencies.bevy]
 version = "0.12.1"
 
+[dependencies.bevy_math]
+version = "0.12.1"
+features = ["mint"]
+
 [dependencies.bevy_egui]
 git = "https://github.com/urholaukkarinen/bevy_egui.git"
 rev="bc3dd1559e24ca0178ed1d2dfef07cb784437505"

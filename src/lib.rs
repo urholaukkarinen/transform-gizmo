@@ -188,7 +188,7 @@ impl Gizmo {
 
         if let Some((_, result)) = active_subgizmo.zip(result) {
             self.config.translation = Vec3::from(result.translation).as_dvec3();
-            self.config.rotation = Quat::from(result.rotation).as_f64();
+            self.config.rotation = Quat::from(result.rotation).as_dquat();
             self.config.scale = Vec3::from(result.scale).as_dvec3();
         }
 

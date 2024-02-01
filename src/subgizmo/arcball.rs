@@ -63,7 +63,7 @@ impl SubGizmo for ArcballSubGizmo {
 
         Some(GizmoResult {
             scale: self.config.scale.as_vec3().into(),
-            rotation: new_rotation.as_f32().into(),
+            rotation: new_rotation.as_quat().into(),
             translation: self.config.translation.as_vec3().into(),
             mode: GizmoMode::Rotate,
             value: None,
