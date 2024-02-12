@@ -1,6 +1,6 @@
 [package]
 name = "egui-gizmo"
-version = "0.15.0"
+version = "0.16.0"
 authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 edition = "2021"
 
@@ -177,3 +177,5 @@ unwrap_used = "allow"
 wildcard_imports = "allow"
 large-types-passed-by-value = "allow"
 needless-pass-by-value = "allow"
+needless_pass_by_ref_mut = "allow"
+redundant_pub_crate = "allow"

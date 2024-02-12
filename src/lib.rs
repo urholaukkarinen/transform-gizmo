@@ -83,49 +83,49 @@ impl Gizmo {
     }
 
     /// Bounds of the viewport in pixels
-    pub fn viewport(mut self, viewport: Rect) -> Self {
+    pub const fn viewport(mut self, viewport: Rect) -> Self {
         self.config.viewport = viewport;
         self
     }
 
     /// Gizmo mode to use
-    pub fn mode(mut self, mode: GizmoMode) -> Self {
+    pub const fn mode(mut self, mode: GizmoMode) -> Self {
         self.config.mode = mode;
         self
     }
 
     /// Gizmo orientation to use
-    pub fn orientation(mut self, orientation: GizmoOrientation) -> Self {
+    pub const fn orientation(mut self, orientation: GizmoOrientation) -> Self {
         self.config.orientation = orientation;
         self
     }
 
     /// Whether snapping is enabled
-    pub fn snapping(mut self, snapping: bool) -> Self {
+    pub const fn snapping(mut self, snapping: bool) -> Self {
         self.config.snapping = snapping;
         self
     }
 
     /// Snap angle to use for rotation when snapping is enabled
-    pub fn snap_angle(mut self, snap_angle: f32) -> Self {
+    pub const fn snap_angle(mut self, snap_angle: f32) -> Self {
         self.config.snap_angle = snap_angle;
         self
     }
 
     /// Snap distance to use for translation when snapping is enabled
-    pub fn snap_distance(mut self, snap_distance: f32) -> Self {
+    pub const fn snap_distance(mut self, snap_distance: f32) -> Self {
         self.config.snap_distance = snap_distance;
         self
     }
 
     /// Snap distance to use for scaling when snapping is enabled
-    pub fn snap_scale(mut self, snap_scale: f32) -> Self {
+    pub const fn snap_scale(mut self, snap_scale: f32) -> Self {
         self.config.snap_scale = snap_scale;
         self
     }
 
     /// Visual configuration of the gizmo, such as colors and size
-    pub fn visuals(mut self, visuals: GizmoVisuals) -> Self {
+    pub const fn visuals(mut self, visuals: GizmoVisuals) -> Self {
         self.config.visuals = visuals;
         self
     }

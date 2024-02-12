@@ -159,7 +159,7 @@ impl SubGizmo for RotationSubGizmo {
             if config.snapping {
                 let stroke_width = stroke.0 / 2.0;
                 for i in 0..((TAU / config.snap_angle as f64) as usize + 1) {
-                    let angle = i as f64 * config.snap_angle as f64 + end_angle;
+                    let angle = (i as f64).mul_add(config.snap_angle as f64, end_angle);
                     let pos = DVec3::new(angle.cos(), 0.0, angle.sin());
                     painter.line_segment(
                         pos * radius * 1.1,
@@ -182,8 +182,8 @@ fn arc_angle(subgizmo: &SubGizmoConfig<Rotation>) -> f64 {
     let min_dot = 0.990;
     let max_dot = 0.995;
 
-    let mut angle =
-        f64::min(1.0, f64::max(0.0, dot - min_dot) / (max_dot - min_dot)) * FRAC_PI_2 + FRAC_PI_2;
+    let mut angle = f64::min(1.0, f64::max(0.0, dot - min_dot) / (max_dot - min_dot))
+        .mul_add(FRAC_PI_2, FRAC_PI_2);
     if (angle - PI).abs() < 1e-2 {
         angle = PI;
     }

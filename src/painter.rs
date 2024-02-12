@@ -15,7 +15,7 @@ pub struct Painter3d {
 }
 
 impl Painter3d {
-    pub fn new(painter: egui::Painter, mvp: DMat4, viewport: Rect) -> Self {
+    pub const fn new(painter: egui::Painter, mvp: DMat4, viewport: Rect) -> Self {
         Self {
             painter,
             mvp,
