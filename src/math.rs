@@ -59,7 +59,7 @@ pub fn segment_to_segment(a1: DVec3, a2: DVec3, b1: DVec3, b2: DVec3) -> (f64, f
     let d1 = a1 - b1;
     let d = da.dot(d1);
     let e = db.dot(d1);
-    let n = la * lb - dd * dd;
+    let n = la.mul_add(lb, -dd * dd);
 
     let mut sn;
     let mut tn;
@@ -72,8 +72,8 @@ pub fn segment_to_segment(a1: DVec3, a2: DVec3, b1: DVec3, b2: DVec3) -> (f64, f
         tn = e;
         td = lb;
     } else {
-        sn = dd * e - lb * d;
-        tn = la * e - dd * d;
+        sn = dd.mul_add(e, -lb * d);
+        tn = la.mul_add(e, -dd * d);
         if sn < 0.0 {
             sn = 0.0;
             tn = e;
@@ -176,8 +176,8 @@ pub fn world_to_screen(viewport: Rect, mvp: DMat4, pos: DVec3) -> Option<Pos2> {
 
 /// Calculates 3d world coordinates from 2d screen coordinates
 pub fn screen_to_world(viewport: Rect, mat: DMat4, pos: Pos2, z: f64) -> DVec3 {
-    let x = (((pos.x - viewport.min.x) / viewport.width()) * 2.0 - 1.0) as f64;
-    let y = (((pos.y - viewport.min.y) / viewport.height()) * 2.0 - 1.0) as f64;
+    let x = ((pos.x - viewport.min.x) / viewport.width()).mul_add(2.0, -1.0) as f64;
+    let y = ((pos.y - viewport.min.y) / viewport.height()).mul_add(2.0, -1.0) as f64;
 
     let mut world_pos = mat * DVec4::new(x, -y, z, 1.0);
 

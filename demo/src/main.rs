@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::render::texture::{CompressedImageFormats, ImageFormat, ImageSampler, ImageType};
 use bevy::window::PresentMode;
-use bevy_egui::{egui, EguiContexts, EguiPlugin};
+use bevy_egui_next::{egui, EguiContexts, EguiPlugin};
 use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin, InfiniteGridSettings};
 use egui::color_picker::Alpha;
 use egui::{pos2, Align2, Color32, FontId, LayerId, Ui, Widget};

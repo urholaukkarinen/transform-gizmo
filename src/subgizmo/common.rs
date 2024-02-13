@@ -32,8 +32,8 @@ pub(crate) fn pick_arrow<T: SubGizmoKind>(
     let width = (subgizmo.config.scale_factor * subgizmo.config.visuals.stroke_width) as f64;
 
     let dir = gizmo_normal(&subgizmo.config, direction);
-    let start =
-        subgizmo.config.translation + (dir * (width * 0.5 + inner_circle_radius(&subgizmo.config)));
+    let start = subgizmo.config.translation
+        + (dir * (width.mul_add(0.5, inner_circle_radius(&subgizmo.config))));
 
     let length = (subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size) as f64;
 
@@ -154,7 +154,7 @@ pub(crate) fn draw_arrow<T: SubGizmoKind>(
     let width = (subgizmo.config.scale_factor * subgizmo.config.visuals.stroke_width) as f64;
     let length = (subgizmo.config.scale_factor * subgizmo.config.visuals.gizmo_size) as f64;
 
-    let start = direction * (width * 0.5 + inner_circle_radius(&subgizmo.config));
+    let start = direction * width.mul_add(0.5, inner_circle_radius(&subgizmo.config));
     let end = direction * length;
     painter.line_segment(start, end, (subgizmo.config.visuals.stroke_width, color));
 
@@ -257,7 +257,7 @@ pub(crate) fn draw_circle<T: SubGizmoKind>(
     }
 }
 
-pub(crate) fn plane_bitangent(direction: GizmoDirection) -> DVec3 {
+pub(crate) const fn plane_bitangent(direction: GizmoDirection) -> DVec3 {
     match direction {
         GizmoDirection::X => DVec3::Y,
         GizmoDirection::Y => DVec3::Z,
@@ -266,7 +266,7 @@ pub(crate) fn plane_bitangent(direction: GizmoDirection) -> DVec3 {
     }
 }
 
-pub(crate) fn plane_tangent(direction: GizmoDirection) -> DVec3 {
+pub(crate) const fn plane_tangent(direction: GizmoDirection) -> DVec3 {
     match direction {
         GizmoDirection::X => DVec3::Z,
         GizmoDirection::Y => DVec3::X,
@@ -276,8 +276,11 @@ pub(crate) fn plane_tangent(direction: GizmoDirection) -> DVec3 {
 }
 
 pub(crate) fn plane_size(config: &GizmoConfig) -> f64 {
-    (config.scale_factor * (config.visuals.gizmo_size * 0.1 + config.visuals.stroke_width * 2.0))
-        as f64
+    (config.scale_factor
+        * config
+            .visuals
+            .gizmo_size
+            .mul_add(0.1, config.visuals.stroke_width * 2.0)) as f64
 }
 
 pub(crate) fn plane_local_origin(config: &GizmoConfig, direction: GizmoDirection) -> DVec3 {
