@@ -46,6 +46,7 @@ impl SubGizmo for ArcballSubGizmo {
             let mat = self.config.view_projection.inverse();
             let a = screen_to_world(self.config.viewport, mat, ray.screen_pos, 0.0);
             let b = screen_to_world(self.config.viewport, mat, state.last_pos, 0.0);
+
             let origin = self.config.view_forward();
             let a = (a - origin).normalize();
             let b = (b - origin).normalize();

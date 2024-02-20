@@ -1,8 +1,8 @@
 use bevy::prelude::*;
+use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::texture::{CompressedImageFormats, ImageFormat, ImageSampler, ImageType};
 use bevy::window::PresentMode;
-use bevy_egui_next::{egui, EguiContexts, EguiPlugin};
-use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin, InfiniteGridSettings};
+use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use egui::color_picker::Alpha;
 use egui::{pos2, Align2, Color32, FontId, LayerId, Ui, Widget};
 
@@ -23,14 +23,12 @@ fn main() {
             primary_window: Some(Window {
                 title: "egui-gizmo demo".into(),
                 present_mode: PresentMode::AutoNoVsync,
-                fit_canvas_to_parent: true,
                 ..default()
             }),
             ..default()
         }))
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(EguiPlugin)
-        .add_plugins(InfiniteGridPlugin)
         .add_systems(Startup, setup)
         .add_systems(Startup, setup_camera)
         .add_systems(Update, update)
@@ -77,6 +75,7 @@ fn setup(
             CompressedImageFormats::all(),
             true,
             ImageSampler::Default,
+            RenderAssetUsages::default(),
         )
         .unwrap(),
     );
@@ -85,11 +84,12 @@ fn setup(
         color: Color::WHITE,
         brightness: 0.2,
     });
-
-    let cube_handle = meshes.add(Mesh::from(shape::Cube { size: 2.0 }));
+    let cube_handle = meshes.add(Cuboid {
+        half_size: Vec3::ONE,
+    });
     let cube_material_handle = materials.add(StandardMaterial {
         base_color_texture: Some(texture_handle.clone()),
-        unlit: false,
+        unlit: true,
         ..default()
     });
 
@@ -102,14 +102,6 @@ fn setup(
             ..default()
         },
     ));
-
-    commands.spawn(InfiniteGridBundle {
-        settings: InfiniteGridSettings {
-            shadow_color: None,
-            ..default()
-        },
-        ..default()
-    });
 }
 
 fn update(
@@ -117,7 +109,7 @@ fn update(
     camera_q: Query<(&Camera, &Transform), Without<Target>>,
     mut target_q: Query<&mut Transform, With<Target>>,
     mut gizmo_options: ResMut<GizmoOptions>,
-    keys: Res<Input<KeyCode>>,
+    keys: Res<ButtonInput<KeyCode>>,
 ) {
     let (projection_matrix, view_matrix) = {
         let (camera, transform) = camera_q.single();
