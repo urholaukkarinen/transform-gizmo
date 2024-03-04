@@ -12,6 +12,10 @@ bevy_egui = "0.25.0"
 egui = "0.26.2"
 egui-gizmo = { path = ".." }
 
+[dependencies.bevy_infinite_grid]
+git = "https://github.com/XYCaptain/bevy_infinite_grid.git"
+rev = "1e5259a52a7dfaca65402c2c57c1d81c2bc443e9"
+
 [dependencies.bevy_math]
 version = "0.12.1"
 features = ["mint"]
