@@ -309,7 +309,7 @@ pub(crate) fn outer_circle_radius(config: &GizmoConfig) -> f64 {
     (config.scale_factor * (config.visuals.gizmo_size + config.visuals.stroke_width + 5.0)) as f64
 }
 
-pub fn gizmo_local_normal(config: &GizmoConfig, direction: GizmoDirection) -> DVec3 {
+pub(crate) fn gizmo_local_normal(config: &GizmoConfig, direction: GizmoDirection) -> DVec3 {
     match direction {
         GizmoDirection::X => DVec3::X,
         GizmoDirection::Y => DVec3::Y,
@@ -318,7 +318,7 @@ pub fn gizmo_local_normal(config: &GizmoConfig, direction: GizmoDirection) -> DV
     }
 }
 
-pub fn gizmo_normal(config: &GizmoConfig, direction: GizmoDirection) -> DVec3 {
+pub(crate) fn gizmo_normal(config: &GizmoConfig, direction: GizmoDirection) -> DVec3 {
     let mut normal = gizmo_local_normal(config, direction);
 
     if config.local_space() && direction != GizmoDirection::View {
@@ -328,7 +328,7 @@ pub fn gizmo_normal(config: &GizmoConfig, direction: GizmoDirection) -> DVec3 {
     normal
 }
 
-pub fn gizmo_color<T: SubGizmoKind>(
+pub(crate) fn gizmo_color<T: SubGizmoKind>(
     subgizmo: &SubGizmoConfig<T>,
     direction: GizmoDirection,
 ) -> Color32 {
