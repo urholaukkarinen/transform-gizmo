@@ -4,7 +4,7 @@ members = ["crates/*"]
 
 [workspace.package]
 version = "0.1.0"
-rust-version = "1.72"
+rust-version = "1.77"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/urholaukkarinen/transform-gizmo"
@@ -20,7 +20,7 @@ eframe = "0.27.1"
 emath = "0.27.1"
 epaint = "0.27.1"
 ecolor = "0.27.1"
-glam = { version = "0.25.0", features = ["mint"] }
+glam = { version = "0.27.0", features = ["mint"] }
 mint = "0.5"
 enum_dispatch = "0.3.12"
 ahash = "0.8.7"
