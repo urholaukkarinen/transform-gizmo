@@ -1,0 +1,20 @@
+[package]
+name = "transform-gizmo-egui"
+authors.workspace = true
+description = "egui integration for transform-gizmo"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+transform-gizmo.workspace = true
+egui.workspace = true
+
+[dev-dependencies]
+eframe.workspace = true
+
+[lints]
+workspace = true

@@ -1,19 +1,18 @@
-use egui::Ui;
 use glam::DVec3;
 
-use crate::math::{round_to_interval, world_to_screen};
+use crate::math::{round_to_interval, world_to_screen, Pos2};
 
 use crate::subgizmo::common::{
     draw_arrow, draw_circle, draw_plane, gizmo_color, gizmo_local_normal, inner_circle_radius,
     outer_circle_radius, pick_arrow, pick_circle, pick_plane, plane_bitangent, plane_tangent,
     ArrowheadStyle,
 };
-use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoKind, TransformKind};
-use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
+use crate::subgizmo::{common::TransformKind, SubGizmo, SubGizmoConfig, SubGizmoKind};
+use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult};
 
 pub(crate) type ScaleSubGizmo = SubGizmoConfig<Scale>;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash)]
 pub(crate) struct ScaleParams {
     pub direction: GizmoDirection,
     pub transform_kind: TransformKind,
@@ -34,27 +33,27 @@ impl SubGizmoKind for Scale {
 }
 
 impl SubGizmo for ScaleSubGizmo {
-    fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
+    fn pick(&mut self, ray: Ray) -> Option<f64> {
         let pick_result = match (self.transform_kind, self.direction) {
             (TransformKind::Plane, GizmoDirection::View) => {
-                let mut result = pick_circle(self, ray, inner_circle_radius(&self.config), true);
+                let mut result =
+                    pick_circle(&self.config, ray, inner_circle_radius(&self.config), true);
                 if !result.picked {
-                    result = pick_circle(self, ray, outer_circle_radius(&self.config), false);
+                    result =
+                        pick_circle(&self.config, ray, outer_circle_radius(&self.config), false);
                 }
                 result
             }
-            (TransformKind::Plane, _) => pick_plane(self, ray, self.direction),
-            (TransformKind::Axis, _) => pick_arrow(self, ray, self.direction),
+            (TransformKind::Plane, _) => pick_plane(&self.config, ray, self.direction),
+            (TransformKind::Axis, _) => pick_arrow(&self.config, ray, self.direction),
         };
 
-        let start_delta = distance_from_origin_2d(self, ui)?;
+        let start_delta = distance_from_origin_2d(self, ray.screen_pos)?;
 
         self.opacity = pick_result.visibility as _;
 
-        self.update_state_with(ui, |state: &mut ScaleState| {
-            state.start_scale = self.config.scale;
-            state.start_delta = start_delta;
-        });
+        self.state.start_scale = self.config.scale;
+        self.state.start_delta = start_delta;
 
         if pick_result.picked {
             Some(pick_result.t)
@@ -63,10 +62,9 @@ impl SubGizmo for ScaleSubGizmo {
         }
     }
 
-    fn update(&mut self, ui: &Ui, _ray: Ray) -> Option<GizmoResult> {
-        let state = self.state(ui);
-        let mut delta = distance_from_origin_2d(self, ui)?;
-        delta /= state.start_delta;
+    fn update(&mut self, ray: Ray) -> Option<GizmoResult> {
+        let mut delta = distance_from_origin_2d(self, ray.screen_pos)?;
+        delta /= self.state.start_delta;
 
         if self.config.snapping {
             delta = round_to_interval(delta, self.config.snap_scale as f64);
@@ -82,7 +80,7 @@ impl SubGizmo for ScaleSubGizmo {
         };
 
         let offset = DVec3::ONE + (direction * delta);
-        let new_scale = state.start_scale * offset;
+        let new_scale = self.state.start_scale * offset;
 
         Some(GizmoResult {
             scale: new_scale.as_vec3().into(),
@@ -93,34 +91,39 @@ impl SubGizmo for ScaleSubGizmo {
         })
     }
 
-    fn draw(&mut self, ui: &Ui) {
+    fn draw(&self) -> GizmoDrawData {
         match (self.transform_kind, self.direction) {
-            (TransformKind::Axis, _) => {
-                draw_arrow(self, ui, self.direction, ArrowheadStyle::Square);
-            }
+            (TransformKind::Axis, _) => draw_arrow(
+                &self.config,
+                self.opacity,
+                self.focused,
+                self.direction,
+                ArrowheadStyle::Square,
+            ),
             (TransformKind::Plane, GizmoDirection::View) => {
                 draw_circle(
-                    self,
-                    ui,
-                    gizmo_color(self, self.direction),
+                    &self.config,
+                    gizmo_color(&self.config, self.focused, self.direction),
                     inner_circle_radius(&self.config),
                     false,
-                );
-                draw_circle(
-                    self,
-                    ui,
-                    gizmo_color(self, self.direction),
+                ) + draw_circle(
+                    &self.config,
+                    gizmo_color(&self.config, self.focused, self.direction),
                     outer_circle_radius(&self.config),
                     false,
-                );
+                )
             }
-            (TransformKind::Plane, _) => draw_plane(self, ui, self.direction),
+            (TransformKind::Plane, _) => {
+                draw_plane(&self.config, self.opacity, self.focused, self.direction)
+            }
         }
     }
 }
 
-fn distance_from_origin_2d<T: SubGizmoKind>(subgizmo: &SubGizmoConfig<T>, ui: &Ui) -> Option<f64> {
-    let cursor_pos = ui.input(|i| i.pointer.hover_pos())?;
+fn distance_from_origin_2d<T: SubGizmoKind>(
+    subgizmo: &SubGizmoConfig<T>,
+    cursor_pos: Pos2,
+) -> Option<f64> {
     let viewport = subgizmo.config.viewport;
     let gizmo_pos = world_to_screen(viewport, subgizmo.config.mvp, DVec3::new(0.0, 0.0, 0.0))?;
 

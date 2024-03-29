@@ -1,26 +1,46 @@
 use std::f64::consts::TAU;
 
-use egui::layers::ShapeIdx;
-use egui::{Color32, Pos2, Rect, Shape, Stroke};
+use crate::math::{Pos2, Rect};
+use ecolor::Color32;
+use epaint::{Mesh, TessellationOptions, Tessellator, TextureId};
+pub use epaint::{Shape, Stroke};
 use glam::{DMat4, DVec3};
 
 use crate::math::world_to_screen;
 
 const STEPS_PER_RAD: f64 = 20.0;
 
-pub struct Painter3d {
-    painter: egui::Painter,
+pub struct ShapeBuidler {
     mvp: DMat4,
     viewport: Rect,
+    pixels_per_point: f32,
 }
 
-impl Painter3d {
-    pub fn new(painter: egui::Painter, mvp: DMat4, viewport: Rect) -> Self {
+impl ShapeBuidler {
+    pub fn new(mvp: DMat4, viewport: Rect, pixels_per_point: f32) -> Self {
         Self {
-            painter: painter.with_clip_rect(viewport),
             mvp,
             viewport,
+            pixels_per_point,
         }
+    }
+
+    fn tessellate_shape(&self, shape: Shape) -> Mesh {
+        let mut tessellator = Tessellator::new(
+            self.pixels_per_point,
+            TessellationOptions {
+                feathering: true,
+                ..Default::default()
+            },
+            Default::default(),
+            Default::default(),
+        );
+
+        let mut mesh = Mesh::default();
+        tessellator.tessellate_shape(shape, &mut mesh);
+
+        mesh.texture_id = TextureId::default();
+        mesh
     }
 
     fn arc_points(&self, radius: f64, start_angle: f64, end_angle: f64) -> Vec<Pos2> {
@@ -50,7 +70,7 @@ impl Painter3d {
         start_angle: f64,
         end_angle: f64,
         stroke: impl Into<Stroke>,
-    ) -> ShapeIdx {
+    ) -> Mesh {
         let mut points = self.arc_points(radius, start_angle, end_angle);
 
         let closed = points
@@ -59,77 +79,89 @@ impl Painter3d {
             .filter(|(first, last)| first.distance(**last) < 1e-2)
             .is_some();
 
-        if closed {
+        self.tessellate_shape(if closed {
             points.pop();
-            self.painter.add(Shape::closed_line(points, stroke))
+            Shape::closed_line(points, stroke)
         } else {
-            self.painter.add(Shape::line(points, stroke))
-        }
+            Shape::line(points, stroke)
+        })
     }
 
-    pub fn circle(&self, radius: f64, stroke: impl Into<Stroke>) -> ShapeIdx {
+    pub fn circle(&self, radius: f64, stroke: impl Into<Stroke>) -> Mesh {
         self.arc(radius, 0.0, TAU, stroke)
     }
 
-    pub fn filled_circle(&self, radius: f64, color: Color32) -> ShapeIdx {
+    pub fn filled_circle(&self, radius: f64, color: Color32) -> Mesh {
         let mut points = self.arc_points(radius, 0.0, TAU);
         points.pop();
 
-        self.painter
-            .add(Shape::convex_polygon(points, color, Stroke::NONE))
+        self.tessellate_shape(Shape::convex_polygon(points, color, Stroke::NONE))
     }
 
-    pub fn line_segment(&self, from: DVec3, to: DVec3, stroke: impl Into<Stroke>) {
+    pub fn line_segment(&self, from: DVec3, to: DVec3, stroke: impl Into<Stroke>) -> Mesh {
         let mut points: [Pos2; 2] = Default::default();
 
         for (i, point) in points.iter_mut().enumerate() {
             if let Some(pos) = world_to_screen(self.viewport, self.mvp, [from, to][i]) {
                 *point = pos;
             } else {
-                return;
+                return Mesh::default();
             }
         }
 
-        self.painter.line_segment(points, stroke);
+        self.tessellate_shape(Shape::LineSegment {
+            points,
+            stroke: stroke.into(),
+        })
     }
 
-    pub fn arrow(&self, from: DVec3, to: DVec3, stroke: impl Into<Stroke>) {
+    pub fn arrow(&self, from: DVec3, to: DVec3, stroke: impl Into<Stroke>) -> Mesh {
         let stroke = stroke.into();
         let arrow_start = world_to_screen(self.viewport, self.mvp, from);
         let arrow_end = world_to_screen(self.viewport, self.mvp, to);
 
-        if let Some((start, end)) = arrow_start.zip(arrow_end) {
+        self.tessellate_shape(if let Some((start, end)) = arrow_start.zip(arrow_end) {
             let cross = (end - start).normalized().rot90() * stroke.width;
 
-            self.painter.add(Shape::convex_polygon(
+            Shape::convex_polygon(
                 vec![start - cross, start + cross, end],
                 stroke.color,
                 Stroke::NONE,
-            ));
-        }
+            )
+        } else {
+            Shape::Noop
+        })
     }
 
-    pub fn polygon(&self, points: &[DVec3], fill: impl Into<Color32>, stroke: impl Into<Stroke>) {
+    pub fn polygon(
+        &self,
+        points: &[DVec3],
+        fill: impl Into<Color32>,
+        stroke: impl Into<Stroke>,
+    ) -> Mesh {
         let points = points
             .iter()
             .filter_map(|pos| world_to_screen(self.viewport, self.mvp, *pos))
             .collect::<Vec<_>>();
 
-        if points.len() > 2 {
-            self.painter
-                .add(Shape::convex_polygon(points, fill, stroke));
-        }
+        self.tessellate_shape(if points.len() > 2 {
+            Shape::convex_polygon(points, fill, stroke)
+        } else {
+            Shape::Noop
+        })
     }
 
-    pub fn polyline(&self, points: &[DVec3], stroke: impl Into<Stroke>) {
+    pub fn polyline(&self, points: &[DVec3], stroke: impl Into<Stroke>) -> Mesh {
         let points = points
             .iter()
             .filter_map(|pos| world_to_screen(self.viewport, self.mvp, *pos))
             .collect::<Vec<_>>();
 
-        if points.len() > 1 {
-            self.painter.add(Shape::line(points, stroke));
-        }
+        self.tessellate_shape(if points.len() > 1 {
+            Shape::line(points, stroke)
+        } else {
+            Shape::Noop
+        })
     }
 
     fn vec3_to_pos2(&self, vec: DVec3) -> Option<Pos2> {

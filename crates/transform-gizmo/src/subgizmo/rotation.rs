@@ -1,17 +1,16 @@
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
-use egui::Ui;
 use glam::{DMat3, DMat4, DQuat, DVec2, DVec3};
 
-use crate::math::{ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen};
-use crate::painter::Painter3d;
+use crate::math::{ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen, Pos2};
+use crate::shape::ShapeBuidler;
 use crate::subgizmo::common::{gizmo_color, gizmo_local_normal, gizmo_normal, outer_circle_radius};
 use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoKind};
-use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
+use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult};
 
 pub(crate) type RotationSubGizmo = SubGizmoConfig<Rotation>;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash)]
 pub(crate) struct RotationParams {
     pub direction: GizmoDirection,
 }
@@ -33,7 +32,7 @@ impl SubGizmoKind for Rotation {
 }
 
 impl SubGizmo for RotationSubGizmo {
-    fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
+    fn pick(&mut self, ray: Ray) -> Option<f64> {
         let radius = arc_radius(self);
         let config = self.config;
         let origin = config.translation;
@@ -60,13 +59,11 @@ impl SubGizmo for RotationSubGizmo {
             f64::atan2(offset.cross(forward).dot(normal), offset.dot(forward))
         };
 
-        self.update_state_with(ui, |state: &mut RotationState| {
-            let rotation_angle = rotation_angle(self, ui).unwrap_or(0.0);
-            state.start_axis_angle = angle as f32;
-            state.start_rotation_angle = rotation_angle as f32;
-            state.last_rotation_angle = rotation_angle as f32;
-            state.current_delta = 0.0;
-        });
+        let rotation_angle = rotation_angle(self, ray.screen_pos).unwrap_or(0.0);
+        self.state.start_axis_angle = angle as f32;
+        self.state.start_rotation_angle = rotation_angle as f32;
+        self.state.last_rotation_angle = rotation_angle as f32;
+        self.state.current_delta = 0.0;
 
         if dist_from_gizmo_edge <= config.focus_distance as f64 && angle.abs() < arc_angle(self) {
             Some(t)
@@ -75,19 +72,18 @@ impl SubGizmo for RotationSubGizmo {
         }
     }
 
-    fn update(&mut self, ui: &Ui, _ray: Ray) -> Option<GizmoResult> {
-        let state = self.state(ui);
+    fn update(&mut self, ray: Ray) -> Option<GizmoResult> {
         let config = self.config;
 
-        let mut rotation_angle = rotation_angle(self, ui)?;
+        let mut rotation_angle = rotation_angle(self, ray.screen_pos)?;
         if config.snapping {
             rotation_angle = round_to_interval(
-                rotation_angle - state.start_rotation_angle as f64,
+                rotation_angle - self.state.start_rotation_angle as f64,
                 config.snap_angle as f64,
-            ) + state.start_rotation_angle as f64;
+            ) + self.state.start_rotation_angle as f64;
         }
 
-        let mut angle_delta = rotation_angle - state.last_rotation_angle as f64;
+        let mut angle_delta = rotation_angle - self.state.last_rotation_angle as f64;
 
         // Always take the smallest angle, e.g. -10° instead of 350°
         if angle_delta > PI {
@@ -96,10 +92,8 @@ impl SubGizmo for RotationSubGizmo {
             angle_delta += TAU;
         }
 
-        self.update_state_with(ui, |state: &mut RotationState| {
-            state.last_rotation_angle = rotation_angle as f32;
-            state.current_delta += angle_delta as f32;
-        });
+        self.state.last_rotation_angle = rotation_angle as f32;
+        self.state.current_delta += angle_delta as f32;
 
         let new_rotation =
             DQuat::from_axis_angle(gizmo_normal(&self.config, self.direction), -angle_delta)
@@ -111,64 +105,73 @@ impl SubGizmo for RotationSubGizmo {
             translation: self.config.translation.as_vec3().into(),
             mode: GizmoMode::Rotate,
             value: Some(
-                (gizmo_normal(&self.config, self.direction).as_vec3() * state.current_delta)
+                (gizmo_normal(&self.config, self.direction).as_vec3() * self.state.current_delta)
                     .to_array(),
             ),
         })
     }
 
-    fn draw(&mut self, ui: &Ui) {
-        let state = self.state(ui);
+    fn draw(&self) -> GizmoDrawData {
         let config = self.config;
 
         let transform = rotation_matrix(self);
-        let painter = Painter3d::new(
-            ui.painter().clone(),
+        let shape_builder = ShapeBuidler::new(
             config.view_projection * transform,
             config.viewport,
+            config.pixels_per_point,
         );
 
-        let color = gizmo_color(self, self.direction);
+        let color = gizmo_color(&self.config, self.focused, self.direction);
         let stroke = (config.visuals.stroke_width, color);
 
         let radius = arc_radius(self);
 
+        let mut draw_data = GizmoDrawData::default();
+
         if !self.active {
             let angle = arc_angle(self);
-            painter.arc(radius, FRAC_PI_2 - angle, FRAC_PI_2 + angle, stroke);
+            draw_data += shape_builder
+                .arc(radius, FRAC_PI_2 - angle, FRAC_PI_2 + angle, stroke)
+                .into();
         } else {
-            let start_angle = state.start_axis_angle as f64 + FRAC_PI_2;
-            let end_angle = start_angle + state.current_delta as f64;
+            let start_angle = self.state.start_axis_angle as f64 + FRAC_PI_2;
+            let end_angle = start_angle + self.state.current_delta as f64;
 
             // The polyline does not get rendered correctly if
             // the start and end lines are exactly the same
             let end_angle = end_angle + 1e-5;
 
-            painter.polyline(
-                &[
-                    DVec3::new(start_angle.cos() * radius, 0.0, start_angle.sin() * radius),
-                    DVec3::new(0.0, 0.0, 0.0),
-                    DVec3::new(end_angle.cos() * radius, 0.0, end_angle.sin() * radius),
-                ],
-                stroke,
-            );
+            draw_data += shape_builder
+                .polyline(
+                    &[
+                        DVec3::new(start_angle.cos() * radius, 0.0, start_angle.sin() * radius),
+                        DVec3::new(0.0, 0.0, 0.0),
+                        DVec3::new(end_angle.cos() * radius, 0.0, end_angle.sin() * radius),
+                    ],
+                    stroke,
+                )
+                .into();
 
-            painter.circle(radius, stroke);
+            draw_data += shape_builder.circle(radius, stroke).into();
 
             // Draw snapping ticks
             if config.snapping {
                 let stroke_width = stroke.0 / 2.0;
                 for i in 0..((TAU / config.snap_angle as f64) as usize + 1) {
-                    let angle = (i as f64).mul_add(config.snap_angle as f64, end_angle);
+                    let angle = i as f64 * config.snap_angle as f64 + end_angle;
                     let pos = DVec3::new(angle.cos(), 0.0, angle.sin());
-                    painter.line_segment(
-                        pos * radius * 1.1,
-                        pos * radius * 1.2,
-                        (stroke_width, stroke.1),
-                    );
+                    draw_data += shape_builder
+                        .line_segment(
+                            pos * radius * 1.1,
+                            pos * radius * 1.2,
+                            (stroke_width, stroke.1),
+                        )
+                        .into();
                 }
             }
         }
+
+        draw_data
     }
 }
 
@@ -182,8 +185,8 @@ fn arc_angle(subgizmo: &SubGizmoConfig<Rotation>) -> f64 {
     let min_dot = 0.990;
     let max_dot = 0.995;
 
-    let mut angle = f64::min(1.0, f64::max(0.0, dot - min_dot) / (max_dot - min_dot))
-        .mul_add(FRAC_PI_2, FRAC_PI_2);
+    let mut angle =
+        f64::min(1.0, f64::max(0.0, dot - min_dot) / (max_dot - min_dot)) * FRAC_PI_2 + FRAC_PI_2;
     if (angle - PI).abs() < 1e-2 {
         angle = PI;
     }
@@ -226,8 +229,7 @@ fn rotation_matrix(subgizmo: &SubGizmoConfig<Rotation>) -> DMat4 {
     DMat4::from_rotation_translation(rotation, config.translation)
 }
 
-fn rotation_angle(subgizmo: &SubGizmoConfig<Rotation>, ui: &Ui) -> Option<f64> {
-    let cursor_pos = ui.input(|i| i.pointer.hover_pos())?;
+fn rotation_angle(subgizmo: &SubGizmoConfig<Rotation>, cursor_pos: Pos2) -> Option<f64> {
     let viewport = subgizmo.config.viewport;
     let gizmo_pos = world_to_screen(viewport, subgizmo.config.mvp, DVec3::new(0.0, 0.0, 0.0))?;
     let delta = DVec2::new(

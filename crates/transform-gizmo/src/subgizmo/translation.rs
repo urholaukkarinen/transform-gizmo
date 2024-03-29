@@ -1,4 +1,3 @@
-use egui::Ui;
 use glam::DVec3;
 
 use crate::math::{intersect_plane, ray_to_ray, round_to_interval};
@@ -8,12 +7,12 @@ use crate::subgizmo::common::{
     pick_arrow, pick_circle, pick_plane, plane_bitangent, plane_global_origin, plane_tangent,
     ArrowheadStyle,
 };
-use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoKind, TransformKind};
-use crate::{GizmoDirection, GizmoMode, GizmoResult, Ray};
+use crate::subgizmo::{common::TransformKind, SubGizmo, SubGizmoConfig, SubGizmoKind};
+use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult};
 
 pub(crate) type TranslationSubGizmo = SubGizmoConfig<Translation>;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash)]
 pub(crate) struct TranslationParams {
     pub direction: GizmoDirection,
     pub transform_kind: TransformKind,
@@ -35,22 +34,20 @@ impl SubGizmoKind for Translation {
 }
 
 impl SubGizmo for TranslationSubGizmo {
-    fn pick(&mut self, ui: &Ui, ray: Ray) -> Option<f64> {
+    fn pick(&mut self, ray: Ray) -> Option<f64> {
         let pick_result = match (self.transform_kind, self.direction) {
             (TransformKind::Plane, GizmoDirection::View) => {
-                pick_circle(self, ray, inner_circle_radius(&self.config), true)
+                pick_circle(&self.config, ray, inner_circle_radius(&self.config), true)
             }
-            (TransformKind::Plane, _) => pick_plane(self, ray, self.direction),
-            (TransformKind::Axis, _) => pick_arrow(self, ray, self.direction),
+            (TransformKind::Plane, _) => pick_plane(&self.config, ray, self.direction),
+            (TransformKind::Axis, _) => pick_arrow(&self.config, ray, self.direction),
         };
 
         self.opacity = pick_result.visibility as _;
 
-        self.update_state_with(ui, |state: &mut TranslationState| {
-            state.start_point = pick_result.subgizmo_point;
-            state.last_point = pick_result.subgizmo_point;
-            state.current_delta = DVec3::ZERO;
-        });
+        self.state.start_point = pick_result.subgizmo_point;
+        self.state.last_point = pick_result.subgizmo_point;
+        self.state.current_delta = DVec3::ZERO;
 
         if pick_result.picked {
             Some(pick_result.t)
@@ -59,9 +56,7 @@ impl SubGizmo for TranslationSubGizmo {
         }
     }
 
-    fn update(&mut self, ui: &Ui, ray: Ray) -> Option<GizmoResult> {
-        let state = self.state(ui);
-
+    fn update(&mut self, ray: Ray) -> Option<GizmoResult> {
         let mut new_point = if self.transform_kind == TransformKind::Axis {
             point_on_axis(self, ray)
         } else {
@@ -72,7 +67,7 @@ impl SubGizmo for TranslationSubGizmo {
             )?
         };
 
-        let mut new_delta = new_point - state.start_point;
+        let mut new_delta = new_point - self.state.start_point;
 
         if self.config.snapping {
             new_delta = if self.transform_kind == TransformKind::Axis {
@@ -80,38 +75,41 @@ impl SubGizmo for TranslationSubGizmo {
             } else {
                 snap_translation_plane(self, new_delta)
             };
-            new_point = state.start_point + new_delta;
+            new_point = self.state.start_point + new_delta;
         }
 
-        self.update_state_with(ui, |state: &mut TranslationState| {
-            state.last_point = new_point;
-            state.current_delta = new_delta;
-        });
+        let new_translation = self.config.translation + new_point - self.state.last_point;
 
-        let new_translation = self.config.translation + new_point - state.last_point;
+        self.state.last_point = new_point;
+        self.state.current_delta = new_delta;
 
         Some(GizmoResult {
             scale: self.config.scale.as_vec3().into(),
             rotation: self.config.rotation.as_quat().into(),
             translation: new_translation.as_vec3().into(),
             mode: GizmoMode::Translate,
-            value: Some(state.current_delta.as_vec3().to_array()),
+            value: Some(new_delta.as_vec3().to_array()),
         })
     }
 
-    fn draw(&mut self, ui: &Ui) {
+    fn draw(&self) -> GizmoDrawData {
         match (self.transform_kind, self.direction) {
-            (TransformKind::Axis, _) => draw_arrow(self, ui, self.direction, ArrowheadStyle::Cone),
-            (TransformKind::Plane, GizmoDirection::View) => {
-                draw_circle(
-                    self,
-                    ui,
-                    gizmo_color(self, self.direction),
-                    inner_circle_radius(&self.config),
-                    false,
-                );
+            (TransformKind::Axis, _) => draw_arrow(
+                &self.config,
+                self.opacity,
+                self.focused,
+                self.direction,
+                ArrowheadStyle::Cone,
+            ),
+            (TransformKind::Plane, GizmoDirection::View) => draw_circle(
+                &self.config,
+                gizmo_color(&self.config, self.focused, self.direction),
+                inner_circle_radius(&self.config),
+                false,
+            ),
+            (TransformKind::Plane, _) => {
+                draw_plane(&self.config, self.opacity, self.focused, self.direction)
             }
-            (TransformKind::Plane, _) => draw_plane(self, ui, self.direction),
         }
     }
 }

@@ -8,14 +8,18 @@ homepage.workspace = true
 repository.workspace = true
 authors.workspace = true
 categories = ["gui", "game-development", "game-engines"]
-keywords = ["3d", "gizmo"]
+keywords = ["gizmo"]
 readme = "../../README.md"
 include = ["../../LICENSE-APACHE", "../../LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 
 [dependencies]
-egui.workspace = true
+emath.workspace = true
+epaint.workspace = true
+ecolor.workspace = true
 glam.workspace = true
 mint.workspace = true
+enum_dispatch.workspace = true
+ahash.workspace = true
 
 [lints]
 workspace = true

@@ -13,9 +13,17 @@ authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 
 [workspace.dependencies]
 transform-gizmo = { version = "0.1.0", path = "crates/transform-gizmo", default-features = false }
+transform-gizmo-egui = { version = "0.1.0", path = "crates/transform-gizmo-egui", default-features = false }
+
 egui = "0.26.2"
+eframe = "0.26.2"
+emath = "0.26.2"
+epaint = "0.26.2"
+ecolor = "0.26.2"
 glam = { version = "0.25.0", features = ["mint"] }
 mint = "0.5"
+enum_dispatch = "0.3.12"
+ahash = "0.8.7"
 
 [profile.release]
 opt-level = "s"
