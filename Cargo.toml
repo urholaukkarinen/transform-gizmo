@@ -1,32 +1,25 @@
-[package]
-name = "egui-gizmo"
-version = "0.16.2"
-authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
-edition = "2021"
-
-license-file = "LICENSE"
-readme = "README.md"
-description = "3d transform gizmo for the egui library"
-homepage = "https://github.com/urholaukkarinen/egui-gizmo"
-repository = "https://github.com/urholaukkarinen/egui-gizmo"
-categories = ["gui", "game-development", "game-engines"]
-keywords = ["egui", "gizmo"]
-exclude = ["/docs"]
-
 [workspace]
-members = ["demo"]
+resolver = "2"
+members = ["crates/*"]
 
-[dependencies]
+[workspace.package]
+version = "0.1.0"
+rust-version = "1.72"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/urholaukkarinen/transform-gizmo"
+repository = "https://github.com/urholaukkarinen/transform-gizmo"
+authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
+
+[workspace.dependencies]
+transform-gizmo = { version = "0.1.0", path = "crates/transform-gizmo", default-features = false }
 egui = "0.26.2"
 glam = { version = "0.25.0", features = ["mint"] }
 mint = "0.5"
 
 [profile.release]
 opt-level = "s"
-lto = "thin"
-
-[lints]
-workspace = true
+panic = "abort"
 
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "allow"
@@ -177,5 +170,3 @@ unwrap_used = "allow"
 wildcard_imports = "allow"
 large-types-passed-by-value = "allow"
 needless-pass-by-value = "allow"
-needless_pass_by_ref_mut = "allow"
-redundant_pub_crate = "allow"

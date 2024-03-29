@@ -3,9 +3,9 @@
 set -eu
 script_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 
-WASM_PATH="docs/egui-gizmo-demo_bg.wasm"
+WASM_PATH="docs/transform-gizmo-demo_bg.wasm"
 
-pushd "$script_path/../demo"
+pushd "$script_path/../crates/transform-gizmo-demo"
 trunk build --config Trunk.toml --release
 popd
 

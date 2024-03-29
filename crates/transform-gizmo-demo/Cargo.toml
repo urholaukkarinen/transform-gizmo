@@ -1,0 +1,26 @@
+[package]
+name = "transform-gizmo-demo"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+egui.workspace = true
+transform-gizmo.workspace = true
+bevy = "0.13"
+bevy_egui = "0.25.0"
+
+[dependencies.bevy_infinite_grid]
+git = "https://github.com/XYCaptain/bevy_infinite_grid.git"
+rev = "1e5259a52a7dfaca65402c2c57c1d81c2bc443e9"
+
+[dependencies.bevy_math]
+version = "0.12.1"
+features = ["mint"]
+
+[lints]
+workspace = true

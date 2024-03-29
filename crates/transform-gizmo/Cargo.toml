@@ -1,0 +1,21 @@
+[package]
+name = "transform-gizmo"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+authors.workspace = true
+categories = ["gui", "game-development", "game-engines"]
+keywords = ["3d", "gizmo"]
+readme = "../../README.md"
+include = ["../../LICENSE-APACHE", "../../LICENSE-MIT", "**/*.rs", "Cargo.toml"]
+
+[dependencies]
+egui.workspace = true
+glam.workspace = true
+mint.workspace = true
+
+[lints]
+workspace = true

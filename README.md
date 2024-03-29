@@ -1,12 +1,12 @@
-# egui-gizmo
+# transform-gizmo
 
-[![Latest version](https://img.shields.io/crates/v/egui-gizmo.svg)](https://crates.io/crates/egui-gizmo)
-[![Documentation](https://docs.rs/egui-gizmo/badge.svg)](https://docs.rs/egui-gizmo)
+[![Latest version](https://img.shields.io/crates/v/transform-gizmo.svg)](https://crates.io/crates/transform-gizmo)
+[![Documentation](https://docs.rs/transform-gizmo/badge.svg)](https://docs.rs/transform-gizmo)
 ![MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
 3d transformation gizmo built on top of the [egui](https://github.com/emilk/egui) library.
 
-[Try it out in a web demo](https://urholaukkarinen.github.io/egui-gizmo/)
+[Try it out in a web demo](https://urholaukkarinen.github.io/transform-gizmo/)
 
 ![Rotation](media/rotation.png)
 ![Translation](media/translation.png)
