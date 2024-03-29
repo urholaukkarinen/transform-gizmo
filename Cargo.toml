@@ -15,11 +15,11 @@ authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 transform-gizmo = { version = "0.1.0", path = "crates/transform-gizmo", default-features = false }
 transform-gizmo-egui = { version = "0.1.0", path = "crates/transform-gizmo-egui", default-features = false }
 
-egui = "0.26.2"
-eframe = "0.26.2"
-emath = "0.26.2"
-epaint = "0.26.2"
-ecolor = "0.26.2"
+egui = "0.27.1"
+eframe = "0.27.1"
+emath = "0.27.1"
+epaint = "0.27.1"
+ecolor = "0.27.1"
 glam = { version = "0.25.0", features = ["mint"] }
 mint = "0.5"
 enum_dispatch = "0.3.12"
