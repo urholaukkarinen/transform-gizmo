@@ -2,6 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use ecolor::Color32;
 use emath::Rect;
+use enumset::{enum_set, EnumSet, EnumSetType};
 pub use glam::{DMat4, DQuat, DVec3, Mat4, Vec4Swizzles};
 
 use crate::math::{screen_to_world, world_to_screen};
@@ -27,8 +28,8 @@ pub struct GizmoConfig {
     /// Screen area where the gizmo is displayed.
     pub viewport: Rect,
 
-    /// The gizmo's operation mode.
-    pub mode: GizmoMode,
+    /// The gizmo's operation modes.
+    pub modes: EnumSet<GizmoMode>,
 
     /// Determines the gizmo's orientation relative to global or local axes.
     pub orientation: GizmoOrientation,
@@ -90,7 +91,7 @@ impl Default for GizmoConfig {
             projection_matrix: DMat4::IDENTITY,
             model_matrix: DMat4::IDENTITY,
             viewport: Rect::NOTHING,
-            mode: GizmoMode::Rotate,
+            modes: enum_set!(GizmoMode::Rotate),
             orientation: GizmoOrientation::Global,
             snapping: false,
             snap_angle: DEFAULT_SNAP_ANGLE,
@@ -167,11 +168,11 @@ impl GizmoConfig {
     /// Whether local orientation is used
     pub(crate) fn local_space(&self) -> bool {
         // Scale mode only works in local space
-        self.orientation == GizmoOrientation::Local || self.mode == GizmoMode::Scale
+        self.orientation == GizmoOrientation::Local || self.modes.contains(GizmoMode::Scale)
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, EnumSetType)]
 pub enum GizmoMode {
     /// Only rotation
     Rotate,

@@ -1,4 +1,5 @@
 use emath::Pos2;
+use enumset::EnumSet;
 use std::ops::{Add, AddAssign, Sub};
 
 use crate::config::{GizmoConfig, GizmoDirection, GizmoMode, PreparedGizmoConfig};
@@ -16,7 +17,7 @@ use crate::subgizmo::{
 
 pub struct Gizmo {
     config: PreparedGizmoConfig,
-    last_mode: Option<GizmoMode>,
+    last_modes: EnumSet<GizmoMode>,
     subgizmos: Vec<Box<dyn SubGizmo + 'static>>,
     active_subgizmo_id: Option<u64>,
 }
@@ -31,7 +32,7 @@ impl Gizmo {
     pub fn new(config: GizmoConfig) -> Self {
         Self {
             config: PreparedGizmoConfig::from_config(config),
-            last_mode: None,
+            last_modes: Default::default(),
             subgizmos: Default::default(),
             active_subgizmo_id: None,
         }
@@ -63,20 +64,22 @@ impl Gizmo {
         }
 
         // Mode was changed. Update all subgizmos accordingly.
-        if Some(self.config.mode) != self.last_mode {
-            self.last_mode = Some(self.config.mode);
+        if self.config.modes != self.last_modes {
+            self.last_modes = self.config.modes;
 
             self.subgizmos.clear();
 
             // Choose subgizmos based on the gizmo mode
-            match self.config.mode {
-                GizmoMode::Rotate => {
-                    self.add_subgizmos(self.new_rotation());
-                    self.add_subgizmos(self.new_arcball());
-                }
-                GizmoMode::Translate => self.add_subgizmos(self.new_translation()),
-                GizmoMode::Scale => self.add_subgizmos(self.new_scale()),
-            };
+            for mode in self.config.modes {
+                match mode {
+                    GizmoMode::Rotate => {
+                        self.add_subgizmos(self.new_rotation());
+                        self.add_subgizmos(self.new_arcball());
+                    }
+                    GizmoMode::Translate => self.add_subgizmos(self.new_translation()),
+                    GizmoMode::Scale => self.add_subgizmos(self.new_scale()),
+                };
+            }
         }
 
         for subgizmo in &mut self.subgizmos {

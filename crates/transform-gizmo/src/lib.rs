@@ -17,3 +17,5 @@ pub mod prelude;
 
 pub use config::{GizmoConfig, GizmoDirection, GizmoMode, GizmoOrientation, GizmoVisuals};
 pub use gizmo::{Gizmo, GizmoDrawData, GizmoInteraction, GizmoResult};
+
+pub use enumset::{enum_set, EnumSet};

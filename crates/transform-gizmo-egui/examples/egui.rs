@@ -1,12 +1,12 @@
 use eframe::{egui, NativeOptions};
 use transform_gizmo::math::{DMat4, DVec3};
-use transform_gizmo::prelude::*;
+use transform_gizmo::{enum_set, prelude::*, EnumSet};
 use transform_gizmo_egui::GizmoExt;
 
 struct ExampleApp {
     gizmo: Gizmo,
 
-    gizmo_mode: GizmoMode,
+    gizmo_modes: EnumSet<GizmoMode>,
     gizmo_orientation: GizmoOrientation,
 
     model_matrix: DMat4,
@@ -16,7 +16,7 @@ impl ExampleApp {
     fn new() -> Self {
         Self {
             gizmo: Gizmo::default(),
-            gizmo_mode: GizmoMode::Rotate,
+            gizmo_modes: enum_set!(GizmoMode::Rotate),
             gizmo_orientation: GizmoOrientation::Global,
             model_matrix: DMat4::IDENTITY,
         }
@@ -43,7 +43,7 @@ impl ExampleApp {
             view_matrix,
             projection_matrix,
             viewport,
-            mode: self.gizmo_mode,
+            modes: self.gizmo_modes,
             orientation: self.gizmo_orientation,
             snapping,
             pixels_per_point: ui.ctx().pixels_per_point(),
@@ -64,12 +64,18 @@ impl ExampleApp {
         egui::Grid::new("options_grid")
             .num_columns(2)
             .show(ui, |ui| {
-                ui.label("Mode");
+                ui.label("Modes");
                 egui::ComboBox::from_id_source("mode_cb")
-                    .selected_text(format!("{:?}", self.gizmo_mode))
+                    .selected_text(format!("{}", self.gizmo_modes.len()))
                     .show_ui(ui, |ui| {
                         for mode in [GizmoMode::Rotate, GizmoMode::Translate, GizmoMode::Scale] {
-                            ui.selectable_value(&mut self.gizmo_mode, mode, format!("{:?}", mode));
+                            let mut mode_selected = self.gizmo_modes.contains(mode);
+                            ui.toggle_value(&mut mode_selected, format!("{:?}", mode));
+                            if mode_selected {
+                                self.gizmo_modes.insert(mode);
+                            } else {
+                                self.gizmo_modes.remove(mode);
+                            }
                         }
                     });
                 ui.end_row();

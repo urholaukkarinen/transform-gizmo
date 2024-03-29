@@ -30,7 +30,7 @@ impl SubGizmo for ArcballSubGizmo {
 
         self.state.last_pos = ray.screen_pos;
 
-        Some(pick_result.t)
+        Some(f64::MAX)
     }
 
     fn update(&mut self, ray: Ray) -> Option<GizmoResult> {
