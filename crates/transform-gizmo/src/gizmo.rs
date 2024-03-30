@@ -12,13 +12,13 @@ use crate::subgizmo::scale::ScaleParams;
 use crate::subgizmo::translation::TranslationParams;
 use crate::subgizmo::{
     common::TransformKind, ArcballSubGizmo, RotationSubGizmo, ScaleSubGizmo, SubGizmo,
-    TranslationSubGizmo,
+    SubGizmoControl, TranslationSubGizmo,
 };
 
 pub struct Gizmo {
     config: PreparedGizmoConfig,
     last_modes: EnumSet<GizmoMode>,
-    subgizmos: Vec<Box<dyn SubGizmo + 'static>>,
+    subgizmos: Vec<SubGizmo>,
     active_subgizmo_id: Option<u64>,
 }
 
@@ -73,11 +73,12 @@ impl Gizmo {
             for mode in self.config.modes {
                 match mode {
                     GizmoMode::Rotate => {
-                        self.add_subgizmos(self.new_rotation());
-                        self.add_subgizmos(self.new_arcball());
+                        self.subgizmos.extend(self.new_rotation());
+                        self.subgizmos.extend(self.new_rotation());
+                        self.subgizmos.extend(self.new_arcball());
                     }
-                    GizmoMode::Translate => self.add_subgizmos(self.new_translation()),
-                    GizmoMode::Scale => self.add_subgizmos(self.new_scale()),
+                    GizmoMode::Translate => self.subgizmos.extend(self.new_translation()),
+                    GizmoMode::Scale => self.subgizmos.extend(self.new_scale()),
                 };
             }
         }
@@ -134,24 +135,16 @@ impl Gizmo {
                 self.config.scale,
                 self.config.rotation,
                 self.config.translation,
-            );
+            )
+            .into();
         }
 
         result
     }
 
-    /// Add given subgizmos to this gizmo
-    fn add_subgizmos<T: SubGizmo + 'static, const N: usize>(&mut self, subgizmos: [T; N]) {
-        for subgizmo in subgizmos {
-            self.subgizmos.push(Box::new(subgizmo));
-        }
-    }
-
     /// Return all the necessary data to draw the latest gizmo interaction.
     ///
-    /// The gizmo draw data consists of vertices that are pre-transformed
-    /// to normalized device coordinates using the matrices provided in the
-    /// gizmo configuration, and are thus easy to draw to the screen.
+    /// The gizmo draw data consists of vertices in screen coordinates.
     pub fn draw(&self) -> GizmoDrawData {
         let mut result = GizmoDrawData::default();
         for subgizmo in &self.subgizmos {
@@ -164,7 +157,7 @@ impl Gizmo {
     }
 
     /// Picks the subgizmo that is closest to the given world space ray.
-    fn pick_subgizmo(&mut self, ray: Ray) -> Option<&mut Box<dyn SubGizmo>> {
+    fn pick_subgizmo(&mut self, ray: Ray) -> Option<&mut SubGizmo> {
         self.subgizmos
             .iter_mut()
             .filter_map(|subgizmo| subgizmo.pick(ray).map(|t| (t, subgizmo)))
@@ -177,42 +170,46 @@ impl Gizmo {
     }
 
     /// Create subgizmos for arcball rotation
-    fn new_arcball(&self) -> [ArcballSubGizmo; 1] {
-        [ArcballSubGizmo::new(self.config, ())]
+    fn new_arcball(&self) -> [SubGizmo; 1] {
+        [ArcballSubGizmo::new(self.config, ()).into()]
     }
 
     /// Create subgizmos for rotation
-    fn new_rotation(&self) -> [RotationSubGizmo; 4] {
+    fn new_rotation(&self) -> [SubGizmo; 4] {
         [
             RotationSubGizmo::new(
                 self.config,
                 RotationParams {
                     direction: GizmoDirection::X,
                 },
-            ),
+            )
+            .into(),
             RotationSubGizmo::new(
                 self.config,
                 RotationParams {
                     direction: GizmoDirection::Y,
                 },
-            ),
+            )
+            .into(),
             RotationSubGizmo::new(
                 self.config,
                 RotationParams {
                     direction: GizmoDirection::Z,
                 },
-            ),
+            )
+            .into(),
             RotationSubGizmo::new(
                 self.config,
                 RotationParams {
                     direction: GizmoDirection::View,
                 },
-            ),
+            )
+            .into(),
         ]
     }
 
     /// Create subgizmos for translation
-    fn new_translation(&self) -> [TranslationSubGizmo; 7] {
+    fn new_translation(&self) -> [SubGizmo; 7] {
         [
             TranslationSubGizmo::new(
                 self.config,
@@ -220,54 +217,61 @@ impl Gizmo {
                     direction: GizmoDirection::View,
                     transform_kind: TransformKind::Plane,
                 },
-            ),
+            )
+            .into(),
             TranslationSubGizmo::new(
                 self.config,
                 TranslationParams {
                     direction: GizmoDirection::X,
                     transform_kind: TransformKind::Axis,
                 },
-            ),
+            )
+            .into(),
             TranslationSubGizmo::new(
                 self.config,
                 TranslationParams {
                     direction: GizmoDirection::Y,
                     transform_kind: TransformKind::Axis,
                 },
-            ),
+            )
+            .into(),
             TranslationSubGizmo::new(
                 self.config,
                 TranslationParams {
                     direction: GizmoDirection::Z,
                     transform_kind: TransformKind::Axis,
                 },
-            ),
+            )
+            .into(),
             TranslationSubGizmo::new(
                 self.config,
                 TranslationParams {
                     direction: GizmoDirection::X,
                     transform_kind: TransformKind::Plane,
                 },
-            ),
+            )
+            .into(),
             TranslationSubGizmo::new(
                 self.config,
                 TranslationParams {
                     direction: GizmoDirection::Y,
                     transform_kind: TransformKind::Plane,
                 },
-            ),
+            )
+            .into(),
             TranslationSubGizmo::new(
                 self.config,
                 TranslationParams {
                     direction: GizmoDirection::Z,
                     transform_kind: TransformKind::Plane,
                 },
-            ),
+            )
+            .into(),
         ]
     }
 
     /// Create subgizmos for scale
-    fn new_scale(&self) -> [ScaleSubGizmo; 7] {
+    fn new_scale(&self) -> [SubGizmo; 7] {
         [
             ScaleSubGizmo::new(
                 self.config,
@@ -275,49 +279,56 @@ impl Gizmo {
                     direction: GizmoDirection::View,
                     transform_kind: TransformKind::Plane,
                 },
-            ),
+            )
+            .into(),
             ScaleSubGizmo::new(
                 self.config,
                 ScaleParams {
                     direction: GizmoDirection::X,
                     transform_kind: TransformKind::Axis,
                 },
-            ),
+            )
+            .into(),
             ScaleSubGizmo::new(
                 self.config,
                 ScaleParams {
                     direction: GizmoDirection::Y,
                     transform_kind: TransformKind::Axis,
                 },
-            ),
+            )
+            .into(),
             ScaleSubGizmo::new(
                 self.config,
                 ScaleParams {
                     direction: GizmoDirection::Z,
                     transform_kind: TransformKind::Axis,
                 },
-            ),
+            )
+            .into(),
             ScaleSubGizmo::new(
                 self.config,
                 ScaleParams {
                     direction: GizmoDirection::X,
                     transform_kind: TransformKind::Plane,
                 },
-            ),
+            )
+            .into(),
             ScaleSubGizmo::new(
                 self.config,
                 ScaleParams {
                     direction: GizmoDirection::Y,
                     transform_kind: TransformKind::Plane,
                 },
-            ),
+            )
+            .into(),
             ScaleSubGizmo::new(
                 self.config,
                 ScaleParams {
                     direction: GizmoDirection::Z,
                     transform_kind: TransformKind::Plane,
                 },
-            ),
+            )
+            .into(),
         ]
     }
 

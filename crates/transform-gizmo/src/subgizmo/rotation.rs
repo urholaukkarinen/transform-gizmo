@@ -5,7 +5,7 @@ use glam::{DMat3, DMat4, DQuat, DVec2, DVec3};
 use crate::math::{ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen, Pos2};
 use crate::shape::ShapeBuidler;
 use crate::subgizmo::common::{gizmo_color, gizmo_local_normal, gizmo_normal, outer_circle_radius};
-use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoKind};
+use crate::subgizmo::{SubGizmoConfig, SubGizmoKind};
 use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult};
 
 pub(crate) type RotationSubGizmo = SubGizmoConfig<Rotation>;
@@ -29,15 +29,13 @@ pub(crate) struct Rotation;
 impl SubGizmoKind for Rotation {
     type Params = RotationParams;
     type State = RotationState;
-}
 
-impl SubGizmo for RotationSubGizmo {
-    fn pick(&mut self, ray: Ray) -> Option<f64> {
-        let radius = arc_radius(self);
-        let config = self.config;
+    fn pick(subgizmo: &mut RotationSubGizmo, ray: Ray) -> Option<f64> {
+        let radius = arc_radius(subgizmo);
+        let config = subgizmo.config;
         let origin = config.translation;
-        let normal = gizmo_normal(&self.config, self.direction);
-        let tangent = tangent(self);
+        let normal = gizmo_normal(&subgizmo.config, subgizmo.direction);
+        let tangent = tangent(subgizmo);
 
         let (t, dist_from_gizmo_origin) =
             ray_to_plane_origin(normal, origin, ray.origin, ray.direction);
@@ -49,7 +47,7 @@ impl SubGizmo for RotationSubGizmo {
 
         let offset = (nearest_circle_pos - origin).normalize();
 
-        let angle = if self.direction == GizmoDirection::View {
+        let angle = if subgizmo.direction == GizmoDirection::View {
             f64::atan2(tangent.cross(normal).dot(offset), tangent.dot(offset))
         } else {
             let mut forward = config.view_forward();
@@ -59,31 +57,32 @@ impl SubGizmo for RotationSubGizmo {
             f64::atan2(offset.cross(forward).dot(normal), offset.dot(forward))
         };
 
-        let rotation_angle = rotation_angle(self, ray.screen_pos).unwrap_or(0.0);
-        self.state.start_axis_angle = angle as f32;
-        self.state.start_rotation_angle = rotation_angle as f32;
-        self.state.last_rotation_angle = rotation_angle as f32;
-        self.state.current_delta = 0.0;
+        let rotation_angle = rotation_angle(subgizmo, ray.screen_pos).unwrap_or(0.0);
+        subgizmo.state.start_axis_angle = angle as f32;
+        subgizmo.state.start_rotation_angle = rotation_angle as f32;
+        subgizmo.state.last_rotation_angle = rotation_angle as f32;
+        subgizmo.state.current_delta = 0.0;
 
-        if dist_from_gizmo_edge <= config.focus_distance as f64 && angle.abs() < arc_angle(self) {
+        if dist_from_gizmo_edge <= config.focus_distance as f64 && angle.abs() < arc_angle(subgizmo)
+        {
             Some(t)
         } else {
             None
         }
     }
 
-    fn update(&mut self, ray: Ray) -> Option<GizmoResult> {
-        let config = self.config;
+    fn update(subgizmo: &mut RotationSubGizmo, ray: Ray) -> Option<GizmoResult> {
+        let config = subgizmo.config;
 
-        let mut rotation_angle = rotation_angle(self, ray.screen_pos)?;
+        let mut rotation_angle = rotation_angle(subgizmo, ray.screen_pos)?;
         if config.snapping {
             rotation_angle = round_to_interval(
-                rotation_angle - self.state.start_rotation_angle as f64,
+                rotation_angle - subgizmo.state.start_rotation_angle as f64,
                 config.snap_angle as f64,
-            ) + self.state.start_rotation_angle as f64;
+            ) + subgizmo.state.start_rotation_angle as f64;
         }
 
-        let mut angle_delta = rotation_angle - self.state.last_rotation_angle as f64;
+        let mut angle_delta = rotation_angle - subgizmo.state.last_rotation_angle as f64;
 
         // Always take the smallest angle, e.g. -10° instead of 350°
         if angle_delta > PI {
@@ -92,50 +91,52 @@ impl SubGizmo for RotationSubGizmo {
             angle_delta += TAU;
         }
 
-        self.state.last_rotation_angle = rotation_angle as f32;
-        self.state.current_delta += angle_delta as f32;
+        subgizmo.state.last_rotation_angle = rotation_angle as f32;
+        subgizmo.state.current_delta += angle_delta as f32;
 
-        let new_rotation =
-            DQuat::from_axis_angle(gizmo_normal(&self.config, self.direction), -angle_delta)
-                * self.config.rotation;
+        let new_rotation = DQuat::from_axis_angle(
+            gizmo_normal(&subgizmo.config, subgizmo.direction),
+            -angle_delta,
+        ) * subgizmo.config.rotation;
 
         Some(GizmoResult {
-            scale: self.config.scale.as_vec3().into(),
+            scale: subgizmo.config.scale.as_vec3().into(),
             rotation: new_rotation.as_quat().into(),
-            translation: self.config.translation.as_vec3().into(),
+            translation: subgizmo.config.translation.as_vec3().into(),
             mode: GizmoMode::Rotate,
             value: Some(
-                (gizmo_normal(&self.config, self.direction).as_vec3() * self.state.current_delta)
+                (gizmo_normal(&subgizmo.config, subgizmo.direction).as_vec3()
+                    * subgizmo.state.current_delta)
                     .to_array(),
             ),
         })
     }
 
-    fn draw(&self) -> GizmoDrawData {
-        let config = self.config;
+    fn draw(subgizmo: &RotationSubGizmo) -> GizmoDrawData {
+        let config = subgizmo.config;
 
-        let transform = rotation_matrix(self);
+        let transform = rotation_matrix(subgizmo);
         let shape_builder = ShapeBuidler::new(
             config.view_projection * transform,
             config.viewport,
             config.pixels_per_point,
         );
 
-        let color = gizmo_color(&self.config, self.focused, self.direction);
+        let color = gizmo_color(&subgizmo.config, subgizmo.focused, subgizmo.direction);
         let stroke = (config.visuals.stroke_width, color);
 
-        let radius = arc_radius(self);
+        let radius = arc_radius(subgizmo);
 
         let mut draw_data = GizmoDrawData::default();
 
-        if !self.active {
-            let angle = arc_angle(self);
+        if !subgizmo.active {
+            let angle = arc_angle(subgizmo);
             draw_data += shape_builder
                 .arc(radius, FRAC_PI_2 - angle, FRAC_PI_2 + angle, stroke)
                 .into();
         } else {
-            let start_angle = self.state.start_axis_angle as f64 + FRAC_PI_2;
-            let end_angle = start_angle + self.state.current_delta as f64;
+            let start_angle = subgizmo.state.start_axis_angle as f64 + FRAC_PI_2;
+            let end_angle = start_angle + subgizmo.state.current_delta as f64;
 
             // The polyline does not get rendered correctly if
             // the start and end lines are exactly the same

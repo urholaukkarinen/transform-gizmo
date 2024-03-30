@@ -1,6 +1,6 @@
 [package]
-name = "transform-gizmo-egui"
-description = "egui integration for transform-gizmo"
+name = "transform-gizmo-bevy"
+description = "bevy integration for transform-gizmo"
 
 authors.workspace = true
 version.workspace = true
@@ -11,10 +11,9 @@ repository.workspace = true
 
 [dependencies]
 transform-gizmo.workspace = true
-egui.workspace = true
-
-[dev-dependencies]
-eframe.workspace = true
+mint.workspace = true
+bevy = "0.13"
+bevy_math = { version = "0.13", features = ["mint"] }
 
 [lints]
 workspace = true

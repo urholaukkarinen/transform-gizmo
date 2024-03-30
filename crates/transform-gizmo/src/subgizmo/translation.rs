@@ -7,7 +7,7 @@ use crate::subgizmo::common::{
     pick_arrow, pick_circle, pick_plane, plane_bitangent, plane_global_origin, plane_tangent,
     ArrowheadStyle,
 };
-use crate::subgizmo::{common::TransformKind, SubGizmo, SubGizmoConfig, SubGizmoKind};
+use crate::subgizmo::{common::TransformKind, SubGizmoConfig, SubGizmoKind};
 use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult};
 
 pub(crate) type TranslationSubGizmo = SubGizmoConfig<Translation>;
@@ -31,23 +31,24 @@ pub(crate) struct Translation;
 impl SubGizmoKind for Translation {
     type Params = TranslationParams;
     type State = TranslationState;
-}
 
-impl SubGizmo for TranslationSubGizmo {
-    fn pick(&mut self, ray: Ray) -> Option<f64> {
-        let pick_result = match (self.transform_kind, self.direction) {
-            (TransformKind::Plane, GizmoDirection::View) => {
-                pick_circle(&self.config, ray, inner_circle_radius(&self.config), true)
-            }
-            (TransformKind::Plane, _) => pick_plane(&self.config, ray, self.direction),
-            (TransformKind::Axis, _) => pick_arrow(&self.config, ray, self.direction),
+    fn pick(subgizmo: &mut TranslationSubGizmo, ray: Ray) -> Option<f64> {
+        let pick_result = match (subgizmo.transform_kind, subgizmo.direction) {
+            (TransformKind::Plane, GizmoDirection::View) => pick_circle(
+                &subgizmo.config,
+                ray,
+                inner_circle_radius(&subgizmo.config),
+                true,
+            ),
+            (TransformKind::Plane, _) => pick_plane(&subgizmo.config, ray, subgizmo.direction),
+            (TransformKind::Axis, _) => pick_arrow(&subgizmo.config, ray, subgizmo.direction),
         };
 
-        self.opacity = pick_result.visibility as _;
+        subgizmo.opacity = pick_result.visibility as _;
 
-        self.state.start_point = pick_result.subgizmo_point;
-        self.state.last_point = pick_result.subgizmo_point;
-        self.state.current_delta = DVec3::ZERO;
+        subgizmo.state.start_point = pick_result.subgizmo_point;
+        subgizmo.state.last_point = pick_result.subgizmo_point;
+        subgizmo.state.current_delta = DVec3::ZERO;
 
         if pick_result.picked {
             Some(pick_result.t)
@@ -56,60 +57,63 @@ impl SubGizmo for TranslationSubGizmo {
         }
     }
 
-    fn update(&mut self, ray: Ray) -> Option<GizmoResult> {
-        let mut new_point = if self.transform_kind == TransformKind::Axis {
-            point_on_axis(self, ray)
+    fn update(subgizmo: &mut TranslationSubGizmo, ray: Ray) -> Option<GizmoResult> {
+        let mut new_point = if subgizmo.transform_kind == TransformKind::Axis {
+            point_on_axis(subgizmo, ray)
         } else {
             point_on_plane(
-                gizmo_normal(&self.config, self.direction),
-                plane_global_origin(&self.config, self.direction),
+                gizmo_normal(&subgizmo.config, subgizmo.direction),
+                plane_global_origin(&subgizmo.config, subgizmo.direction),
                 ray,
             )?
         };
 
-        let mut new_delta = new_point - self.state.start_point;
+        let mut new_delta = new_point - subgizmo.state.start_point;
 
-        if self.config.snapping {
-            new_delta = if self.transform_kind == TransformKind::Axis {
-                snap_translation_vector(self, new_delta)
+        if subgizmo.config.snapping {
+            new_delta = if subgizmo.transform_kind == TransformKind::Axis {
+                snap_translation_vector(subgizmo, new_delta)
             } else {
-                snap_translation_plane(self, new_delta)
+                snap_translation_plane(subgizmo, new_delta)
             };
-            new_point = self.state.start_point + new_delta;
+            new_point = subgizmo.state.start_point + new_delta;
         }
 
-        let new_translation = self.config.translation + new_point - self.state.last_point;
+        let new_translation = subgizmo.config.translation + new_point - subgizmo.state.last_point;
 
-        self.state.last_point = new_point;
-        self.state.current_delta = new_delta;
+        subgizmo.state.last_point = new_point;
+        subgizmo.state.current_delta = new_delta;
 
         Some(GizmoResult {
-            scale: self.config.scale.as_vec3().into(),
-            rotation: self.config.rotation.as_quat().into(),
+            scale: subgizmo.config.scale.as_vec3().into(),
+            rotation: subgizmo.config.rotation.as_quat().into(),
             translation: new_translation.as_vec3().into(),
             mode: GizmoMode::Translate,
             value: Some(new_delta.as_vec3().to_array()),
         })
     }
 
-    fn draw(&self) -> GizmoDrawData {
-        match (self.transform_kind, self.direction) {
+    fn draw(subgizmo: &TranslationSubGizmo) -> GizmoDrawData {
+        match (subgizmo.transform_kind, subgizmo.direction) {
             (TransformKind::Axis, _) => draw_arrow(
-                &self.config,
-                self.opacity,
-                self.focused,
-                self.direction,
+                &subgizmo.config,
+                subgizmo.opacity,
+                subgizmo.focused,
+                subgizmo.direction,
                 ArrowheadStyle::Cone,
             ),
             (TransformKind::Plane, GizmoDirection::View) => draw_circle(
-                &self.config,
-                gizmo_color(&self.config, self.focused, self.direction),
-                inner_circle_radius(&self.config),
+                &subgizmo.config,
+                gizmo_color(&subgizmo.config, subgizmo.focused, subgizmo.direction),
+                inner_circle_radius(&subgizmo.config),
                 false,
             ),
-            (TransformKind::Plane, _) => {
-                draw_plane(&self.config, self.opacity, self.focused, self.direction)
-            }
+            (TransformKind::Plane, _) => draw_plane(
+                &subgizmo.config,
+                subgizmo.opacity,
+                subgizmo.focused,
+                subgizmo.direction,
+            ),
         }
     }
 }

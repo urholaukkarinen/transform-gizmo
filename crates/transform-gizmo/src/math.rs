@@ -1,5 +1,5 @@
 pub use emath::{Pos2, Rect, Vec2};
-pub use glam::{DMat3, DMat4, DVec3, DVec4, Quat, Vec3, Vec4Swizzles};
+pub use glam::{DMat3, DMat4, DQuat, DVec3, DVec4, Mat4, Quat, Vec3, Vec4Swizzles};
 
 /// Creates a matrix that represents rotation between two 3d vectors
 ///

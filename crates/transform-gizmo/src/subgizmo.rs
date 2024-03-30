@@ -3,6 +3,8 @@ use std::fmt::Debug;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::ops::Deref;
 
+use enum_dispatch::enum_dispatch;
+
 use crate::{config::PreparedGizmoConfig, gizmo::Ray, GizmoDrawData, GizmoResult};
 
 pub(crate) use arcball::ArcballSubGizmo;
@@ -19,6 +21,16 @@ pub(crate) mod translation;
 pub(crate) trait SubGizmoKind: 'static {
     type Params: Copy + Hash;
     type State: Debug + Copy + Clone + Send + Sync + Default + 'static;
+
+    fn pick(subgizmo: &mut SubGizmoConfig<Self>, ray: Ray) -> Option<f64>
+    where
+        Self: Sized;
+    fn update(subgizmo: &mut SubGizmoConfig<Self>, ray: Ray) -> Option<GizmoResult>
+    where
+        Self: Sized;
+    fn draw(subgizmo: &SubGizmoConfig<Self>) -> GizmoDrawData
+    where
+        Self: Sized;
 }
 
 pub(crate) struct SubGizmoConfig<T: SubGizmoKind> {
@@ -69,7 +81,7 @@ where
     }
 }
 
-impl<T> SubGizmoBase for SubGizmoConfig<T>
+impl<T> SubGizmoControl for SubGizmoConfig<T>
 where
     T: SubGizmoKind,
 {
@@ -95,9 +107,22 @@ where
     fn is_active(&self) -> bool {
         self.active
     }
+
+    fn pick(&mut self, ray: Ray) -> Option<f64> {
+        T::pick(self, ray)
+    }
+
+    fn update(&mut self, ray: Ray) -> Option<GizmoResult> {
+        T::update(self, ray)
+    }
+
+    fn draw(&self) -> GizmoDrawData {
+        T::draw(self)
+    }
 }
 
-pub(crate) trait SubGizmoBase {
+#[enum_dispatch]
+pub trait SubGizmoControl {
     /// Unique identifier for this subgizmo.
     fn id(&self) -> u64;
     /// Update the configuration used by the gizmo.
@@ -110,9 +135,6 @@ pub(crate) trait SubGizmoBase {
     fn is_focused(&self) -> bool;
     /// Returns true if this subgizmo is currently active.
     fn is_active(&self) -> bool;
-}
-
-pub(crate) trait SubGizmo: SubGizmoBase {
     /// Pick the subgizmo based on pointer ray. If it is close enough to
     /// the mouse pointer, distance from camera to the subgizmo is returned.
     fn pick(&mut self, ray: Ray) -> Option<f64>;
@@ -120,4 +142,12 @@ pub(crate) trait SubGizmo: SubGizmoBase {
     fn update(&mut self, ray: Ray) -> Option<GizmoResult>;
     /// Draw the subgizmo.
     fn draw(&self) -> GizmoDrawData;
+}
+
+#[enum_dispatch(SubGizmoControl)]
+pub enum SubGizmo {
+    Rotate(RotationSubGizmo),
+    Translate(TranslationSubGizmo),
+    Scale(ScaleSubGizmo),
+    Arcball(ArcballSubGizmo),
 }

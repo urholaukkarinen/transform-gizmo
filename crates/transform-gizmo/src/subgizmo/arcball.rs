@@ -2,7 +2,7 @@ use glam::DQuat;
 
 use crate::math::{screen_to_world, Pos2};
 use crate::subgizmo::common::{draw_circle, pick_circle};
-use crate::subgizmo::{SubGizmo, SubGizmoConfig, SubGizmoKind};
+use crate::subgizmo::{SubGizmoConfig, SubGizmoKind};
 use crate::{config::PreparedGizmoConfig, gizmo::Ray, GizmoDrawData, GizmoMode, GizmoResult};
 use ecolor::Color32;
 
@@ -19,29 +19,32 @@ pub(crate) struct Arcball;
 impl SubGizmoKind for Arcball {
     type Params = ();
     type State = ArcballState;
-}
 
-impl SubGizmo for ArcballSubGizmo {
-    fn pick(&mut self, ray: Ray) -> Option<f64> {
-        let pick_result = pick_circle(&self.config, ray, arcball_radius(&self.config), true);
+    fn pick(subgizmo: &mut ArcballSubGizmo, ray: Ray) -> Option<f64> {
+        let pick_result = pick_circle(
+            &subgizmo.config,
+            ray,
+            arcball_radius(&subgizmo.config),
+            true,
+        );
         if !pick_result.picked {
             return None;
         }
 
-        self.state.last_pos = ray.screen_pos;
+        subgizmo.state.last_pos = ray.screen_pos;
 
         Some(f64::MAX)
     }
 
-    fn update(&mut self, ray: Ray) -> Option<GizmoResult> {
-        let dir = ray.screen_pos - self.state.last_pos;
+    fn update(subgizmo: &mut ArcballSubGizmo, ray: Ray) -> Option<GizmoResult> {
+        let dir = ray.screen_pos - subgizmo.state.last_pos;
 
         let quat = if dir.length_sq() > f32::EPSILON {
-            let mat = self.config.view_projection.inverse();
-            let a = screen_to_world(self.config.viewport, mat, ray.screen_pos, 0.0);
-            let b = screen_to_world(self.config.viewport, mat, self.state.last_pos, 0.0);
+            let mat = subgizmo.config.view_projection.inverse();
+            let a = screen_to_world(subgizmo.config.viewport, mat, ray.screen_pos, 0.0);
+            let b = screen_to_world(subgizmo.config.viewport, mat, subgizmo.state.last_pos, 0.0);
 
-            let origin = self.config.view_forward();
+            let origin = subgizmo.config.view_forward();
             let a = (a - origin).normalize();
             let b = (b - origin).normalize();
 
@@ -50,24 +53,24 @@ impl SubGizmo for ArcballSubGizmo {
             DQuat::IDENTITY
         };
 
-        self.state.last_pos = ray.screen_pos;
+        subgizmo.state.last_pos = ray.screen_pos;
 
-        let new_rotation = quat * self.config.rotation;
+        let new_rotation = quat * subgizmo.config.rotation;
 
         Some(GizmoResult {
-            scale: self.config.scale.as_vec3().into(),
+            scale: subgizmo.config.scale.as_vec3().into(),
             rotation: new_rotation.as_quat().into(),
-            translation: self.config.translation.as_vec3().into(),
+            translation: subgizmo.config.translation.as_vec3().into(),
             mode: GizmoMode::Rotate,
             value: None,
         })
     }
 
-    fn draw(&self) -> GizmoDrawData {
+    fn draw(subgizmo: &ArcballSubGizmo) -> GizmoDrawData {
         draw_circle(
-            &self.config,
-            Color32::WHITE.gamma_multiply(if self.focused { 0.10 } else { 0.0 }),
-            arcball_radius(&self.config),
+            &subgizmo.config,
+            Color32::WHITE.gamma_multiply(if subgizmo.focused { 0.10 } else { 0.0 }),
+            arcball_radius(&subgizmo.config),
             true,
         )
     }
