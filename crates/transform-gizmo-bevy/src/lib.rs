@@ -32,7 +32,7 @@ impl Plugin for TransformGizmoPlugin {
 
 #[derive(Resource, Debug)]
 pub struct GizmoOptions {
-    pub gizmo_mode: GizmoMode,
+    pub gizmo_modes: EnumSet<GizmoMode>,
     pub gizmo_orientation: GizmoOrientation,
     pub visuals: GizmoVisuals,
     pub snapping: bool,
@@ -43,7 +43,7 @@ pub struct GizmoOptions {
 impl Default for GizmoOptions {
     fn default() -> Self {
         Self {
-            gizmo_mode: GizmoMode::Rotate,
+            gizmo_modes: EnumSet::only(GizmoMode::Rotate),
             gizmo_orientation: GizmoOrientation::Global,
             visuals: Default::default(),
             snapping: false,
@@ -168,7 +168,7 @@ fn update_gizmos(
             projection_matrix: projection_matrix.as_dmat4().into(),
             model_matrix: model_matrix.into(),
             viewport,
-            modes: EnumSet::only(gizmo_options.gizmo_mode),
+            modes: gizmo_options.gizmo_modes,
             orientation: gizmo_options.gizmo_orientation,
             visuals: gizmo_options.visuals,
             snapping: gizmo_options.snapping,

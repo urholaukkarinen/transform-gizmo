@@ -40,7 +40,7 @@ fn setup(
     });
 
     commands.insert_resource(GizmoOptions {
-        gizmo_mode: GizmoMode::Translate,
+        gizmo_modes: enum_set!(GizmoMode::Rotate | GizmoMode::Scale),
         ..Default::default()
     });
 
@@ -50,7 +50,19 @@ fn setup(
                 half_size: Vec3::splat(1.0),
             })),
             material: materials.add(Color::WHITE),
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+            transform: Transform::from_translation(Vec3::new(-1.5, 0.0, 0.0)),
+            ..default()
+        },
+        GizmoTarget::default(),
+    ));
+
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(Mesh::from(Cuboid {
+                half_size: Vec3::splat(1.0),
+            })),
+            material: materials.add(Color::WHITE),
+            transform: Transform::from_translation(Vec3::new(1.5, 0.0, 0.0)),
             ..default()
         },
         GizmoTarget::default(),

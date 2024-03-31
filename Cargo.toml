@@ -12,8 +12,9 @@ repository = "https://github.com/urholaukkarinen/transform-gizmo"
 authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 
 [workspace.dependencies]
-transform-gizmo = { version = "0.1.0", path = "crates/transform-gizmo", default-features = false }
-transform-gizmo-egui = { version = "0.1.0", path = "crates/transform-gizmo-egui", default-features = false }
+transform-gizmo = { path = "crates/transform-gizmo", default-features = false }
+transform-gizmo-egui = { path = "crates/transform-gizmo-egui", default-features = false }
+transform-gizmo-bevy = { path = "crates/transform-gizmo-bevy", default-features = false }
 
 egui = "0.27.1"
 eframe = "0.27.1"
@@ -25,6 +26,8 @@ mint = "0.5"
 enum_dispatch = "0.3.12"
 ahash = "0.8.7"
 enumset = "1.1.3"
+bevy = "0.13"
+bevy_math = { version = "0.13", features = ["mint"] }
 
 [profile.release]
 opt-level = "s"

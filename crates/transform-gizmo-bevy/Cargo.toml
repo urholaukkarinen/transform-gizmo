@@ -2,8 +2,8 @@
 name = "transform-gizmo-bevy"
 description = "bevy integration for transform-gizmo"
 
-authors.workspace = true
 version.workspace = true
+authors.workspace = true
 edition.workspace = true
 license.workspace = true
 homepage.workspace = true
@@ -12,8 +12,8 @@ repository.workspace = true
 [dependencies]
 transform-gizmo.workspace = true
 mint.workspace = true
-bevy = "0.13"
-bevy_math = { version = "0.13", features = ["mint"] }
+bevy.workspace = true
+bevy_math.workspace = true
 
 [lints]
 workspace = true
