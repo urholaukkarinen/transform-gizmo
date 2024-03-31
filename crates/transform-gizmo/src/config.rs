@@ -166,6 +166,7 @@ impl PreparedGizmoConfig {
         let mut translation = DVec3::ZERO;
         let mut rotation = DQuat::IDENTITY;
 
+        let mut target_count = 0;
         for target in targets {
             let (s, r, t) = target.to_scale_rotation_translation();
 
@@ -173,13 +174,15 @@ impl PreparedGizmoConfig {
             translation += t;
 
             rotation = r;
+
+            target_count += 1;
         }
 
-        if targets.is_empty() {
+        if target_count == 0 {
             scale = DVec3::ONE;
         } else {
-            translation /= targets.len() as f64;
-            scale /= targets.len() as f64;
+            translation /= target_count as f64;
+            scale /= target_count as f64;
         }
 
         let model_matrix = DMat4::from_scale_rotation_translation(scale, rotation, translation);

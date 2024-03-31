@@ -148,92 +148,104 @@ fn update_gizmos(
     )
     .inverse();
 
-    let mut targets_this_frame = vec![];
+    let gizmo_config = GizmoConfig {
+        view_matrix: view_matrix.into(),
+        projection_matrix: projection_matrix.as_dmat4().into(),
+        viewport,
+        modes: gizmo_options.gizmo_modes,
+        orientation: gizmo_options.gizmo_orientation,
+        visuals: gizmo_options.visuals,
+        snapping: gizmo_options.snapping,
+        snap_angle: gizmo_options.snap_angle,
+        snap_distance: gizmo_options.snap_distance,
+        snap_scale: gizmo_options.snap_distance,
+        pixels_per_point: scale_factor,
+    };
 
-    for (entity, mut target_transform, mut gizmo_target) in &mut q_targets {
-        if !gizmo_target.is_enabled {
-            continue;
-        }
+    let mut target_entities: Vec<Entity> = vec![];
+    let mut target_transforms: Vec<Transform> = vec![];
 
-        targets_this_frame.push(entity);
+    let mut gizmo_entity = Entity::PLACEHOLDER;
 
-        let model_matrix = target_transform.compute_matrix();
+    for (entity, target_transform, _) in &mut q_targets {
+        gizmo_entity = entity;
+        target_entities.push(entity);
+        target_transforms.push(*target_transform);
+    }
 
-        let gizmo_config = GizmoConfig {
-            view_matrix: view_matrix.into(),
-            projection_matrix: projection_matrix.as_dmat4().into(),
-            viewport,
-            modes: gizmo_options.gizmo_modes,
-            orientation: gizmo_options.gizmo_orientation,
-            visuals: gizmo_options.visuals,
-            snapping: gizmo_options.snapping,
-            snap_angle: gizmo_options.snap_angle,
-            snap_distance: gizmo_options.snap_distance,
-            snap_scale: gizmo_options.snap_distance,
-            pixels_per_point: scale_factor,
-        };
+    let gizmo = gizmo_storage.gizmos.entry(gizmo_entity).or_default();
+    gizmo.update_config(gizmo_config);
 
-        let gizmo = gizmo_storage.gizmos.entry(entity).or_default();
+    let gizmo_result = gizmo.update(
+        GizmoInteraction {
+            cursor_pos: (cursor_pos.x, cursor_pos.y),
+            drag_started: mouse.just_pressed(MouseButton::Left),
+            dragging: mouse.any_pressed([MouseButton::Left]),
+        },
+        target_transforms
+            .iter()
+            .map(|transform| transform.compute_matrix().as_dmat4().into()),
+    );
 
-        gizmo.update_config(gizmo_config);
+    let is_focused = gizmo.is_any_focused();
 
-        let gizmo_result = gizmo.update(
-            GizmoInteraction {
-                cursor_pos: (cursor_pos.x, cursor_pos.y),
-                drag_started: mouse.just_pressed(MouseButton::Left),
-                dragging: mouse.any_pressed([MouseButton::Left]),
-            },
-            model_matrix.as_dmat4().into(),
-        );
+    let draw_data = gizmo.draw();
 
-        let draw_data = gizmo.draw();
-
+    for (i, (entity, mut target_transform, mut gizmo_target)) in q_targets.iter_mut().enumerate() {
         gizmo_target.is_active = gizmo_result.is_some();
-        gizmo_target.is_focused = gizmo.is_any_focused();
-        gizmo_target.latest_result = gizmo_result;
+        gizmo_target.is_focused = is_focused;
+        gizmo_target.latest_result = gizmo_result.clone();
 
-        if let Some(result) = gizmo_result {
+        if let Some(result) = &gizmo_result {
+            let Some(result_transform) = result.targets.get(i) else {
+                bevy::log::warn!("No matching transform found in GizmoResult!");
+                continue;
+            };
+
             *target_transform =
-                Transform::from_matrix(bevy::math::DMat4::from(result.target).as_mat4());
+                Transform::from_matrix(bevy::math::DMat4::from(*result_transform).as_mat4());
 
-            gizmo_storage.results.entry(entity).or_insert(result);
+            gizmo_storage
+                .results
+                .entry(entity)
+                .or_insert(result.clone());
         }
+    }
 
-        let mut bevy_draw_data = render::GizmoDrawData::default();
+    let mut bevy_draw_data = render::GizmoDrawData::default();
 
-        let (asset, is_new) = if let Some(handle) = draw_data_handles.handles.get(&entity) {
-            (draw_data_assets.get_mut(handle).unwrap(), false)
-        } else {
-            (&mut bevy_draw_data, true)
-        };
+    let (asset, is_new) = if let Some(handle) = draw_data_handles.handles.get(&gizmo_entity) {
+        (draw_data_assets.get_mut(handle).unwrap(), false)
+    } else {
+        (&mut bevy_draw_data, true)
+    };
 
-        asset.0.vertices.clear();
-        asset
-            .0
-            .vertices
-            .extend(draw_data.vertices.into_iter().map(|vert| {
-                [
-                    (vert[0] / viewport.width()) * 2.0 - 1.0,
-                    (vert[1] / viewport.height()) * 2.0 - 1.0,
-                ]
-            }));
-        asset.0.colors = draw_data.colors;
-        asset.0.indices = draw_data.indices;
+    asset.0.vertices.clear();
+    asset
+        .0
+        .vertices
+        .extend(draw_data.vertices.into_iter().map(|vert| {
+            [
+                (vert[0] / viewport.width()) * 2.0 - 1.0,
+                (vert[1] / viewport.height()) * 2.0 - 1.0,
+            ]
+        }));
+    asset.0.colors = draw_data.colors;
+    asset.0.indices = draw_data.indices;
 
-        if is_new {
-            draw_data_handles
-                .handles
-                .insert(entity, draw_data_assets.add(bevy_draw_data));
-        }
+    if is_new {
+        draw_data_handles
+            .handles
+            .insert(gizmo_entity, draw_data_assets.add(bevy_draw_data));
     }
 
     draw_data_handles
         .handles
-        .retain(|entity, _| targets_this_frame.contains(entity));
+        .retain(|entity, _| target_entities.contains(entity));
     gizmo_storage
         .gizmos
-        .retain(|entity, _| targets_this_frame.contains(entity));
+        .retain(|entity, _| target_entities.contains(entity));
     gizmo_storage
         .results
-        .retain(|entity, _| targets_this_frame.contains(entity));
+        .retain(|entity, _| target_entities.contains(entity));
 }

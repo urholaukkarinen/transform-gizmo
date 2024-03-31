@@ -21,7 +21,7 @@ pub struct Gizmo {
     subgizmos: Vec<SubGizmo>,
     active_subgizmo_id: Option<u64>,
 
-    start_transform: DMat4,
+    start_transforms: Vec<DMat4>,
 }
 
 impl Default for Gizmo {
@@ -38,7 +38,7 @@ impl Gizmo {
             subgizmos: Default::default(),
             active_subgizmo_id: None,
 
-            start_transform: DMat4::IDENTITY,
+            start_transforms: vec![],
         }
     }
 
@@ -65,7 +65,7 @@ impl Gizmo {
     pub fn update(
         &mut self,
         interaction: GizmoInteraction,
-        target: mint::RowMatrix4<f64>,
+        targets: impl Iterator<Item = mint::RowMatrix4<f64>>,
     ) -> Option<GizmoResult> {
         if !self.config.viewport.is_finite() {
             return None;
@@ -91,8 +91,12 @@ impl Gizmo {
             }
         }
 
+        let targets = targets
+            .map(|target| DMat4::from(target))
+            .collect::<Vec<_>>();
+
         // Update the gizmo based on the given targets.
-        self.config.update_for_targets(&[target.into()]);
+        self.config.update_for_targets(&targets);
 
         for subgizmo in &mut self.subgizmos {
             // Update current configuration to each subgizmo.
@@ -114,7 +118,7 @@ impl Gizmo {
                 // If we started dragging from one of the subgizmos, mark it as active.
                 if interaction.drag_started {
                     self.active_subgizmo_id = Some(subgizmo.id());
-                    self.start_transform = target.into();
+                    self.start_transforms = targets.clone();
                 }
             }
         }
@@ -139,21 +143,25 @@ impl Gizmo {
 
         // Update current configuration based on the interaction result.
         if let Some((_, result)) = active_subgizmo.zip(result.as_mut()) {
-            let (start_scale, _, _) = self.start_transform.to_scale_rotation_translation();
+            for (start_transform, target) in self.start_transforms.iter().zip(targets) {
+                let (start_scale, _, _) = start_transform.to_scale_rotation_translation();
 
-            let (_, target_rotation, target_translation) =
-                DMat4::from(target).to_scale_rotation_translation();
+                let (_, target_rotation, target_translation) =
+                    DMat4::from(target).to_scale_rotation_translation();
 
-            let updated_scale = start_scale * DVec3::from(result.scale);
-            let updated_rotation = DQuat::from(result.rotation) * target_rotation;
-            let updated_translation = target_translation + DVec3::from(result.translation);
+                let updated_scale = start_scale * DVec3::from(result.scale);
+                let updated_rotation = DQuat::from(result.rotation) * target_rotation;
+                let updated_translation = target_translation + DVec3::from(result.translation);
 
-            result.target = DMat4::from_scale_rotation_translation(
-                updated_scale,
-                updated_rotation,
-                updated_translation,
-            )
-            .into();
+                result.targets.push(
+                    DMat4::from_scale_rotation_translation(
+                        updated_scale,
+                        updated_rotation,
+                        updated_translation,
+                    )
+                    .into(),
+                );
+            }
         }
 
         result
@@ -381,7 +389,7 @@ pub struct GizmoInteraction {
 }
 
 /// Result of a gizmo transformation
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct GizmoResult {
     /// Updated scale
     pub scale: mint::Vector3<f64>,
@@ -394,7 +402,7 @@ pub struct GizmoResult {
     /// Total scale, rotation or translation of the current gizmo activation, depending on mode
     pub value: Option<[f64; 3]>,
 
-    pub target: mint::RowMatrix4<f64>,
+    pub targets: Vec<mint::RowMatrix4<f64>>,
 }
 
 impl Default for GizmoResult {
@@ -405,7 +413,7 @@ impl Default for GizmoResult {
             translation: DVec3::ZERO.into(),
             mode: GizmoMode::Rotate,
             value: None,
-            target: DMat4::IDENTITY.into(),
+            targets: vec![],
         }
     }
 }
