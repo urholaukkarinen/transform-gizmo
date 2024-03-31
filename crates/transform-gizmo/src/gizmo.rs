@@ -21,7 +21,7 @@ pub struct Gizmo {
     subgizmos: Vec<SubGizmo>,
     active_subgizmo_id: Option<u64>,
 
-    start_transforms: Vec<DMat4>,
+    target_start_transforms: Vec<DMat4>,
 }
 
 impl Default for Gizmo {
@@ -38,7 +38,7 @@ impl Gizmo {
             subgizmos: Default::default(),
             active_subgizmo_id: None,
 
-            start_transforms: vec![],
+            target_start_transforms: vec![],
         }
     }
 
@@ -118,7 +118,7 @@ impl Gizmo {
                 // If we started dragging from one of the subgizmos, mark it as active.
                 if interaction.drag_started {
                     self.active_subgizmo_id = Some(subgizmo.id());
-                    self.start_transforms = targets.clone();
+                    self.target_start_transforms = targets.clone();
                 }
             }
         }
@@ -141,26 +141,46 @@ impl Gizmo {
             }
         }
 
-        // Update current configuration based on the interaction result.
         if let Some((_, result)) = active_subgizmo.zip(result.as_mut()) {
-            for (start_transform, target) in self.start_transforms.iter().zip(targets) {
-                let (start_scale, _, _) = start_transform.to_scale_rotation_translation();
+            for (target_start_transform, target_transform) in
+                self.target_start_transforms.iter().zip(targets)
+            {
+                let mut new_target_transform = target_transform;
 
-                let (_, target_rotation, target_translation) =
-                    DMat4::from(target).to_scale_rotation_translation();
+                match result.mode {
+                    GizmoMode::Rotate => {
+                        // Rotate around the target group origin
 
-                let updated_scale = start_scale * DVec3::from(result.scale);
-                let updated_rotation = DQuat::from(result.rotation) * target_rotation;
-                let updated_translation = target_translation + DVec3::from(result.translation);
+                        let group_translation = DMat4::from_translation(self.config.translation);
 
-                result.targets.push(
-                    DMat4::from_scale_rotation_translation(
-                        updated_scale,
-                        updated_rotation,
-                        updated_translation,
-                    )
-                    .into(),
-                );
+                        new_target_transform =
+                            group_translation.inverse().mul_mat4(&new_target_transform);
+
+                        new_target_transform = DMat4::from_quat(result.rotation.into())
+                            .mul_mat4(&new_target_transform);
+
+                        new_target_transform = group_translation.mul_mat4(&new_target_transform);
+                    }
+                    GizmoMode::Translate => {
+                        new_target_transform = DMat4::from_translation(result.translation.into())
+                            .mul_mat4(&new_target_transform);
+                    }
+                    GizmoMode::Scale => {
+                        let (start_scale, _, _) =
+                            target_start_transform.to_scale_rotation_translation();
+
+                        let (_, target_rotation, target_translation) =
+                            target_transform.to_scale_rotation_translation();
+
+                        new_target_transform = DMat4::from_scale_rotation_translation(
+                            start_scale * DVec3::from(result.scale),
+                            target_rotation,
+                            target_translation,
+                        );
+                    }
+                }
+
+                result.targets.push(new_target_transform.into());
             }
         }
 
