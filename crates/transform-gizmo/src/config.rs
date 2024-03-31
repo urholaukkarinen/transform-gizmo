@@ -54,6 +54,48 @@ pub struct GizmoConfig {
     pub pixels_per_point: f32,
 }
 
+impl Default for GizmoConfig {
+    fn default() -> Self {
+        Self {
+            view_matrix: DMat4::IDENTITY.into(),
+            projection_matrix: DMat4::IDENTITY.into(),
+            model_matrix: DMat4::IDENTITY.into(),
+            viewport: Rect::NOTHING,
+            modes: enum_set!(GizmoMode::Rotate),
+            orientation: GizmoOrientation::Global,
+            snapping: false,
+            snap_angle: DEFAULT_SNAP_ANGLE,
+            snap_distance: DEFAULT_SNAP_DISTANCE,
+            snap_scale: DEFAULT_SNAP_SCALE,
+            visuals: GizmoVisuals::default(),
+            pixels_per_point: 1.0,
+        }
+    }
+}
+
+impl GizmoConfig {
+    /// Forward vector of the view camera
+    pub(crate) fn view_forward(&self) -> DVec3 {
+        DVec4::from(self.view_matrix.z).xyz()
+    }
+
+    /// Up vector of the view camera
+    pub(crate) fn view_up(&self) -> DVec3 {
+        DVec4::from(self.view_matrix.y).xyz()
+    }
+
+    /// Right vector of the view camera
+    pub(crate) fn view_right(&self) -> DVec3 {
+        DVec4::from(self.view_matrix.x).xyz()
+    }
+
+    /// Whether local orientation is used
+    pub(crate) fn local_space(&self) -> bool {
+        // Scale mode only works in local space
+        self.orientation == GizmoOrientation::Local || self.modes.contains(GizmoMode::Scale)
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct PreparedGizmoConfig {
     config: GizmoConfig,
@@ -82,25 +124,6 @@ impl Deref for PreparedGizmoConfig {
 impl DerefMut for PreparedGizmoConfig {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.config
-    }
-}
-
-impl Default for GizmoConfig {
-    fn default() -> Self {
-        Self {
-            view_matrix: DMat4::IDENTITY.into(),
-            projection_matrix: DMat4::IDENTITY.into(),
-            model_matrix: DMat4::IDENTITY.into(),
-            viewport: Rect::NOTHING,
-            modes: enum_set!(GizmoMode::Rotate),
-            orientation: GizmoOrientation::Global,
-            snapping: false,
-            snap_angle: DEFAULT_SNAP_ANGLE,
-            snap_distance: DEFAULT_SNAP_DISTANCE,
-            snap_scale: DEFAULT_SNAP_SCALE,
-            visuals: GizmoVisuals::default(),
-            pixels_per_point: 1.0,
-        }
     }
 }
 
@@ -151,29 +174,6 @@ impl PreparedGizmoConfig {
             focus_distance,
             left_handed,
         }
-    }
-}
-
-impl GizmoConfig {
-    /// Forward vector of the view camera
-    pub(crate) fn view_forward(&self) -> DVec3 {
-        DVec4::from(self.view_matrix.z).xyz()
-    }
-
-    /// Up vector of the view camera
-    pub(crate) fn view_up(&self) -> DVec3 {
-        DVec4::from(self.view_matrix.y).xyz()
-    }
-
-    /// Right vector of the view camera
-    pub(crate) fn view_right(&self) -> DVec3 {
-        DVec4::from(self.view_matrix.x).xyz()
-    }
-
-    /// Whether local orientation is used
-    pub(crate) fn local_space(&self) -> bool {
-        // Scale mode only works in local space
-        self.orientation == GizmoOrientation::Local || self.modes.contains(GizmoMode::Scale)
     }
 }
 
