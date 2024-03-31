@@ -1,6 +1,4 @@
-use glam::DQuat;
-
-use crate::math::{screen_to_world, Pos2};
+use crate::math::{screen_to_world, DQuat, Pos2};
 use crate::subgizmo::common::{draw_circle, pick_circle};
 use crate::subgizmo::{SubGizmoConfig, SubGizmoKind};
 use crate::{config::PreparedGizmoConfig, gizmo::Ray, GizmoDrawData, GizmoMode, GizmoResult};
@@ -39,7 +37,7 @@ impl SubGizmoKind for Arcball {
     fn update(subgizmo: &mut ArcballSubGizmo, ray: Ray) -> Option<GizmoResult> {
         let dir = ray.screen_pos - subgizmo.state.last_pos;
 
-        let quat = if dir.length_sq() > f32::EPSILON {
+        let rotation = if dir.length_sq() > f32::EPSILON {
             let mat = subgizmo.config.view_projection.inverse();
             let a = screen_to_world(subgizmo.config.viewport, mat, ray.screen_pos, 0.0);
             let b = screen_to_world(subgizmo.config.viewport, mat, subgizmo.state.last_pos, 0.0);
@@ -55,14 +53,10 @@ impl SubGizmoKind for Arcball {
 
         subgizmo.state.last_pos = ray.screen_pos;
 
-        let new_rotation = quat * subgizmo.config.rotation;
-
         Some(GizmoResult {
-            scale: subgizmo.config.scale.into(),
-            rotation: new_rotation.into(),
-            translation: subgizmo.config.translation.into(),
+            rotation: rotation.into(),
             mode: GizmoMode::Rotate,
-            value: None,
+            ..Default::default()
         })
     }
 

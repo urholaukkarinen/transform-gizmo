@@ -20,7 +20,6 @@ pub(crate) struct ScaleParams {
 
 #[derive(Default, Debug, Copy, Clone)]
 pub(crate) struct ScaleState {
-    start_scale: DVec3,
     start_delta: f64,
 }
 
@@ -58,7 +57,6 @@ impl SubGizmoKind for Scale {
 
         subgizmo.opacity = pick_result.visibility as _;
 
-        subgizmo.state.start_scale = subgizmo.config.scale;
         subgizmo.state.start_delta = start_delta;
 
         if pick_result.picked {
@@ -85,15 +83,13 @@ impl SubGizmoKind for Scale {
             .normalize(),
         };
 
-        let offset = DVec3::ONE + (direction * delta);
-        let new_scale = subgizmo.state.start_scale * offset;
+        let scale = DVec3::ONE + (direction * delta);
 
         Some(GizmoResult {
-            scale: new_scale.into(),
-            rotation: subgizmo.config.rotation.into(),
-            translation: subgizmo.config.translation.into(),
+            scale: scale.into(),
             mode: GizmoMode::Scale,
-            value: Some(offset.to_array()),
+            value: Some(scale.to_array()),
+            ..Default::default()
         })
     }
 

@@ -1,6 +1,4 @@
-use glam::DVec3;
-
-use crate::math::{intersect_plane, ray_to_ray, round_to_interval};
+use crate::math::{intersect_plane, ray_to_ray, round_to_interval, DVec3};
 
 use crate::subgizmo::common::{
     draw_arrow, draw_circle, draw_plane, gizmo_color, gizmo_normal, inner_circle_radius,
@@ -79,17 +77,16 @@ impl SubGizmoKind for Translation {
             new_point = subgizmo.state.start_point + new_delta;
         }
 
-        let new_translation = subgizmo.config.translation + new_point - subgizmo.state.last_point;
-
         subgizmo.state.last_point = new_point;
         subgizmo.state.current_delta = new_delta;
 
+        let translation = new_point - subgizmo.state.last_point;
+
         Some(GizmoResult {
-            scale: subgizmo.config.scale.into(),
-            rotation: subgizmo.config.rotation.into(),
-            translation: new_translation.into(),
+            translation: translation.into(),
             mode: GizmoMode::Translate,
             value: Some(new_delta.to_array()),
+            ..Default::default()
         })
     }
 

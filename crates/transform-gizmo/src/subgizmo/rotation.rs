@@ -1,8 +1,9 @@
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
-use glam::{DMat3, DMat4, DQuat, DVec2, DVec3};
-
-use crate::math::{ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen, Pos2};
+use crate::math::{
+    ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen, DMat3, DMat4, DQuat,
+    DVec2, DVec3, Pos2,
+};
 use crate::shape::ShapeBuidler;
 use crate::subgizmo::common::{gizmo_color, gizmo_local_normal, gizmo_normal, outer_circle_radius};
 use crate::subgizmo::{SubGizmoConfig, SubGizmoKind};
@@ -94,20 +95,19 @@ impl SubGizmoKind for Rotation {
         subgizmo.state.last_rotation_angle = rotation_angle;
         subgizmo.state.current_delta += angle_delta;
 
-        let new_rotation = DQuat::from_axis_angle(
+        let rotation = DQuat::from_axis_angle(
             gizmo_normal(&subgizmo.config, subgizmo.direction),
             -angle_delta,
-        ) * subgizmo.config.rotation;
+        );
 
         Some(GizmoResult {
-            scale: subgizmo.config.scale.into(),
-            rotation: new_rotation.into(),
-            translation: subgizmo.config.translation.into(),
+            rotation: rotation.into(),
             mode: GizmoMode::Rotate,
             value: Some(
                 (gizmo_normal(&subgizmo.config, subgizmo.direction) * subgizmo.state.current_delta)
                     .to_array(),
             ),
+            ..Default::default()
         })
     }
 

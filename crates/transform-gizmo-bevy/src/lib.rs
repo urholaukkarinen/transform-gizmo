@@ -195,9 +195,9 @@ fn update_gizmos(
         gizmo_target.latest_result = gizmo_result;
 
         if let Some(result) = gizmo_result {
-            target_transform.translation = bevy::math::DVec3::from(result.translation).as_vec3();
-            target_transform.rotation = bevy::math::DQuat::from(result.rotation).as_quat();
-            target_transform.scale = bevy::math::DVec3::from(result.scale).as_vec3();
+            *target_transform = Transform::from_matrix(
+                bevy::math::DMat4::from(gizmo.config().model_matrix).as_mat4(),
+            );
 
             gizmo_storage.results.entry(entity).or_insert(result);
         }

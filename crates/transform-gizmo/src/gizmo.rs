@@ -20,6 +20,8 @@ pub struct Gizmo {
     last_modes: EnumSet<GizmoMode>,
     subgizmos: Vec<SubGizmo>,
     active_subgizmo_id: Option<u64>,
+
+    start_transform: DMat4,
 }
 
 impl Default for Gizmo {
@@ -35,6 +37,8 @@ impl Gizmo {
             last_modes: Default::default(),
             subgizmos: Default::default(),
             active_subgizmo_id: None,
+
+            start_transform: DMat4::IDENTITY,
         }
     }
 
@@ -103,6 +107,7 @@ impl Gizmo {
                 // If we started dragging from one of the subgizmos, mark it as active.
                 if interaction.drag_started {
                     self.active_subgizmo_id = Some(subgizmo.id());
+                    self.start_transform = self.config.model_matrix.into();
                 }
             }
         }
@@ -126,10 +131,12 @@ impl Gizmo {
         }
 
         // Update current configuration based on the interaction result.
-        if let Some((_, result)) = active_subgizmo.zip(result) {
-            self.config.translation = DVec3::from(result.translation);
-            self.config.rotation = DQuat::from(result.rotation);
-            self.config.scale = DVec3::from(result.scale);
+        if let Some((_, result)) = active_subgizmo.zip(result.as_mut()) {
+            let (start_scale, _, _) = self.start_transform.to_scale_rotation_translation();
+
+            self.config.translation += DVec3::from(result.translation);
+            self.config.rotation = DQuat::from(result.rotation) * self.config.rotation;
+            self.config.scale = start_scale * DVec3::from(result.scale);
 
             self.config.model_matrix = DMat4::from_scale_rotation_translation(
                 self.config.scale,
@@ -376,6 +383,18 @@ pub struct GizmoResult {
     pub mode: GizmoMode,
     /// Total scale, rotation or translation of the current gizmo activation, depending on mode
     pub value: Option<[f64; 3]>,
+}
+
+impl Default for GizmoResult {
+    fn default() -> Self {
+        Self {
+            scale: DVec3::ONE.into(),
+            rotation: DQuat::IDENTITY.into(),
+            translation: DVec3::ZERO.into(),
+            mode: GizmoMode::Rotate,
+            value: None,
+        }
+    }
 }
 
 impl GizmoResult {
