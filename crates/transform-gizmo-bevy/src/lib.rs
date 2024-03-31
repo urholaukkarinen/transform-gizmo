@@ -140,7 +140,13 @@ fn update_gizmos(
     );
 
     let projection_matrix = camera.projection_matrix();
-    let view_matrix = camera_transform.compute_matrix().inverse();
+
+    let view_matrix = bevy::math::DMat4::from_scale_rotation_translation(
+        camera_transform.scale.as_dvec3(),
+        camera_transform.rotation.as_dquat(),
+        camera_transform.translation.as_dvec3(),
+    )
+    .inverse();
 
     let mut targets_this_frame = vec![];
 
@@ -151,12 +157,16 @@ fn update_gizmos(
 
         targets_this_frame.push(entity);
 
-        let model_matrix = target_transform.compute_matrix();
+        let model_matrix = bevy::math::DMat4::from_scale_rotation_translation(
+            target_transform.scale.as_dvec3(),
+            target_transform.rotation.as_dquat(),
+            target_transform.translation.as_dvec3(),
+        );
 
         let gizmo_config = GizmoConfig {
-            view_matrix: view_matrix.as_dmat4().into(),
+            view_matrix: view_matrix.into(),
             projection_matrix: projection_matrix.as_dmat4().into(),
-            model_matrix: model_matrix.as_dmat4().into(),
+            model_matrix: model_matrix.into(),
             viewport,
             modes: EnumSet::only(gizmo_options.gizmo_mode),
             orientation: gizmo_options.gizmo_orientation,
@@ -185,9 +195,9 @@ fn update_gizmos(
         gizmo_target.latest_result = gizmo_result;
 
         if let Some(result) = gizmo_result {
-            target_transform.translation = result.translation.into();
-            target_transform.rotation = result.rotation.into();
-            target_transform.scale = result.scale.into();
+            target_transform.translation = bevy::math::DVec3::from(result.translation).as_vec3();
+            target_transform.rotation = bevy::math::DQuat::from(result.rotation).as_quat();
+            target_transform.scale = bevy::math::DVec3::from(result.scale).as_vec3();
 
             gizmo_storage.results.entry(entity).or_insert(result);
         }

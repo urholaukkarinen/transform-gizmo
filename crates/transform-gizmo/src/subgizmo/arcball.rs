@@ -58,9 +58,9 @@ impl SubGizmoKind for Arcball {
         let new_rotation = quat * subgizmo.config.rotation;
 
         Some(GizmoResult {
-            scale: subgizmo.config.scale.as_vec3().into(),
-            rotation: new_rotation.as_quat().into(),
-            translation: subgizmo.config.translation.as_vec3().into(),
+            scale: subgizmo.config.scale.into(),
+            rotation: new_rotation.into(),
+            translation: subgizmo.config.translation.into(),
             mode: GizmoMode::Rotate,
             value: None,
         })

@@ -85,11 +85,11 @@ impl SubGizmoKind for Translation {
         subgizmo.state.current_delta = new_delta;
 
         Some(GizmoResult {
-            scale: subgizmo.config.scale.as_vec3().into(),
-            rotation: subgizmo.config.rotation.as_quat().into(),
-            translation: new_translation.as_vec3().into(),
+            scale: subgizmo.config.scale.into(),
+            rotation: subgizmo.config.rotation.into(),
+            translation: new_translation.into(),
             mode: GizmoMode::Translate,
-            value: Some(new_delta.as_vec3().to_array()),
+            value: Some(new_delta.to_array()),
         })
     }
 

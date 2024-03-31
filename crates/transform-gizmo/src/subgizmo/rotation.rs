@@ -17,10 +17,10 @@ pub(crate) struct RotationParams {
 
 #[derive(Default, Debug, Copy, Clone)]
 pub(crate) struct RotationState {
-    start_axis_angle: f32,
-    start_rotation_angle: f32,
-    last_rotation_angle: f32,
-    current_delta: f32,
+    start_axis_angle: f64,
+    start_rotation_angle: f64,
+    last_rotation_angle: f64,
+    current_delta: f64,
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -58,9 +58,9 @@ impl SubGizmoKind for Rotation {
         };
 
         let rotation_angle = rotation_angle(subgizmo, ray.screen_pos).unwrap_or(0.0);
-        subgizmo.state.start_axis_angle = angle as f32;
-        subgizmo.state.start_rotation_angle = rotation_angle as f32;
-        subgizmo.state.last_rotation_angle = rotation_angle as f32;
+        subgizmo.state.start_axis_angle = angle;
+        subgizmo.state.start_rotation_angle = rotation_angle;
+        subgizmo.state.last_rotation_angle = rotation_angle;
         subgizmo.state.current_delta = 0.0;
 
         if dist_from_gizmo_edge <= config.focus_distance as f64 && angle.abs() < arc_angle(subgizmo)
@@ -77,12 +77,12 @@ impl SubGizmoKind for Rotation {
         let mut rotation_angle = rotation_angle(subgizmo, ray.screen_pos)?;
         if config.snapping {
             rotation_angle = round_to_interval(
-                rotation_angle - subgizmo.state.start_rotation_angle as f64,
+                rotation_angle - subgizmo.state.start_rotation_angle,
                 config.snap_angle as f64,
-            ) + subgizmo.state.start_rotation_angle as f64;
+            ) + subgizmo.state.start_rotation_angle;
         }
 
-        let mut angle_delta = rotation_angle - subgizmo.state.last_rotation_angle as f64;
+        let mut angle_delta = rotation_angle - subgizmo.state.last_rotation_angle;
 
         // Always take the smallest angle, e.g. -10° instead of 350°
         if angle_delta > PI {
@@ -91,8 +91,8 @@ impl SubGizmoKind for Rotation {
             angle_delta += TAU;
         }
 
-        subgizmo.state.last_rotation_angle = rotation_angle as f32;
-        subgizmo.state.current_delta += angle_delta as f32;
+        subgizmo.state.last_rotation_angle = rotation_angle;
+        subgizmo.state.current_delta += angle_delta;
 
         let new_rotation = DQuat::from_axis_angle(
             gizmo_normal(&subgizmo.config, subgizmo.direction),
@@ -100,13 +100,12 @@ impl SubGizmoKind for Rotation {
         ) * subgizmo.config.rotation;
 
         Some(GizmoResult {
-            scale: subgizmo.config.scale.as_vec3().into(),
-            rotation: new_rotation.as_quat().into(),
-            translation: subgizmo.config.translation.as_vec3().into(),
+            scale: subgizmo.config.scale.into(),
+            rotation: new_rotation.into(),
+            translation: subgizmo.config.translation.into(),
             mode: GizmoMode::Rotate,
             value: Some(
-                (gizmo_normal(&subgizmo.config, subgizmo.direction).as_vec3()
-                    * subgizmo.state.current_delta)
+                (gizmo_normal(&subgizmo.config, subgizmo.direction) * subgizmo.state.current_delta)
                     .to_array(),
             ),
         })
@@ -135,8 +134,8 @@ impl SubGizmoKind for Rotation {
                 .arc(radius, FRAC_PI_2 - angle, FRAC_PI_2 + angle, stroke)
                 .into();
         } else {
-            let start_angle = subgizmo.state.start_axis_angle as f64 + FRAC_PI_2;
-            let end_angle = start_angle + subgizmo.state.current_delta as f64;
+            let start_angle = subgizmo.state.start_axis_angle + FRAC_PI_2;
+            let end_angle = start_angle + subgizmo.state.current_delta;
 
             // The polyline does not get rendered correctly if
             // the start and end lines are exactly the same

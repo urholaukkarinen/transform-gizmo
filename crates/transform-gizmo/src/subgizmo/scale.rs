@@ -89,11 +89,11 @@ impl SubGizmoKind for Scale {
         let new_scale = subgizmo.state.start_scale * offset;
 
         Some(GizmoResult {
-            scale: new_scale.as_vec3().into(),
-            rotation: subgizmo.config.rotation.as_quat().into(),
-            translation: subgizmo.config.translation.as_vec3().into(),
+            scale: new_scale.into(),
+            rotation: subgizmo.config.rotation.into(),
+            translation: subgizmo.config.translation.into(),
             mode: GizmoMode::Scale,
-            value: Some(offset.as_vec3().to_array()),
+            value: Some(offset.to_array()),
         })
     }
 

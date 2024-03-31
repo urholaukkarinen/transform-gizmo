@@ -5,7 +5,7 @@ use std::ops::{Add, AddAssign, Sub};
 use crate::config::{GizmoConfig, GizmoDirection, GizmoMode, PreparedGizmoConfig};
 use crate::math::screen_to_world;
 use epaint::Mesh;
-use glam::{DMat4, DVec3, Mat4, Quat, Vec3};
+use glam::{DMat4, DQuat, DVec3};
 
 use crate::subgizmo::rotation::RotationParams;
 use crate::subgizmo::scale::ScaleParams;
@@ -127,9 +127,9 @@ impl Gizmo {
 
         // Update current configuration based on the interaction result.
         if let Some((_, result)) = active_subgizmo.zip(result) {
-            self.config.translation = Vec3::from(result.translation).as_dvec3();
-            self.config.rotation = Quat::from(result.rotation).as_dquat();
-            self.config.scale = Vec3::from(result.scale).as_dvec3();
+            self.config.translation = DVec3::from(result.translation);
+            self.config.rotation = DQuat::from(result.rotation);
+            self.config.scale = DVec3::from(result.scale);
 
             self.config.model_matrix = DMat4::from_scale_rotation_translation(
                 self.config.scale,
@@ -367,21 +367,21 @@ pub struct GizmoInteraction {
 #[derive(Debug, Copy, Clone)]
 pub struct GizmoResult {
     /// Updated scale
-    pub scale: mint::Vector3<f32>,
+    pub scale: mint::Vector3<f64>,
     /// Updated rotation
-    pub rotation: mint::Quaternion<f32>,
+    pub rotation: mint::Quaternion<f64>,
     /// Updated translation
-    pub translation: mint::Vector3<f32>,
+    pub translation: mint::Vector3<f64>,
     /// Mode of the active subgizmo
     pub mode: GizmoMode,
     /// Total scale, rotation or translation of the current gizmo activation, depending on mode
-    pub value: Option<[f32; 3]>,
+    pub value: Option<[f64; 3]>,
 }
 
 impl GizmoResult {
     /// Updated transformation matrix in column major order.
-    pub fn transform(&self) -> mint::ColumnMatrix4<f32> {
-        Mat4::from_scale_rotation_translation(
+    pub fn transform(&self) -> mint::ColumnMatrix4<f64> {
+        DMat4::from_scale_rotation_translation(
             self.scale.into(),
             self.rotation.into(),
             self.translation.into(),
