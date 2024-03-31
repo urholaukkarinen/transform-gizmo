@@ -157,16 +157,11 @@ fn update_gizmos(
 
         targets_this_frame.push(entity);
 
-        let model_matrix = bevy::math::DMat4::from_scale_rotation_translation(
-            target_transform.scale.as_dvec3(),
-            target_transform.rotation.as_dquat(),
-            target_transform.translation.as_dvec3(),
-        );
+        let model_matrix = target_transform.compute_matrix();
 
         let gizmo_config = GizmoConfig {
             view_matrix: view_matrix.into(),
             projection_matrix: projection_matrix.as_dmat4().into(),
-            model_matrix: model_matrix.into(),
             viewport,
             modes: gizmo_options.gizmo_modes,
             orientation: gizmo_options.gizmo_orientation,
@@ -182,11 +177,14 @@ fn update_gizmos(
 
         gizmo.update_config(gizmo_config);
 
-        let gizmo_result = gizmo.update(GizmoInteraction {
-            cursor_pos: (cursor_pos.x, cursor_pos.y),
-            drag_started: mouse.just_pressed(MouseButton::Left),
-            dragging: mouse.any_pressed([MouseButton::Left]),
-        });
+        let gizmo_result = gizmo.update(
+            GizmoInteraction {
+                cursor_pos: (cursor_pos.x, cursor_pos.y),
+                drag_started: mouse.just_pressed(MouseButton::Left),
+                dragging: mouse.any_pressed([MouseButton::Left]),
+            },
+            model_matrix.as_dmat4().into(),
+        );
 
         let draw_data = gizmo.draw();
 
@@ -195,9 +193,8 @@ fn update_gizmos(
         gizmo_target.latest_result = gizmo_result;
 
         if let Some(result) = gizmo_result {
-            *target_transform = Transform::from_matrix(
-                bevy::math::DMat4::from(gizmo.config().model_matrix).as_mat4(),
-            );
+            *target_transform =
+                Transform::from_matrix(bevy::math::DMat4::from(result.target).as_mat4());
 
             gizmo_storage.results.entry(entity).or_insert(result);
         }

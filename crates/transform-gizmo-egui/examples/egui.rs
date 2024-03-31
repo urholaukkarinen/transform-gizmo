@@ -39,9 +39,8 @@ impl ExampleApp {
         let snapping = ui.input(|input| input.modifiers.ctrl);
 
         self.gizmo.update_config(GizmoConfig {
-            model_matrix: self.model_matrix,
-            view_matrix,
-            projection_matrix,
+            view_matrix: view_matrix.into(),
+            projection_matrix: projection_matrix.into(),
             viewport,
             modes: self.gizmo_modes,
             orientation: self.gizmo_orientation,
@@ -53,8 +52,6 @@ impl ExampleApp {
         if let Some(result) = self.gizmo.interact(ui) {
             println!("{result:#?}");
         }
-
-        self.model_matrix = self.gizmo.config().model_matrix;
     }
 
     fn draw_options(&mut self, ui: &mut egui::Ui) {

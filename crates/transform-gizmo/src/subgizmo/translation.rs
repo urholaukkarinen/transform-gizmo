@@ -77,10 +77,10 @@ impl SubGizmoKind for Translation {
             new_point = subgizmo.state.start_point + new_delta;
         }
 
+        let translation = new_point - subgizmo.state.last_point;
+
         subgizmo.state.last_point = new_point;
         subgizmo.state.current_delta = new_delta;
-
-        let translation = new_point - subgizmo.state.last_point;
 
         Some(GizmoResult {
             translation: translation.into(),

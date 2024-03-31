@@ -15,6 +15,7 @@ fn main() {
         }))
         .add_plugins(TransformGizmoPlugin)
         .add_systems(Startup, setup)
+        .add_systems(Update, update)
         .run();
 }
 
@@ -67,4 +68,30 @@ fn setup(
         },
         GizmoTarget::default(),
     ));
+}
+
+fn update(mut gizmo_options: ResMut<GizmoOptions>, keyboard_input: Res<ButtonInput<KeyCode>>) {
+    if keyboard_input.just_pressed(KeyCode::KeyR) {
+        if gizmo_options.gizmo_modes.contains(GizmoMode::Rotate) {
+            gizmo_options.gizmo_modes.remove(GizmoMode::Rotate);
+        } else {
+            gizmo_options.gizmo_modes.insert(GizmoMode::Rotate);
+        }
+    }
+
+    if keyboard_input.just_pressed(KeyCode::KeyT) {
+        if gizmo_options.gizmo_modes.contains(GizmoMode::Translate) {
+            gizmo_options.gizmo_modes.remove(GizmoMode::Translate);
+        } else {
+            gizmo_options.gizmo_modes.insert(GizmoMode::Translate);
+        }
+    }
+
+    if keyboard_input.just_pressed(KeyCode::KeyS) {
+        if gizmo_options.gizmo_modes.contains(GizmoMode::Scale) {
+            gizmo_options.gizmo_modes.remove(GizmoMode::Scale);
+        } else {
+            gizmo_options.gizmo_modes.insert(GizmoMode::Scale);
+        }
+    }
 }

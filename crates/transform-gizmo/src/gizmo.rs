@@ -62,7 +62,11 @@ impl Gizmo {
     /// Returns the result of the interaction with the updated transformation.
     ///
     /// [`Some`] is returned when any of the subgizmos is being dragged, [`None`] otherwise.
-    pub fn update(&mut self, interaction: GizmoInteraction) -> Option<GizmoResult> {
+    pub fn update(
+        &mut self,
+        interaction: GizmoInteraction,
+        target: mint::RowMatrix4<f64>,
+    ) -> Option<GizmoResult> {
         if !self.config.viewport.is_finite() {
             return None;
         }
@@ -87,6 +91,9 @@ impl Gizmo {
             }
         }
 
+        // Update the gizmo based on the given targets.
+        self.config.update_for_targets(&[target.into()]);
+
         for subgizmo in &mut self.subgizmos {
             // Update current configuration to each subgizmo.
             subgizmo.update_config(self.config);
@@ -107,7 +114,7 @@ impl Gizmo {
                 // If we started dragging from one of the subgizmos, mark it as active.
                 if interaction.drag_started {
                     self.active_subgizmo_id = Some(subgizmo.id());
-                    self.start_transform = self.config.model_matrix.into();
+                    self.start_transform = target.into();
                 }
             }
         }
@@ -134,14 +141,17 @@ impl Gizmo {
         if let Some((_, result)) = active_subgizmo.zip(result.as_mut()) {
             let (start_scale, _, _) = self.start_transform.to_scale_rotation_translation();
 
-            self.config.translation += DVec3::from(result.translation);
-            self.config.rotation = DQuat::from(result.rotation) * self.config.rotation;
-            self.config.scale = start_scale * DVec3::from(result.scale);
+            let (_, target_rotation, target_translation) =
+                DMat4::from(target).to_scale_rotation_translation();
 
-            self.config.model_matrix = DMat4::from_scale_rotation_translation(
-                self.config.scale,
-                self.config.rotation,
-                self.config.translation,
+            let updated_scale = start_scale * DVec3::from(result.scale);
+            let updated_rotation = DQuat::from(result.rotation) * target_rotation;
+            let updated_translation = target_translation + DVec3::from(result.translation);
+
+            result.target = DMat4::from_scale_rotation_translation(
+                updated_scale,
+                updated_rotation,
+                updated_translation,
             )
             .into();
         }
@@ -383,6 +393,8 @@ pub struct GizmoResult {
     pub mode: GizmoMode,
     /// Total scale, rotation or translation of the current gizmo activation, depending on mode
     pub value: Option<[f64; 3]>,
+
+    pub target: mint::RowMatrix4<f64>,
 }
 
 impl Default for GizmoResult {
@@ -393,6 +405,7 @@ impl Default for GizmoResult {
             translation: DVec3::ZERO.into(),
             mode: GizmoMode::Rotate,
             value: None,
+            target: DMat4::IDENTITY.into(),
         }
     }
 }

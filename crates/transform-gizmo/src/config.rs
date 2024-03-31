@@ -3,10 +3,8 @@ use std::ops::{Deref, DerefMut};
 use ecolor::Color32;
 use emath::Rect;
 use enumset::{enum_set, EnumSet, EnumSetType};
-use glam::DVec4;
-pub use glam::{DMat4, DQuat, DVec3, Mat4, Vec4Swizzles};
 
-use crate::math::{screen_to_world, world_to_screen};
+use crate::math::{screen_to_world, world_to_screen, DMat4, DQuat, DVec3, DVec4, Vec4Swizzles};
 
 /// The default snapping distance for rotation in radians
 pub const DEFAULT_SNAP_ANGLE: f32 = std::f32::consts::PI / 32.0;
@@ -22,9 +20,6 @@ pub struct GizmoConfig {
 
     /// Projection matrix for the gizmo, determining how it is projected onto the screen.
     pub projection_matrix: mint::RowMatrix4<f64>,
-
-    /// Model matrix for positioning the gizmo in the world space.
-    pub model_matrix: mint::RowMatrix4<f64>,
 
     /// Screen area where the gizmo is displayed.
     pub viewport: Rect,
@@ -59,7 +54,6 @@ impl Default for GizmoConfig {
         Self {
             view_matrix: DMat4::IDENTITY.into(),
             projection_matrix: DMat4::IDENTITY.into(),
-            model_matrix: DMat4::IDENTITY.into(),
             viewport: Rect::NOTHING,
             modes: enum_set!(GizmoMode::Rotate),
             orientation: GizmoOrientation::Global,
@@ -99,17 +93,23 @@ impl GizmoConfig {
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct PreparedGizmoConfig {
     config: GizmoConfig,
-    //----------------------------------//
+    /// Rotation of the gizmo
     pub rotation: DQuat,
+    /// Translation of the gizmo
     pub translation: DVec3,
+    /// Scale of the gizmo
     pub scale: DVec3,
+    /// Combined view-projection matrix
     pub view_projection: DMat4,
+    /// Combined model-view-projection matrix
     pub mvp: DMat4,
+    /// Scale factor for the gizmo rendering
     pub scale_factor: f32,
     /// How close the mouse pointer needs to be to a subgizmo before it is focused
     pub focus_distance: f32,
-    /// Whether left-handed projection is used.
+    /// Whether left-handed projection is used
     pub left_handed: bool,
+    /// Direction from the camera to the gizmo in world space
     pub eye_to_model_dir: DVec3,
 }
 
@@ -129,15 +129,12 @@ impl DerefMut for PreparedGizmoConfig {
 
 impl PreparedGizmoConfig {
     pub fn from_config(config: GizmoConfig) -> Self {
-        let model_matrix = DMat4::from(config.model_matrix);
         let projection_matrix = DMat4::from(config.projection_matrix);
         let view_matrix = DMat4::from(config.view_matrix);
 
-        let (scale, rotation, translation) = model_matrix.to_scale_rotation_translation();
         let view_projection = projection_matrix * view_matrix;
-        let mvp = projection_matrix * view_matrix * model_matrix;
 
-        let scale_factor = mvp.as_ref()[15] as f32
+        let scale_factor = view_projection.as_ref()[15] as f32
             / projection_matrix.as_ref()[0] as f32
             / config.viewport.width()
             * 2.0;
@@ -150,30 +147,59 @@ impl PreparedGizmoConfig {
             projection_matrix.z_axis.w > 0.0
         };
 
-        let gizmo_screen_pos =
-            world_to_screen(config.viewport, mvp, translation).unwrap_or_default();
-
-        let gizmo_view_near = screen_to_world(
-            config.viewport,
-            view_projection.inverse(),
-            gizmo_screen_pos,
-            -1.0,
-        );
-
-        let eye_to_model_dir = (gizmo_view_near - translation).normalize_or_zero();
-
         Self {
             config,
-            rotation,
-            translation,
-            scale,
+            rotation: DQuat::IDENTITY,
+            translation: DVec3::ZERO,
+            scale: DVec3::ONE,
             view_projection,
-            mvp,
-            eye_to_model_dir,
+            mvp: view_projection,
+            eye_to_model_dir: DVec3::ZERO,
             scale_factor,
             focus_distance,
             left_handed,
         }
+    }
+
+    pub(crate) fn update_for_targets(&mut self, targets: &[DMat4]) {
+        let mut scale = DVec3::ZERO;
+        let mut translation = DVec3::ZERO;
+        let mut rotation = DQuat::IDENTITY;
+
+        for target in targets {
+            let (s, r, t) = target.to_scale_rotation_translation();
+
+            scale += s;
+            translation += t;
+
+            rotation = r;
+        }
+
+        if targets.is_empty() {
+            scale = DVec3::ONE;
+        } else {
+            translation /= targets.len() as f64;
+            scale /= targets.len() as f64;
+        }
+
+        let model_matrix = DMat4::from_scale_rotation_translation(scale, rotation, translation);
+
+        self.mvp = self.view_projection * model_matrix;
+
+        let gizmo_screen_pos =
+            world_to_screen(self.config.viewport, self.mvp, translation).unwrap_or_default();
+
+        let gizmo_view_near = screen_to_world(
+            self.config.viewport,
+            self.view_projection.inverse(),
+            gizmo_screen_pos,
+            -1.0,
+        );
+
+        self.rotation = rotation;
+        self.translation = translation;
+        self.scale = scale;
+        self.eye_to_model_dir = (gizmo_view_near - translation).normalize_or_zero();
     }
 }
 
