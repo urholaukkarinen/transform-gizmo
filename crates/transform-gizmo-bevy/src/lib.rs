@@ -119,16 +119,16 @@ fn update_gizmos(
     mut gizmo_storage: ResMut<GizmoStorage>,
     mut draw_data_assets: ResMut<Assets<render::GizmoDrawData>>,
     mut draw_data_handles: ResMut<DrawDataHandles>,
+
+    mut last_cursor_pos: Local<Vec2>,
 ) {
     let Ok(window) = q_window.get_single() else {
         // No primary window found.
         return;
     };
 
-    let Some(cursor_pos) = window.cursor_position() else {
-        // Cannot update gizmos, because the cursor is not inside the window.
-        return;
-    };
+    let cursor_pos = window.cursor_position().unwrap_or_else(|| *last_cursor_pos);
+    *last_cursor_pos = cursor_pos;
 
     let scale_factor = window.scale_factor();
 
@@ -239,8 +239,8 @@ fn update_gizmos(
         .vertices
         .extend(draw_data.vertices.into_iter().map(|vert| {
             [
-                (vert[0] / viewport.width()) * 2.0 - 1.0,
-                (vert[1] / viewport.height()) * 2.0 - 1.0,
+                ((vert[0] - viewport.left()) / viewport.width()) * 2.0 - 1.0,
+                ((vert[1] - viewport.top()) / viewport.height()) * 2.0 - 1.0,
             ]
         }));
     asset.0.colors = draw_data.colors;
