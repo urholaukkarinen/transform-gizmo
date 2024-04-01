@@ -6,11 +6,19 @@ pub trait GizmoExt {
     /// Interact with the gizmo and draw it to Ui.
     ///
     /// Returns result of the gizmo interaction.
-    fn interact(&mut self, ui: &Ui) -> Option<GizmoResult>;
+    fn interact(
+        &mut self,
+        ui: &Ui,
+        targets: impl Iterator<Item = mint::RowMatrix4<f64>>,
+    ) -> Option<GizmoResult>;
 }
 
 impl GizmoExt for Gizmo {
-    fn interact(&mut self, ui: &Ui) -> Option<GizmoResult> {
+    fn interact(
+        &mut self,
+        ui: &Ui,
+        targets: impl Iterator<Item = mint::RowMatrix4<f64>>,
+    ) -> Option<GizmoResult> {
         let config = self.config();
 
         let egui_viewport = egui::Rect {
@@ -22,11 +30,15 @@ impl GizmoExt for Gizmo {
             .input(|input| input.pointer.hover_pos())
             .unwrap_or_default();
 
-        let gizmo_result = self.update(GizmoInteraction {
-            cursor_pos: (cursor_pos.x, cursor_pos.y),
-            drag_started: ui.input(|input| input.pointer.button_pressed(PointerButton::Primary)),
-            dragging: ui.input(|input| input.pointer.button_down(PointerButton::Primary)),
-        });
+        let gizmo_result = self.update(
+            GizmoInteraction {
+                cursor_pos: (cursor_pos.x, cursor_pos.y),
+                drag_started: ui
+                    .input(|input| input.pointer.button_pressed(PointerButton::Primary)),
+                dragging: ui.input(|input| input.pointer.button_down(PointerButton::Primary)),
+            },
+            targets,
+        );
 
         let draw_data = self.draw();
 

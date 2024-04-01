@@ -16,8 +16,8 @@ impl ExampleApp {
     fn new() -> Self {
         Self {
             gizmo: Gizmo::default(),
-            gizmo_modes: enum_set!(GizmoMode::Rotate),
-            gizmo_orientation: GizmoOrientation::Global,
+            gizmo_modes: enum_set!(GizmoMode::Rotate | GizmoMode::Translate),
+            gizmo_orientation: GizmoOrientation::Local,
             model_matrix: DMat4::IDENTITY,
         }
     }
@@ -49,8 +49,11 @@ impl ExampleApp {
             ..Default::default()
         });
 
-        if let Some(result) = self.gizmo.interact(ui) {
-            println!("{result:#?}");
+        if let Some(result) = self
+            .gizmo
+            .interact(ui, std::iter::once(self.model_matrix.into()))
+        {
+            self.model_matrix = result.targets.first().copied().unwrap().into();
         }
     }
 
