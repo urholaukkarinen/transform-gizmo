@@ -2,12 +2,14 @@ use bevy::{prelude::*, window::WindowResolution};
 use camera::PanOrbitCameraPlugin;
 use grid::GridPlugin;
 use gui::GuiPlugin;
+use picking::PickingPlugin;
 use scene::ScenePlugin;
 use transform_gizmo_bevy::TransformGizmoPlugin;
 
 mod camera;
 mod grid;
 mod gui;
+mod picking;
 mod scene;
 
 fn main() {
@@ -26,5 +28,6 @@ fn main() {
         .add_plugins(PanOrbitCameraPlugin)
         .add_plugins(ScenePlugin)
         .add_plugins(TransformGizmoPlugin)
+        .add_plugins(PickingPlugin)
         .run();
 }

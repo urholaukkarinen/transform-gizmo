@@ -1,22 +1,11 @@
 use bevy::prelude::*;
 use bevy_mod_outline::*;
-use bevy_mod_picking::{
-    picking_core::PickingPluginsSettings, prelude::*, selection::SelectionPluginSettings,
-};
-use transform_gizmo_bevy::GizmoTarget;
+use bevy_mod_picking::prelude::*;
 
 pub struct ScenePlugin;
 impl Plugin for ScenePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_plugins(DefaultPickingPlugins.build())
-            .add_plugins(OutlinePlugin)
-            .insert_resource(SelectionPluginSettings {
-                click_nothing_deselect_all: false,
-                ..default()
-            })
-            .add_systems(Startup, setup)
-            .add_systems(PreUpdate, toggle_picking_enabled)
-            .add_systems(Update, update);
+        app.add_systems(Startup, setup);
     }
 }
 
@@ -36,13 +25,16 @@ fn setup(
             ..default()
         },
         NoDeselect,
+        Pickable {
+            should_block_lower: false,
+            is_hoverable: false,
+        },
     ));
 
     let cube_count: i32 = 3;
 
     let colors = [Color::RED, Color::GREEN, Color::BLUE];
 
-    // Cubes
     for i in 0..cube_count {
         commands
             .spawn((
@@ -71,7 +63,6 @@ fn setup(
             });
     }
 
-    // Light
     commands.spawn(PointLightBundle {
         point_light: PointLight {
             shadows_enabled: true,
@@ -80,41 +71,4 @@ fn setup(
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
     });
-}
-
-fn toggle_picking_enabled(
-    gizmo_targets: Query<&GizmoTarget>,
-    mut picking_settings: ResMut<PickingPluginsSettings>,
-) {
-    // Picking is disabled when any of the gizmos is focused or active.
-
-    picking_settings.is_enabled = gizmo_targets
-        .iter()
-        .all(|target| !target.is_focused && !target.is_active);
-}
-
-fn update(
-    mut commands: Commands,
-    mut targets: Query<(
-        Entity,
-        &PickSelection,
-        &mut OutlineVolume,
-        Option<&GizmoTarget>,
-    )>,
-) {
-    for (entity, pick_interaction, mut outline, gizmo_target) in targets.iter_mut() {
-        let mut entity_cmd = commands.entity(entity);
-
-        if pick_interaction.is_selected {
-            if gizmo_target.is_none() {
-                entity_cmd.insert(GizmoTarget::default());
-            }
-
-            outline.visible = true;
-        } else {
-            entity_cmd.remove::<GizmoTarget>();
-
-            outline.visible = false;
-        }
-    }
 }
