@@ -1,13 +1,11 @@
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::math::vec2;
 use bevy::prelude::*;
-use transform_gizmo_bevy::GizmoCamera;
 
 pub struct PanOrbitCameraPlugin;
 impl Plugin for PanOrbitCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_camera)
-            .add_systems(Update, update_camera);
+        app.add_systems(Update, update_camera);
     }
 }
 
@@ -26,22 +24,6 @@ impl Default for PanOrbitCamera {
             upside_down: false,
         }
     }
-}
-
-fn setup_camera(mut commands: Commands) {
-    let transform = Transform::from_xyz(5.0, 5.0, 5.0);
-
-    commands.spawn((
-        PanOrbitCamera {
-            radius: transform.translation.length(),
-            ..Default::default()
-        },
-        Camera3dBundle {
-            transform: transform.looking_at(Vec3::ZERO, Vec3::Y),
-            ..default()
-        },
-        GizmoCamera,
-    ));
 }
 
 fn update_camera(

@@ -1,8 +1,8 @@
-use bevy::{
-    app::{Plugin, Update},
-    ecs::system::ResMut,
+use bevy::{prelude::*, render::camera::Viewport};
+use bevy_egui_next::{
+    egui::{self, Widget},
+    EguiContexts, EguiPlugin,
 };
-use bevy_egui_next::{egui, EguiContexts, EguiPlugin};
 use transform_gizmo_bevy::prelude::*;
 
 pub struct GuiPlugin;
@@ -13,8 +13,15 @@ impl Plugin for GuiPlugin {
     }
 }
 
-fn update_ui(mut contexts: EguiContexts, mut gizmo_options: ResMut<GizmoOptions>) {
-    egui::Window::new("Options").show(contexts.ctx_mut(), |ui| {
+fn update_ui(
+    mut contexts: EguiContexts,
+    mut gizmo_options: ResMut<GizmoOptions>,
+    mut camera: Query<&mut Camera>,
+) {
+    egui::SidePanel::left("options").show(contexts.ctx_mut(), |ui| {
+        ui.heading("Options");
+        ui.separator();
+
         egui::Grid::new("options_grid")
             .num_columns(2)
             .show(ui, |ui| {
@@ -47,6 +54,26 @@ fn update_ui(mut contexts: EguiContexts, mut gizmo_options: ResMut<GizmoOptions>
                         }
                     });
                 ui.end_row();
+
+                ui.label("Toggle grouping");
+                egui::Checkbox::without_text(&mut gizmo_options.group_targets).ui(ui);
+                ui.end_row();
             });
     });
+
+    // Use a transparent panel as the camera viewport
+    egui::CentralPanel::default()
+        .frame(egui::Frame::none())
+        .show(contexts.ctx_mut(), |ui| {
+            ui.allocate_ui(ui.available_size(), |ui| {
+                let clip_rect = ui.clip_rect();
+
+                let mut camera = camera.single_mut();
+                camera.viewport = Some(Viewport {
+                    physical_position: UVec2::new(clip_rect.left() as _, clip_rect.top() as _),
+                    physical_size: UVec2::new(clip_rect.width() as _, clip_rect.height() as _),
+                    ..default()
+                });
+            });
+        });
 }

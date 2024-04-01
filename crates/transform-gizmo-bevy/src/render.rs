@@ -28,7 +28,8 @@ use bevy::render::render_resource::{
 use bevy::render::renderer::RenderDevice;
 use bevy::render::texture::BevyDefault;
 use bevy::render::view::{ExtractedView, RenderLayers, ViewTarget};
-use bevy::render::{Render, RenderApp, RenderSet};
+use bevy::render::{Extract, Render, RenderApp, RenderSet};
+use bevy::utils::{HashMap, HashSet, Uuid};
 
 const GIZMO_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(7414812681337026784);
 
@@ -38,7 +39,8 @@ impl Plugin for TransformGizmoRenderPlugin {
     fn build(&self, app: &mut App) {
         load_internal_asset!(app, GIZMO_SHADER_HANDLE, "gizmo.wgsl", Shader::from_wgsl);
 
-        app.add_plugins(RenderAssetPlugin::<GizmoDrawData>::default());
+        app.init_resource::<DrawDataHandles>()
+            .add_plugins(RenderAssetPlugin::<GizmoDrawData>::default());
 
         let Ok(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
@@ -60,7 +62,26 @@ impl Plugin for TransformGizmoRenderPlugin {
             return;
         };
 
-        render_app.init_resource::<TransformGizmoPipeline>();
+        render_app
+            .add_systems(ExtractSchedule, extract_gizmo_data)
+            .init_resource::<TransformGizmoPipeline>();
+    }
+}
+
+#[derive(Resource, Default)]
+pub(crate) struct DrawDataHandles {
+    pub(crate) handles: HashMap<Uuid, Handle<GizmoDrawData>>,
+}
+
+fn extract_gizmo_data(mut commands: Commands, handles: Extract<Res<DrawDataHandles>>) {
+    let handle_weak_refs = handles
+        .handles
+        .values()
+        .map(|handle| handle.clone_weak())
+        .collect::<HashSet<_>>();
+
+    for handle in handle_weak_refs {
+        commands.spawn((handle,));
     }
 }
 

@@ -39,7 +39,9 @@ fn update_picking(
         Option<&GizmoTarget>,
     )>,
 ) {
-    for (entity, pick_interaction, mut outline, gizmo_target) in targets.iter_mut() {
+    // Continuously update entities based on their picking state
+
+    for (entity, pick_interaction, mut outline, gizmo_target) in &mut targets {
         let mut entity_cmd = commands.entity(entity);
 
         if pick_interaction.is_selected {

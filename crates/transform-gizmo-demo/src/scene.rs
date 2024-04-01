@@ -2,18 +2,36 @@ use bevy::prelude::*;
 use bevy_mod_outline::*;
 use bevy_mod_picking::prelude::*;
 
+use transform_gizmo_bevy::GizmoCamera;
+
+use crate::camera::PanOrbitCamera;
+
 pub struct ScenePlugin;
 impl Plugin for ScenePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(Startup, setup);
+        app.add_systems(Startup, setup_scene);
     }
 }
 
-fn setup(
+fn setup_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    let camera_transform = Transform::from_xyz(5.0, 5.0, 5.0);
+
+    commands.spawn((
+        PanOrbitCamera {
+            radius: camera_transform.translation.length(),
+            ..Default::default()
+        },
+        Camera3dBundle {
+            transform: camera_transform.looking_at(Vec3::ZERO, Vec3::Y),
+            ..default()
+        },
+        GizmoCamera,
+    ));
+
     let cube_mesh = meshes.add(Cuboid::default());
 
     // Ground
