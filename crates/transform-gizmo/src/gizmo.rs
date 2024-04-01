@@ -91,9 +91,7 @@ impl Gizmo {
             }
         }
 
-        let targets = targets
-            .map(|target| DMat4::from(target))
-            .collect::<Vec<_>>();
+        let targets = targets.map(DMat4::from).collect::<Vec<_>>();
 
         // Update the gizmo based on the given targets.
         self.config.update_for_targets(&targets);
@@ -189,7 +187,7 @@ impl Gizmo {
 
     /// Return all the necessary data to draw the latest gizmo interaction.
     ///
-    /// The gizmo draw data consists of vertices in screen coordinates.
+    /// The gizmo draw data consists of vertices in viewport coordinates.
     pub fn draw(&self) -> GizmoDrawData {
         let mut result = GizmoDrawData::default();
         for subgizmo in &self.subgizmos {

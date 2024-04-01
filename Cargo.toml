@@ -15,6 +15,7 @@ authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 transform-gizmo = { path = "crates/transform-gizmo", default-features = false }
 transform-gizmo-egui = { path = "crates/transform-gizmo-egui", default-features = false }
 transform-gizmo-bevy = { path = "crates/transform-gizmo-bevy", default-features = false }
+transform-gizmo-demo = { path = "crates/transform-gizmo-demo", default-features = false }
 
 egui = "0.27.1"
 eframe = "0.27.1"

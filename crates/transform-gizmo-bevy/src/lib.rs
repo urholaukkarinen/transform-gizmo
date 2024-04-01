@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::render::{Extract, RenderApp};
+use bevy::utils::hashbrown::HashSet;
 use bevy::utils::HashMap;
 use bevy::window::PrimaryWindow;
 use render::TransformGizmoRenderPlugin;
@@ -95,8 +96,14 @@ pub struct GizmoStorage {
 }
 
 fn extract_gizmo_data(mut commands: Commands, handles: Extract<Res<DrawDataHandles>>) {
-    for (_, handle) in &handles.handles {
-        commands.spawn((handle.clone_weak(),));
+    let handle_weak_refs = handles
+        .handles
+        .values()
+        .map(|handle| handle.clone_weak())
+        .collect::<HashSet<_>>();
+
+    for handle in handle_weak_refs {
+        commands.spawn((handle,));
     }
 }
 
@@ -134,6 +141,22 @@ fn update_gizmos(
         return;
     };
 
+    let mut target_entities: Vec<Entity> = vec![];
+    let mut target_transforms: Vec<Transform> = vec![];
+
+    let mut gizmo_entity = Entity::PLACEHOLDER;
+
+    for (entity, target_transform, _) in &mut q_targets {
+        gizmo_entity = entity;
+        target_entities.push(entity);
+        target_transforms.push(*target_transform);
+    }
+
+    if target_entities.is_empty() {
+        // Nothing to transform
+        return;
+    }
+
     let viewport = transform_gizmo::math::Rect::from_min_max(
         transform_gizmo::math::Pos2::new(viewport.min.x as _, viewport.min.y as _),
         transform_gizmo::math::Pos2::new(viewport.max.x as _, viewport.max.y as _),
@@ -147,6 +170,8 @@ fn update_gizmos(
         camera_transform.translation.as_dvec3(),
     )
     .inverse();
+
+    let gizmo = gizmo_storage.gizmos.entry(gizmo_entity).or_default();
 
     let gizmo_config = GizmoConfig {
         view_matrix: view_matrix.into(),
@@ -162,18 +187,6 @@ fn update_gizmos(
         pixels_per_point: scale_factor,
     };
 
-    let mut target_entities: Vec<Entity> = vec![];
-    let mut target_transforms: Vec<Transform> = vec![];
-
-    let mut gizmo_entity = Entity::PLACEHOLDER;
-
-    for (entity, target_transform, _) in &mut q_targets {
-        gizmo_entity = entity;
-        target_entities.push(entity);
-        target_transforms.push(*target_transform);
-    }
-
-    let gizmo = gizmo_storage.gizmos.entry(gizmo_entity).or_default();
     gizmo.update_config(gizmo_config);
 
     let gizmo_result = gizmo.update(
@@ -234,9 +247,11 @@ fn update_gizmos(
     asset.0.indices = draw_data.indices;
 
     if is_new {
-        draw_data_handles
-            .handles
-            .insert(gizmo_entity, draw_data_assets.add(bevy_draw_data));
+        let asset = draw_data_assets.add(bevy_draw_data);
+
+        for entity in &target_entities {
+            draw_data_handles.handles.insert(*entity, asset.clone());
+        }
     }
 
     draw_data_handles
