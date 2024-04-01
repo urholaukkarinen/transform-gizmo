@@ -134,13 +134,6 @@ impl PreparedGizmoConfig {
 
         let view_projection = projection_matrix * view_matrix;
 
-        let scale_factor = view_projection.as_ref()[15] as f32
-            / projection_matrix.as_ref()[0] as f32
-            / config.viewport.width()
-            * 2.0;
-
-        let focus_distance = scale_factor * (config.visuals.stroke_width / 2.0 + 5.0);
-
         let left_handed = if projection_matrix.z_axis.w == 0.0 {
             projection_matrix.z_axis.z > 0.0
         } else {
@@ -155,8 +148,8 @@ impl PreparedGizmoConfig {
             view_projection,
             mvp: view_projection,
             eye_to_model_dir: DVec3::ZERO,
-            scale_factor,
-            focus_distance,
+            scale_factor: 1.0,
+            focus_distance: 1.0,
             left_handed,
         }
     }
@@ -198,6 +191,13 @@ impl PreparedGizmoConfig {
             gizmo_screen_pos,
             -1.0,
         );
+
+        self.scale_factor = self.mvp.as_ref()[15] as f32
+            / self.projection_matrix.x.x as f32
+            / self.config.viewport.width()
+            * 2.0;
+
+        self.focus_distance = self.scale_factor * (self.config.visuals.stroke_width / 2.0 + 5.0);
 
         self.rotation = rotation;
         self.translation = translation;

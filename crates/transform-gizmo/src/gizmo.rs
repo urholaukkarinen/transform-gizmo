@@ -189,14 +189,14 @@ impl Gizmo {
     ///
     /// The gizmo draw data consists of vertices in viewport coordinates.
     pub fn draw(&self) -> GizmoDrawData {
-        let mut result = GizmoDrawData::default();
+        let mut draw_data = GizmoDrawData::default();
         for subgizmo in &self.subgizmos {
             if self.active_subgizmo_id.is_none() || subgizmo.is_active() {
-                result += subgizmo.draw();
+                draw_data += subgizmo.draw();
             }
         }
 
-        result
+        draw_data
     }
 
     /// Picks the subgizmo that is closest to the given world space ray.

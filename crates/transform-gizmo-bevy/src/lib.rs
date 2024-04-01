@@ -108,15 +108,10 @@ fn update_gizmos(
 
     let projection_matrix = camera.projection_matrix();
 
-    let view_matrix = bevy::math::DMat4::from_scale_rotation_translation(
-        camera_transform.scale.as_dvec3(),
-        camera_transform.rotation.as_dquat(),
-        camera_transform.translation.as_dvec3(),
-    )
-    .inverse();
+    let view_matrix = camera_transform.compute_matrix().inverse();
 
     let gizmo_config = GizmoConfig {
-        view_matrix: view_matrix.into(),
+        view_matrix: view_matrix.as_dmat4().into(),
         projection_matrix: projection_matrix.as_dmat4().into(),
         viewport,
         modes: gizmo_options.gizmo_modes,
