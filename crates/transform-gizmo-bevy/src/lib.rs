@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::render::{Extract, RenderApp};
 use bevy::utils::hashbrown::HashSet;
-use bevy::utils::HashMap;
+use bevy::utils::{HashMap, Uuid};
 use bevy::window::PrimaryWindow;
 use render::TransformGizmoRenderPlugin;
 use transform_gizmo::config::{DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE};
@@ -20,7 +20,7 @@ impl Plugin for TransformGizmoPlugin {
             .init_resource::<DrawDataHandles>()
             .init_resource::<GizmoOptions>()
             .init_resource::<GizmoStorage>()
-            .add_systems(Last, update_gizmos)
+            .add_systems(Last, (update_gizmos, draw_gizmos, cleanup_old_data).chain())
             .add_plugins(TransformGizmoRenderPlugin);
 
         let Ok(render_app) = app.get_sub_app_mut(RenderApp) else {
@@ -31,7 +31,7 @@ impl Plugin for TransformGizmoPlugin {
     }
 }
 
-#[derive(Resource, Debug)]
+#[derive(Resource, Copy, Clone, Debug)]
 pub struct GizmoOptions {
     pub gizmo_modes: EnumSet<GizmoMode>,
     pub gizmo_orientation: GizmoOrientation,
@@ -54,29 +54,20 @@ impl Default for GizmoOptions {
     }
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Copy, Clone, Debug)]
 pub struct GizmoTarget {
-    /// Whether the gizmo target is enabled.
-    /// When `false`, the gizmo is not drawn and cannot be interacted with.
-    pub is_enabled: bool,
-
     /// Whether any part of the gizmo is currently focused.
     pub is_focused: bool,
 
     /// Whether the gizmo is currently being interacted with.
     pub is_active: bool,
-
-    /// Result of the latest interaction with this target.
-    pub latest_result: Option<GizmoResult>,
 }
 
 impl Default for GizmoTarget {
     fn default() -> Self {
         Self {
-            is_enabled: true,
             is_focused: false,
             is_active: false,
-            latest_result: None,
         }
     }
 }
@@ -85,14 +76,15 @@ impl Default for GizmoTarget {
 pub struct GizmoCamera;
 
 #[derive(Resource, Default)]
-struct DrawDataHandles {
-    handles: HashMap<Entity, Handle<render::GizmoDrawData>>,
+struct GizmoStorage {
+    target_entities: Vec<Entity>,
+    entity_gizmo_map: HashMap<Entity, Uuid>,
+    gizmos: HashMap<Uuid, Gizmo>,
 }
 
 #[derive(Resource, Default)]
-pub struct GizmoStorage {
-    pub gizmos: HashMap<Entity, Gizmo>,
-    pub results: HashMap<Entity, GizmoResult>,
+struct DrawDataHandles {
+    handles: HashMap<Entity, Handle<render::GizmoDrawData>>,
 }
 
 fn extract_gizmo_data(mut commands: Commands, handles: Extract<Res<DrawDataHandles>>) {
@@ -109,17 +101,12 @@ fn extract_gizmo_data(mut commands: Commands, handles: Extract<Res<DrawDataHandl
 
 #[allow(clippy::too_many_arguments)]
 fn update_gizmos(
-    q_gizmo_camera: Query<(&Camera, &Transform), With<GizmoCamera>>,
     q_window: Query<&Window, With<PrimaryWindow>>,
+    q_gizmo_camera: Query<(&Camera, &Transform), With<GizmoCamera>>,
     mut q_targets: Query<(Entity, &mut Transform, &mut GizmoTarget), Without<GizmoCamera>>,
-
     mouse: Res<ButtonInput<MouseButton>>,
     gizmo_options: Res<GizmoOptions>,
-
     mut gizmo_storage: ResMut<GizmoStorage>,
-    mut draw_data_assets: ResMut<Assets<render::GizmoDrawData>>,
-    mut draw_data_handles: ResMut<DrawDataHandles>,
-
     mut last_cursor_pos: Local<Vec2>,
 ) {
     let Ok(window) = q_window.get_single() else {
@@ -141,22 +128,6 @@ fn update_gizmos(
         return;
     };
 
-    let mut target_entities: Vec<Entity> = vec![];
-    let mut target_transforms: Vec<Transform> = vec![];
-
-    let mut gizmo_entity = Entity::PLACEHOLDER;
-
-    for (entity, target_transform, _) in &mut q_targets {
-        gizmo_entity = entity;
-        target_entities.push(entity);
-        target_transforms.push(*target_transform);
-    }
-
-    if target_entities.is_empty() {
-        // Nothing to transform
-        return;
-    }
-
     let viewport = transform_gizmo::math::Rect::from_min_max(
         transform_gizmo::math::Pos2::new(viewport.min.x as _, viewport.min.y as _),
         transform_gizmo::math::Pos2::new(viewport.max.x as _, viewport.max.y as _),
@@ -170,8 +141,6 @@ fn update_gizmos(
         camera_transform.translation.as_dvec3(),
     )
     .inverse();
-
-    let gizmo = gizmo_storage.gizmos.entry(gizmo_entity).or_default();
 
     let gizmo_config = GizmoConfig {
         view_matrix: view_matrix.into(),
@@ -187,80 +156,121 @@ fn update_gizmos(
         pixels_per_point: scale_factor,
     };
 
-    gizmo.update_config(gizmo_config);
+    let mut target_entities: Vec<Entity> = vec![];
+    let mut target_transforms: Vec<Transform> = vec![];
 
-    let gizmo_result = gizmo.update(
-        GizmoInteraction {
-            cursor_pos: (cursor_pos.x, cursor_pos.y),
-            drag_started: mouse.just_pressed(MouseButton::Left),
-            dragging: mouse.any_pressed([MouseButton::Left]),
-        },
-        target_transforms
-            .iter()
-            .map(|transform| transform.compute_matrix().as_dmat4().into()),
-    );
+    for (entity, mut target_transform, mut gizmo_target) in q_targets.iter_mut() {
+        target_entities.push(entity);
+        target_transforms.push(*target_transform);
 
-    let is_focused = gizmo.is_any_focused();
+        let gizmo_uuid = *gizmo_storage
+            .entity_gizmo_map
+            .entry(entity)
+            .or_insert_with(|| Uuid::new_v4());
 
-    let draw_data = gizmo.draw();
+        let gizmo = gizmo_storage.gizmos.entry(gizmo_uuid).or_default();
 
-    for (i, (entity, mut target_transform, mut gizmo_target)) in q_targets.iter_mut().enumerate() {
+        gizmo.update_config(gizmo_config);
+
+        let gizmo_result = gizmo.update(
+            GizmoInteraction {
+                cursor_pos: (cursor_pos.x, cursor_pos.y),
+                drag_started: mouse.just_pressed(MouseButton::Left),
+                dragging: mouse.any_pressed([MouseButton::Left]),
+            },
+            [target_transform.compute_matrix().as_dmat4().into()].into_iter(), /*
+                                                                               target_transforms
+                                                                                   .iter()
+                                                                                   .map(|transform| transform.compute_matrix().as_dmat4().into()),
+                                                                                   */
+        );
+
+        let is_focused = gizmo.is_any_focused();
+
         gizmo_target.is_active = gizmo_result.is_some();
         gizmo_target.is_focused = is_focused;
-        gizmo_target.latest_result = gizmo_result.clone();
 
         if let Some(result) = &gizmo_result {
-            let Some(result_transform) = result.targets.get(i) else {
+            let Some(result_transform) = result.targets.get(0) else {
                 bevy::log::warn!("No matching transform found in GizmoResult!");
                 continue;
             };
 
             *target_transform =
                 Transform::from_matrix(bevy::math::DMat4::from(*result_transform).as_mat4());
-
-            gizmo_storage
-                .results
-                .entry(entity)
-                .or_insert(result.clone());
         }
     }
 
-    let mut bevy_draw_data = render::GizmoDrawData::default();
+    gizmo_storage.target_entities = target_entities;
+}
 
-    let (asset, is_new) = if let Some(handle) = draw_data_handles.handles.get(&gizmo_entity) {
-        (draw_data_assets.get_mut(handle).unwrap(), false)
-    } else {
-        (&mut bevy_draw_data, true)
-    };
+#[allow(clippy::too_many_arguments)]
+fn draw_gizmos(
+    gizmo_storage: Res<GizmoStorage>,
+    mut draw_data_assets: ResMut<Assets<render::GizmoDrawData>>,
+    mut draw_data_handles: ResMut<DrawDataHandles>,
+) {
+    for (entity, gizmo_uuid) in gizmo_storage.entity_gizmo_map.iter() {
+        let Some(gizmo) = gizmo_storage.gizmos.get(gizmo_uuid) else {
+            continue;
+        };
 
-    asset.0.vertices.clear();
-    asset
-        .0
-        .vertices
-        .extend(draw_data.vertices.into_iter().map(|vert| {
-            [
-                ((vert[0] - viewport.left()) / viewport.width()) * 2.0 - 1.0,
-                ((vert[1] - viewport.top()) / viewport.height()) * 2.0 - 1.0,
-            ]
-        }));
-    asset.0.colors = draw_data.colors;
-    asset.0.indices = draw_data.indices;
+        let draw_data = gizmo.draw();
 
-    if is_new {
-        let asset = draw_data_assets.add(bevy_draw_data);
+        let mut bevy_draw_data = render::GizmoDrawData::default();
 
-        for entity in &target_entities {
+        let (asset, is_new_asset) = if let Some(handle) = draw_data_handles.handles.get(entity) {
+            (draw_data_assets.get_mut(handle).unwrap(), false)
+        } else {
+            (&mut bevy_draw_data, true)
+        };
+
+        let viewport = &gizmo.config().viewport;
+
+        asset.0.vertices.clear();
+        asset
+            .0
+            .vertices
+            .extend(draw_data.vertices.into_iter().map(|vert| {
+                [
+                    ((vert[0] - viewport.left()) / viewport.width()) * 2.0 - 1.0,
+                    ((vert[1] - viewport.top()) / viewport.height()) * 2.0 - 1.0,
+                ]
+            }));
+        asset.0.colors = draw_data.colors;
+        asset.0.indices = draw_data.indices;
+
+        if is_new_asset {
+            let asset = draw_data_assets.add(bevy_draw_data);
+
             draw_data_handles.handles.insert(*entity, asset.clone());
         }
+    }
+}
+
+fn cleanup_old_data(
+    mut gizmo_storage: ResMut<GizmoStorage>,
+    mut draw_data_handles: ResMut<DrawDataHandles>,
+) {
+    let target_entities = std::mem::take(&mut gizmo_storage.target_entities);
+
+    let mut gizmos_to_remove = vec![];
+
+    gizmo_storage.entity_gizmo_map.retain(|entity, uuid| {
+        if !target_entities.contains(entity) {
+            gizmos_to_remove.push(*uuid);
+
+            false
+        } else {
+            true
+        }
+    });
+
+    for uuid in gizmos_to_remove {
+        gizmo_storage.gizmos.remove(&uuid);
     }
 
     draw_data_handles
         .handles
-        .retain(|entity, _| target_entities.contains(entity));
-    gizmo_storage
-        .gizmos
-        .retain(|entity, _| target_entities.contains(entity));
-    gizmo_storage
-        .results
         .retain(|entity, _| target_entities.contains(entity));
 }
