@@ -4,7 +4,7 @@ use grid::GridPlugin;
 use gui::GuiPlugin;
 use picking::PickingPlugin;
 use scene::ScenePlugin;
-use transform_gizmo_bevy::TransformGizmoPlugin;
+use transform_gizmo_bevy::prelude::*;
 
 mod camera;
 mod grid;
@@ -29,5 +29,10 @@ fn main() {
         .add_plugins(ScenePlugin)
         .add_plugins(TransformGizmoPlugin)
         .add_plugins(PickingPlugin)
+        .insert_resource(GizmoOptions {
+            gizmo_modes: enum_set!(GizmoMode::Rotate | GizmoMode::Translate),
+            gizmo_orientation: GizmoOrientation::Global,
+            ..default()
+        })
         .run();
 }
