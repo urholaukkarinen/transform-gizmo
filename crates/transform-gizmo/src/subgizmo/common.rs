@@ -1,4 +1,5 @@
 use crate::math::{ray_to_plane_origin, segment_to_segment};
+use crate::GizmoMode;
 use ecolor::Color32;
 use std::ops::{Add, RangeInclusive};
 
@@ -23,38 +24,71 @@ pub(crate) struct PickResult {
     pub t: f64,
 }
 
-#[derive(Copy, Clone, PartialEq)]
-pub(crate) enum ArrowheadStyle {
-    Cone,
-    Square,
+struct ArrowParams {
+    start: DVec3,
+    end: DVec3,
+    direction: DVec3,
+    length: f64,
+}
+
+fn arrow_params(config: &PreparedGizmoConfig, direction: DVec3, mode: GizmoMode) -> ArrowParams {
+    let width = (config.scale_factor * config.visuals.stroke_width) as f64;
+
+    let (start, length) = if mode == GizmoMode::Translate && config.modes.contains(GizmoMode::Scale)
+    {
+        // Modes contain both translate and scale. Use a bit different translate arrow, so the modes do not overlap.
+        let length = (config.scale_factor * config.visuals.gizmo_size) as f64;
+        let start = direction * (length + (width * 3.0));
+
+        let length = length * 0.1;
+
+        (start, length)
+    } else {
+        let start = direction * (width * 0.5 + inner_circle_radius(config));
+        let mut length = (config.scale_factor * config.visuals.gizmo_size) as f64 - start.length();
+
+        if config.modes.len() > 1 {
+            length -= width * 2.0;
+        }
+
+        (start, length)
+    };
+
+    ArrowParams {
+        start,
+        end: start + direction * length,
+        direction,
+        length,
+    }
 }
 
 pub(crate) fn pick_arrow(
     config: &PreparedGizmoConfig,
     ray: Ray,
     direction: GizmoDirection,
+    mode: GizmoMode,
 ) -> PickResult {
-    let width = (config.scale_factor * config.visuals.stroke_width) as f64;
-
-    let dir = gizmo_normal(config, direction);
-    let start = config.translation + (dir * (width * 0.5 + inner_circle_radius(config)));
-
-    let length = (config.scale_factor * config.visuals.gizmo_size) as f64;
-
     let ray_length = 1e+14;
+
+    let direction = gizmo_normal(config, direction);
+
+    let mut arrow_params = arrow_params(config, direction, mode);
+    arrow_params.start += config.translation;
+    arrow_params.end += config.translation;
 
     let (ray_t, subgizmo_t) = segment_to_segment(
         ray.origin,
         ray.origin + ray.direction * ray_length,
-        start,
-        start + dir * length,
+        arrow_params.start,
+        arrow_params.end,
     );
 
     let ray_point = ray.origin + ray.direction * ray_length * ray_t;
-    let subgizmo_point = start + dir * length * subgizmo_t;
+    let subgizmo_point =
+        arrow_params.start + arrow_params.direction * arrow_params.length * subgizmo_t;
     let dist = (ray_point - subgizmo_point).length();
 
-    let dot = config.eye_to_model_dir.dot(dir).abs();
+    let dot = config.eye_to_model_dir.dot(arrow_params.direction).abs();
 
     let visibility =
         (1.0 - (dot - *ARROW_FADE.start()) / (*ARROW_FADE.end() - *ARROW_FADE.start())).min(1.0);
@@ -133,7 +167,7 @@ pub(crate) fn draw_arrow(
     opacity: f32,
     focused: bool,
     direction: GizmoDirection,
-    arrowhead_style: ArrowheadStyle,
+    mode: GizmoMode,
 ) -> GizmoDrawData {
     if opacity <= 1e-4 {
         return GizmoDrawData::default();
@@ -154,47 +188,51 @@ pub(crate) fn draw_arrow(
     );
 
     let direction = gizmo_local_normal(config, direction);
-    let width = (config.scale_factor * config.visuals.stroke_width) as f64;
-    let length = (config.scale_factor * config.visuals.gizmo_size) as f64;
 
-    let start = direction * (width * 0.5 + inner_circle_radius(config));
-    let end = direction * length;
+    let arrow_params = arrow_params(config, direction, mode);
+
+    let width = (config.scale_factor * config.visuals.stroke_width) as f64;
 
     let mut draw_data = GizmoDrawData::default();
     draw_data = draw_data.add(
         shape_builder
-            .line_segment(start, end, (config.visuals.stroke_width, color))
+            .line_segment(
+                arrow_params.start,
+                arrow_params.end,
+                (config.visuals.stroke_width, color),
+            )
             .into(),
     );
 
-    match arrowhead_style {
-        ArrowheadStyle::Square => {
+    match mode {
+        GizmoMode::Scale => {
             let end_stroke_width = config.visuals.stroke_width * 2.5;
             let end_length = config.scale_factor * end_stroke_width;
 
             draw_data = draw_data.add(
                 shape_builder
                     .line_segment(
-                        end,
-                        end + direction * end_length as f64,
+                        arrow_params.end,
+                        arrow_params.end + arrow_params.direction * end_length as f64,
                         (end_stroke_width, color),
                     )
                     .into(),
             );
         }
-        ArrowheadStyle::Cone => {
+        GizmoMode::Translate => {
             let arrow_length = width * 2.4;
 
             draw_data = draw_data.add(
                 shape_builder
                     .arrow(
-                        end,
-                        end + direction * arrow_length,
+                        arrow_params.end,
+                        arrow_params.end + arrow_params.direction * arrow_length,
                         (config.visuals.stroke_width * 1.2, color),
                     )
                     .into(),
             );
         }
+        _ => {}
     }
 
     draw_data

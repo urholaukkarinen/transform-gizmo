@@ -3,7 +3,6 @@ use crate::math::{intersect_plane, ray_to_ray, round_to_interval, DVec3};
 use crate::subgizmo::common::{
     draw_arrow, draw_circle, draw_plane, gizmo_color, gizmo_normal, inner_circle_radius,
     pick_arrow, pick_circle, pick_plane, plane_bitangent, plane_global_origin, plane_tangent,
-    ArrowheadStyle,
 };
 use crate::subgizmo::{common::TransformKind, SubGizmoConfig, SubGizmoKind};
 use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult};
@@ -39,7 +38,12 @@ impl SubGizmoKind for Translation {
                 true,
             ),
             (TransformKind::Plane, _) => pick_plane(&subgizmo.config, ray, subgizmo.direction),
-            (TransformKind::Axis, _) => pick_arrow(&subgizmo.config, ray, subgizmo.direction),
+            (TransformKind::Axis, _) => pick_arrow(
+                &subgizmo.config,
+                ray,
+                subgizmo.direction,
+                GizmoMode::Translate,
+            ),
         };
 
         subgizmo.opacity = pick_result.visibility as _;
@@ -97,7 +101,7 @@ impl SubGizmoKind for Translation {
                 subgizmo.opacity,
                 subgizmo.focused,
                 subgizmo.direction,
-                ArrowheadStyle::Cone,
+                GizmoMode::Translate,
             ),
             (TransformKind::Plane, GizmoDirection::View) => draw_circle(
                 &subgizmo.config,

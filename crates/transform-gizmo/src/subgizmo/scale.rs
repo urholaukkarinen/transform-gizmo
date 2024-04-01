@@ -5,7 +5,6 @@ use crate::math::{round_to_interval, world_to_screen, Pos2};
 use crate::subgizmo::common::{
     draw_arrow, draw_circle, draw_plane, gizmo_color, gizmo_local_normal, inner_circle_radius,
     outer_circle_radius, pick_arrow, pick_circle, pick_plane, plane_bitangent, plane_tangent,
-    ArrowheadStyle,
 };
 use crate::subgizmo::{common::TransformKind, SubGizmoConfig, SubGizmoKind};
 use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult};
@@ -50,7 +49,9 @@ impl SubGizmoKind for Scale {
                 result
             }
             (TransformKind::Plane, _) => pick_plane(&subgizmo.config, ray, subgizmo.direction),
-            (TransformKind::Axis, _) => pick_arrow(&subgizmo.config, ray, subgizmo.direction),
+            (TransformKind::Axis, _) => {
+                pick_arrow(&subgizmo.config, ray, subgizmo.direction, GizmoMode::Scale)
+            }
         };
 
         let start_delta = distance_from_origin_2d(subgizmo, ray.screen_pos)?;
@@ -100,7 +101,7 @@ impl SubGizmoKind for Scale {
                 subgizmo.opacity,
                 subgizmo.focused,
                 subgizmo.direction,
-                ArrowheadStyle::Square,
+                GizmoMode::Scale,
             ),
             (TransformKind::Plane, GizmoDirection::View) => {
                 draw_circle(

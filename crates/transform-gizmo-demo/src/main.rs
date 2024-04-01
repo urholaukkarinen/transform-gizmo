@@ -30,7 +30,7 @@ fn main() {
         .add_plugins(TransformGizmoPlugin)
         .add_plugins(PickingPlugin)
         .insert_resource(GizmoOptions {
-            gizmo_modes: enum_set!(GizmoMode::Rotate | GizmoMode::Translate),
+            gizmo_modes: enum_set!(GizmoMode::Rotate | GizmoMode::Translate | GizmoMode::Scale),
             gizmo_orientation: GizmoOrientation::Global,
             ..default()
         })
