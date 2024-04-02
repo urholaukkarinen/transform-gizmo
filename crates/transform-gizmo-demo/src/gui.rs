@@ -1,9 +1,12 @@
 use bevy::{prelude::*, render::camera::Viewport};
 use bevy_egui_next::{
-    egui::{self, Widget},
+    egui::{self, Layout, Widget},
     EguiContexts, EguiPlugin,
 };
-use transform_gizmo_bevy::prelude::*;
+use transform_gizmo_bevy::{
+    config::{DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE},
+    prelude::*,
+};
 
 pub struct GuiPlugin;
 
@@ -18,47 +21,26 @@ fn update_ui(
     mut gizmo_options: ResMut<GizmoOptions>,
     mut camera: Query<&mut Camera>,
 ) {
+    // Snapping is enabled when CTRL is pressed.
+    // When using Bevy, you'll probably want to use Bevy's input system for this.
+    let snapping = contexts.ctx_mut().input(|input| input.modifiers.ctrl);
+    // Accurate snapping is enabled when both CTRL and SHIFT are pressed
+    let accurate_snapping = snapping && contexts.ctx_mut().input(|input| input.modifiers.shift);
+
+    gizmo_options.snapping = snapping;
+
+    gizmo_options.snap_angle = DEFAULT_SNAP_ANGLE;
+    gizmo_options.snap_distance = DEFAULT_SNAP_DISTANCE;
+    gizmo_options.snap_scale = DEFAULT_SNAP_SCALE;
+
+    if accurate_snapping {
+        gizmo_options.snap_angle /= 2.0;
+        gizmo_options.snap_distance /= 2.0;
+        gizmo_options.snap_scale /= 2.0;
+    }
+
     egui::SidePanel::left("options").show(contexts.ctx_mut(), |ui| {
-        ui.heading("Options");
-        ui.separator();
-
-        egui::Grid::new("options_grid")
-            .num_columns(2)
-            .show(ui, |ui| {
-                ui.label("Modes");
-                egui::ComboBox::from_id_source("mode_cb")
-                    .selected_text(format!("{}", gizmo_options.gizmo_modes.len()))
-                    .show_ui(ui, |ui| {
-                        for mode in [GizmoMode::Rotate, GizmoMode::Translate, GizmoMode::Scale] {
-                            let mut mode_selected = gizmo_options.gizmo_modes.contains(mode);
-                            ui.toggle_value(&mut mode_selected, format!("{:?}", mode));
-                            if mode_selected {
-                                gizmo_options.gizmo_modes.insert(mode);
-                            } else {
-                                gizmo_options.gizmo_modes.remove(mode);
-                            }
-                        }
-                    });
-                ui.end_row();
-
-                ui.label("Orientation");
-                egui::ComboBox::from_id_source("orientation_cb")
-                    .selected_text(format!("{:?}", gizmo_options.gizmo_orientation))
-                    .show_ui(ui, |ui| {
-                        for orientation in [GizmoOrientation::Global, GizmoOrientation::Local] {
-                            ui.selectable_value(
-                                &mut gizmo_options.gizmo_orientation,
-                                orientation,
-                                format!("{:?}", orientation),
-                            );
-                        }
-                    });
-                ui.end_row();
-
-                ui.label("Toggle grouping");
-                egui::Checkbox::without_text(&mut gizmo_options.group_targets).ui(ui);
-                ui.end_row();
-            });
+        draw_options(ui, &mut gizmo_options);
     });
 
     // Use a transparent panel as the camera viewport
@@ -76,4 +58,116 @@ fn update_ui(
                 });
             });
         });
+}
+
+fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
+    ui.heading("Options");
+    ui.separator();
+
+    egui::Grid::new("options_grid")
+        .num_columns(2)
+        .show(ui, |ui| {
+            ui.label("Modes");
+            egui::ComboBox::from_id_source("mode_cb")
+                .selected_text(format!("{}", gizmo_options.gizmo_modes.len()))
+                .show_ui(ui, |ui| {
+                    for mode in [GizmoMode::Rotate, GizmoMode::Translate, GizmoMode::Scale] {
+                        let mut mode_selected = gizmo_options.gizmo_modes.contains(mode);
+                        ui.toggle_value(&mut mode_selected, format!("{:?}", mode));
+                        if mode_selected {
+                            gizmo_options.gizmo_modes.insert(mode);
+                        } else {
+                            gizmo_options.gizmo_modes.remove(mode);
+                        }
+                    }
+                });
+            ui.end_row();
+
+            ui.label("Orientation");
+            egui::ComboBox::from_id_source("orientation_cb")
+                .selected_text(format!("{:?}", gizmo_options.gizmo_orientation))
+                .show_ui(ui, |ui| {
+                    for orientation in [GizmoOrientation::Global, GizmoOrientation::Local] {
+                        ui.selectable_value(
+                            &mut gizmo_options.gizmo_orientation,
+                            orientation,
+                            format!("{:?}", orientation),
+                        );
+                    }
+                });
+            ui.end_row();
+
+            ui.label("Group targets");
+            egui::Checkbox::without_text(&mut gizmo_options.group_targets).ui(ui);
+            ui.end_row();
+        });
+
+    ui.separator();
+    ui.heading("Visuals");
+    ui.separator();
+
+    egui::Grid::new("visuals_grid")
+        .num_columns(2)
+        .show(ui, |ui| {
+            ui.label("Gizmo size");
+            egui::Slider::new(&mut gizmo_options.visuals.gizmo_size, 10.0..=200.0).ui(ui);
+            ui.end_row();
+
+            ui.label("Stroke width");
+            egui::Slider::new(&mut gizmo_options.visuals.stroke_width, 1.0..=15.0).ui(ui);
+            ui.end_row();
+
+            ui.label("Inactive alpha");
+            egui::Slider::new(&mut gizmo_options.visuals.inactive_alpha, 0.0..=1.0).ui(ui);
+            ui.end_row();
+
+            ui.label("Highlight alpha");
+            egui::Slider::new(&mut gizmo_options.visuals.highlight_alpha, 0.0..=1.0).ui(ui);
+            ui.end_row();
+
+            ui.label("X axis color");
+            draw_color_picker(ui, &mut gizmo_options.visuals.x_color);
+            ui.end_row();
+
+            ui.label("Y axis color");
+            draw_color_picker(ui, &mut gizmo_options.visuals.y_color);
+            ui.end_row();
+
+            ui.label("Z axis color");
+            draw_color_picker(ui, &mut gizmo_options.visuals.z_color);
+            ui.end_row();
+
+            ui.label("View axis color");
+            draw_color_picker(ui, &mut gizmo_options.visuals.s_color);
+            ui.end_row();
+        });
+
+    ui.separator();
+
+    ui.with_layout(Layout::bottom_up(egui::Align::Center), |ui| {
+        egui::Hyperlink::from_label_and_url("(source code)", "https://github.com/urholaukkarinen/transform-gizmo/blob/main/crates/transform-gizmo-demo/src/main.rs").ui(ui);
+
+        ui.label("Move and rotate the camera using the middle and right mouse buttons");
+        ui.label("Toggle gizmo snapping with left ctrl & shift");
+    });
+}
+
+fn draw_color_picker(ui: &mut egui::Ui, color: &mut Color32) {
+    let mut egui_color =
+        egui::Color32::from_rgba_premultiplied(color.r(), color.g(), color.b(), color.a());
+
+    let color_picker = egui::color_picker::color_edit_button_srgba(
+        ui,
+        &mut egui_color,
+        egui::color_picker::Alpha::Opaque,
+    );
+
+    if color_picker.changed() {
+        *color = Color32::from_rgba_premultiplied(
+            egui_color.r(),
+            egui_color.g(),
+            egui_color.b(),
+            egui_color.a(),
+        );
+    }
 }

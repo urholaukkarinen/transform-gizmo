@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::utils::{HashMap, Uuid};
 use bevy::window::PrimaryWindow;
 use render::{DrawDataHandles, TransformGizmoRenderPlugin};
-use transform_gizmo::config::{DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE};
+use transform_gizmo::config::{DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE};
 
 pub use transform_gizmo::{GizmoConfig, *};
 
@@ -32,6 +32,7 @@ pub struct GizmoOptions {
     pub snapping: bool,
     pub snap_angle: f32,
     pub snap_distance: f32,
+    pub snap_scale: f32,
 
     /// If `true`, all GizmoTargets are transformed
     /// using a single gizmo. If `false`, each GizmoTarget
@@ -48,6 +49,7 @@ impl Default for GizmoOptions {
             snapping: false,
             snap_angle: DEFAULT_SNAP_ANGLE,
             snap_distance: DEFAULT_SNAP_DISTANCE,
+            snap_scale: DEFAULT_SNAP_SCALE,
             group_targets: true,
         }
     }
@@ -120,7 +122,7 @@ fn update_gizmos(
         snapping: gizmo_options.snapping,
         snap_angle: gizmo_options.snap_angle,
         snap_distance: gizmo_options.snap_distance,
-        snap_scale: gizmo_options.snap_distance,
+        snap_scale: gizmo_options.snap_scale,
         pixels_per_point: scale_factor,
     };
 

@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use ecolor::Color32;
+pub use ecolor::Color32;
 use emath::Rect;
 use enumset::{enum_set, EnumSet, EnumSetType};
 
@@ -264,8 +264,8 @@ pub struct GizmoVisuals {
 impl Default for GizmoVisuals {
     fn default() -> Self {
         Self {
-            x_color: Color32::from_rgb(255, 50, 0),
-            y_color: Color32::from_rgb(50, 255, 0),
+            x_color: Color32::from_rgb(255, 0, 50),
+            y_color: Color32::from_rgb(0, 255, 50),
             z_color: Color32::from_rgb(0, 50, 255),
             s_color: Color32::from_rgb(255, 255, 255),
             inactive_alpha: 0.5,
