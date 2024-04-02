@@ -40,7 +40,7 @@ fn arrow_params(config: &PreparedGizmoConfig, direction: DVec3, mode: GizmoMode)
         let length = (config.scale_factor * config.visuals.gizmo_size) as f64;
         let start = direction * (length + (width * 3.0));
 
-        let length = length * 0.1;
+        let length = length * 0.2 + width;
 
         (start, length)
     } else {
@@ -191,14 +191,17 @@ pub(crate) fn draw_arrow(
 
     let arrow_params = arrow_params(config, direction, mode);
 
-    let width = (config.scale_factor * config.visuals.stroke_width) as f64;
+    let tip_stroke_width = 2.4 * config.visuals.stroke_width;
+    let tip_length = (tip_stroke_width * config.scale_factor) as f64;
+
+    let tip_start = arrow_params.end - arrow_params.direction * tip_length;
 
     let mut draw_data = GizmoDrawData::default();
     draw_data = draw_data.add(
         shape_builder
             .line_segment(
                 arrow_params.start,
-                arrow_params.end,
+                tip_start,
                 (config.visuals.stroke_width, color),
             )
             .into(),
@@ -206,29 +209,16 @@ pub(crate) fn draw_arrow(
 
     match mode {
         GizmoMode::Scale => {
-            let end_stroke_width = config.visuals.stroke_width * 2.5;
-            let end_length = config.scale_factor * end_stroke_width;
-
             draw_data = draw_data.add(
                 shape_builder
-                    .line_segment(
-                        arrow_params.end,
-                        arrow_params.end + arrow_params.direction * end_length as f64,
-                        (end_stroke_width, color),
-                    )
+                    .line_segment(tip_start, arrow_params.end, (tip_stroke_width, color))
                     .into(),
             );
         }
         GizmoMode::Translate => {
-            let arrow_length = width * 2.4;
-
             draw_data = draw_data.add(
                 shape_builder
-                    .arrow(
-                        arrow_params.end,
-                        arrow_params.end + arrow_params.direction * arrow_length,
-                        (config.visuals.stroke_width * 1.2, color),
-                    )
+                    .arrow(tip_start, arrow_params.end, (tip_stroke_width, color))
                     .into(),
             );
         }

@@ -121,7 +121,7 @@ impl ShapeBuidler {
         let arrow_end = world_to_screen(self.viewport, self.mvp, to);
 
         self.tessellate_shape(if let Some((start, end)) = arrow_start.zip(arrow_end) {
-            let cross = (end - start).normalized().rot90() * stroke.width;
+            let cross = (end - start).normalized().rot90() * stroke.width / 2.0;
 
             Shape::convex_polygon(
                 vec![start - cross, start + cross, end],
