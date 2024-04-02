@@ -303,7 +303,11 @@ pub(crate) fn draw_circle(
 
     let mut draw_data = GizmoDrawData::default();
     if filled {
-        draw_data = draw_data.add(shape_builder.filled_circle(radius, color).into());
+        draw_data = draw_data.add(
+            shape_builder
+                .filled_circle(radius, color, (0.0, Color32::TRANSPARENT))
+                .into(),
+        );
     } else {
         draw_data = draw_data.add(
             shape_builder

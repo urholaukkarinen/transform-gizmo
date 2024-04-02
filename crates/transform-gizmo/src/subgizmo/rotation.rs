@@ -1,5 +1,7 @@
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
+use ecolor::Color32;
+
 use crate::math::{
     ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen, DMat3, DMat4, DQuat,
     DVec2, DVec3, Pos2,
@@ -134,12 +136,37 @@ impl SubGizmoKind for Rotation {
                 .arc(radius, FRAC_PI_2 - angle, FRAC_PI_2 + angle, stroke)
                 .into();
         } else {
-            let start_angle = subgizmo.state.start_axis_angle + FRAC_PI_2;
-            let end_angle = start_angle + subgizmo.state.current_delta;
+            let mut start_angle = subgizmo.state.start_axis_angle + FRAC_PI_2;
+            let mut end_angle = start_angle + subgizmo.state.current_delta;
+
+            if start_angle > end_angle {
+                // First make it so that end angle is always greater than start angle
+                std::mem::swap(&mut start_angle, &mut end_angle);
+            }
 
             // The polyline does not get rendered correctly if
             // the start and end lines are exactly the same
-            let end_angle = end_angle + 1e-5;
+            end_angle = end_angle + 1e-5;
+
+            let total_angle = end_angle - start_angle;
+
+            let full_circles = (total_angle / std::f64::consts::TAU).abs() as u32;
+
+            end_angle -= TAU * full_circles as f64;
+
+            let mut start_angle_2 = end_angle;
+            let mut end_angle_2 = start_angle + TAU;
+
+            if config
+                .view_forward()
+                .dot(gizmo_normal(&config, subgizmo.direction))
+                < 0.0
+            {
+                // Swap start and end angles based on the view direction relative to gizmo normal.
+                // Otherwise the filled sector gets drawn incorrectly.
+                std::mem::swap(&mut start_angle, &mut end_angle);
+                std::mem::swap(&mut start_angle_2, &mut end_angle_2);
+            }
 
             draw_data += shape_builder
                 .polyline(
@@ -149,6 +176,28 @@ impl SubGizmoKind for Rotation {
                         DVec3::new(end_angle.cos() * radius, 0.0, end_angle.sin() * radius),
                     ],
                     stroke,
+                )
+                .into();
+
+            if full_circles > 0 {
+                draw_data += shape_builder
+                    .sector(
+                        radius,
+                        start_angle_2,
+                        end_angle_2,
+                        color.gamma_multiply((0.2 * full_circles as f32).min(1.0)),
+                        (0.0, Color32::TRANSPARENT),
+                    )
+                    .into();
+            }
+
+            draw_data += shape_builder
+                .sector(
+                    radius,
+                    start_angle,
+                    end_angle,
+                    color.gamma_multiply((0.2 * (full_circles + 1) as f32).min(1.0)),
+                    (0.0, Color32::TRANSPARENT),
                 )
                 .into();
 
