@@ -17,11 +17,11 @@ transform-gizmo-egui = { path = "crates/transform-gizmo-egui", default-features 
 transform-gizmo-bevy = { path = "crates/transform-gizmo-bevy", default-features = false }
 transform-gizmo-demo = { path = "crates/transform-gizmo-demo", default-features = false }
 
-egui = "0.27.1"
-eframe = "0.27.1"
-emath = "0.27.1"
-epaint = "0.27.1"
-ecolor = "0.27.1"
+egui = "0.27.2"
+eframe = "0.27.2"
+emath = "0.27.2"
+epaint = "0.27.2"
+ecolor = "0.27.2"
 glam = { version = "0.27.0", features = ["mint"] }
 mint = "0.5"
 enum_dispatch = "0.3.12"
