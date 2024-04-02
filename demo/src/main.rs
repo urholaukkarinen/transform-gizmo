@@ -230,7 +230,7 @@ fn update(
             egui::Hyperlink::from_label_and_url("(source code)", SOURCE_URL).ui(ui);
         });
 
-    egui::Area::new("Viewport")
+    egui::Area::new("Viewport".into())
         .fixed_pos((0.0, 0.0))
         .show(contexts.ctx_mut(), |ui| {
             ui.with_layer_id(LayerId::background(), |ui| {

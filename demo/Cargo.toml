@@ -8,16 +8,20 @@ license = "MIT"
 
 [dependencies]
 bevy = "0.13"
-bevy_egui = "0.25.0"
-egui = "0.26.2"
+egui = "0.27.2"
 egui-gizmo = { path = ".." }
 
 [dependencies.bevy_infinite_grid]
 git = "https://github.com/XYCaptain/bevy_infinite_grid.git"
 rev = "1e5259a52a7dfaca65402c2c57c1d81c2bc443e9"
 
+[dependencies.bevy_egui]
+git = "https://github.com/mvlabat/bevy_egui.git"
+rev = "51fa9176cb636c27b792004af410955f946e808e"
+
+
 [dependencies.bevy_math]
-version = "0.12.1"
+version = "0.13.1"
 features = ["mint"]
 
 [lints]
