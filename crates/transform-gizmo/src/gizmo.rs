@@ -436,8 +436,6 @@ pub struct GizmoResult {
     pub translation: mint::Vector3<f64>,
     /// Mode of the active subgizmo
     pub mode: GizmoMode,
-    /// Total scale, rotation or translation of the current gizmo activation, depending on mode
-    pub value: Option<[f64; 3]>,
 
     pub targets: Vec<mint::RowMatrix4<f64>>,
 }
@@ -449,26 +447,13 @@ impl Default for GizmoResult {
             rotation: DQuat::IDENTITY.into(),
             translation: DVec3::ZERO.into(),
             mode: GizmoMode::Rotate,
-            value: None,
             targets: vec![],
         }
     }
 }
 
-impl GizmoResult {
-    /// Updated transformation matrix in column major order.
-    pub fn transform(&self) -> mint::ColumnMatrix4<f64> {
-        DMat4::from_scale_rotation_translation(
-            self.scale.into(),
-            self.rotation.into(),
-            self.translation.into(),
-        )
-        .into()
-    }
-}
-
 #[derive(Debug, Copy, Clone)]
-pub struct Ray {
+pub(crate) struct Ray {
     pub screen_pos: Pos2,
     pub origin: DVec3,
     pub direction: DVec3,

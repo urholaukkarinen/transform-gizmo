@@ -89,7 +89,6 @@ impl SubGizmoKind for Translation {
         Some(GizmoResult {
             translation: translation.into(),
             mode: GizmoMode::Translate,
-            value: Some(new_delta.to_array()),
             ..Default::default()
         })
     }

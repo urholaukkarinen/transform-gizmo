@@ -105,10 +105,6 @@ impl SubGizmoKind for Rotation {
         Some(GizmoResult {
             rotation: rotation.into(),
             mode: GizmoMode::Rotate,
-            value: Some(
-                (gizmo_normal(&subgizmo.config, subgizmo.direction) * subgizmo.state.current_delta)
-                    .to_array(),
-            ),
             ..Default::default()
         })
     }

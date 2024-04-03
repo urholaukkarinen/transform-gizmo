@@ -89,7 +89,6 @@ impl SubGizmoKind for Scale {
         Some(GizmoResult {
             scale: scale.into(),
             mode: GizmoMode::Scale,
-            value: Some(scale.to_array()),
             ..Default::default()
         })
     }
