@@ -41,7 +41,7 @@ fn setup(
     });
 
     commands.insert_resource(GizmoOptions {
-        gizmo_modes: enum_set!(GizmoMode::Rotate | GizmoMode::Scale),
+        gizmo_modes: enum_set!(GizmoMode::Rotate | GizmoMode::Scale | GizmoMode::Translate),
         ..Default::default()
     });
 

@@ -38,7 +38,7 @@
 //! ```
 //!
 //!
-use egui::{epaint::Vertex, Mesh, PointerButton, Pos2, Ui};
+use egui::{epaint::Vertex, Mesh, PointerButton, Pos2, Rgba, Ui};
 
 pub use transform_gizmo::*;
 pub mod prelude;
@@ -95,12 +95,7 @@ impl GizmoExt for Gizmo {
                 .map(|(pos, [r, g, b, a])| Vertex {
                     pos: pos.into(),
                     uv: Pos2::default(),
-                    color: Color32::from_rgba_premultiplied(
-                        (r * 255.0) as u8,
-                        (g * 255.0) as u8,
-                        (b * 255.0) as u8,
-                        (a * 255.0) as u8,
-                    ),
+                    color: Rgba::from_rgba_premultiplied(r, g, b, a).into(),
                 })
                 .collect(),
             ..Default::default()

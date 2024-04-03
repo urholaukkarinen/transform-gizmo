@@ -296,6 +296,7 @@ fn draw_gizmos(
                     ((vert[1] - viewport.top()) / viewport.height()) * 2.0 - 1.0,
                 ]
             }));
+
         asset.0.colors = draw_data.colors;
         asset.0.indices = draw_data.indices;
 

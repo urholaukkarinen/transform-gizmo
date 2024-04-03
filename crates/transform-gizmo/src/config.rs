@@ -257,9 +257,9 @@ pub struct GizmoVisuals {
 impl Default for GizmoVisuals {
     fn default() -> Self {
         Self {
-            x_color: Color32::from_rgb(255, 0, 50),
-            y_color: Color32::from_rgb(0, 255, 50),
-            z_color: Color32::from_rgb(0, 50, 255),
+            x_color: Color32::from_rgb(255, 0, 85),
+            y_color: Color32::from_rgb(0, 255, 85),
+            z_color: Color32::from_rgb(0, 85, 255),
             s_color: Color32::from_rgb(255, 255, 255),
             inactive_alpha: 0.5,
             highlight_alpha: 0.9,

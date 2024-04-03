@@ -1,3 +1,4 @@
+use ecolor::Rgba;
 use emath::Pos2;
 use enumset::EnumSet;
 use std::ops::{Add, AddAssign, Sub};
@@ -485,7 +486,7 @@ impl From<Mesh> for GizmoDrawData {
             .map(|vertex| {
                 (
                     [vertex.pos.x, vertex.pos.y],
-                    vertex.color.to_normalized_gamma_f32(),
+                    Rgba::from(vertex.color).to_array(),
                 )
             })
             .unzip();
