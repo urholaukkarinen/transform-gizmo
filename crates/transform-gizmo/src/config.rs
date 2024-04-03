@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 pub use ecolor::Color32;
+
 use emath::Rect;
 use enumset::{enum_set, EnumSet, EnumSetType};
 
@@ -13,38 +14,32 @@ pub const DEFAULT_SNAP_DISTANCE: f32 = 0.1;
 /// The default snapping distance for scale
 pub const DEFAULT_SNAP_SCALE: f32 = 0.1;
 
+/// Configuration of a [`Gizmo`].
+///
+/// Defines how the gizmo is drawn to the screen and
+/// how it can be interacted with.
 #[derive(Debug, Copy, Clone)]
 pub struct GizmoConfig {
     /// View matrix for the gizmo, aligning it with the camera's viewpoint.
     pub view_matrix: mint::RowMatrix4<f64>,
-
     /// Projection matrix for the gizmo, determining how it is projected onto the screen.
     pub projection_matrix: mint::RowMatrix4<f64>,
-
     /// Screen area where the gizmo is displayed.
     pub viewport: Rect,
-
     /// The gizmo's operation modes.
     pub modes: EnumSet<GizmoMode>,
-
     /// Determines the gizmo's orientation relative to global or local axes.
     pub orientation: GizmoOrientation,
-
     /// Toggles snapping to predefined increments during transformations for precision.
     pub snapping: bool,
-
     /// Angle increment for snapping rotations, in radians.
     pub snap_angle: f32,
-
     /// Distance increment for snapping translations.
     pub snap_distance: f32,
-
     /// Scale increment for snapping scalings.
     pub snap_scale: f32,
-
     /// Visual settings for the gizmo, affecting appearance and visibility.
     pub visuals: GizmoVisuals,
-
     /// Ratio of window's physical size to logical size.
     pub pixels_per_point: f32,
 }
@@ -94,23 +89,23 @@ impl GizmoConfig {
 pub(crate) struct PreparedGizmoConfig {
     config: GizmoConfig,
     /// Rotation of the gizmo
-    pub rotation: DQuat,
+    pub(crate) rotation: DQuat,
     /// Translation of the gizmo
-    pub translation: DVec3,
+    pub(crate) translation: DVec3,
     /// Scale of the gizmo
-    pub scale: DVec3,
+    pub(crate) scale: DVec3,
     /// Combined view-projection matrix
-    pub view_projection: DMat4,
+    pub(crate) view_projection: DMat4,
     /// Combined model-view-projection matrix
-    pub mvp: DMat4,
+    pub(crate) mvp: DMat4,
     /// Scale factor for the gizmo rendering
-    pub scale_factor: f32,
+    pub(crate) scale_factor: f32,
     /// How close the mouse pointer needs to be to a subgizmo before it is focused
-    pub focus_distance: f32,
+    pub(crate) focus_distance: f32,
     /// Whether left-handed projection is used
-    pub left_handed: bool,
+    pub(crate) left_handed: bool,
     /// Direction from the camera to the gizmo in world space
-    pub eye_to_model_dir: DVec3,
+    pub(crate) eye_to_model_dir: DVec3,
 }
 
 impl Deref for PreparedGizmoConfig {
@@ -128,7 +123,7 @@ impl DerefMut for PreparedGizmoConfig {
 }
 
 impl PreparedGizmoConfig {
-    pub fn from_config(config: GizmoConfig) -> Self {
+    pub(crate) fn from_config(config: GizmoConfig) -> Self {
         let projection_matrix = DMat4::from(config.projection_matrix);
         let view_matrix = DMat4::from(config.view_matrix);
 
@@ -206,13 +201,11 @@ impl PreparedGizmoConfig {
     }
 }
 
+/// Operation mode of a gizmo.
 #[derive(Debug, EnumSetType)]
 pub enum GizmoMode {
-    /// Only rotation
     Rotate,
-    /// Only translation
     Translate,
-    /// Only scale
     Scale,
 }
 

@@ -3,21 +3,21 @@ use std::f64::consts::TAU;
 use crate::math::{Pos2, Rect};
 use ecolor::Color32;
 use epaint::{Mesh, TessellationOptions, Tessellator, TextureId};
-pub use epaint::{Shape, Stroke};
+pub(crate) use epaint::{Shape, Stroke};
 use glam::{DMat4, DVec3};
 
 use crate::math::world_to_screen;
 
 const STEPS_PER_RAD: f64 = 20.0;
 
-pub struct ShapeBuidler {
+pub(crate) struct ShapeBuidler {
     mvp: DMat4,
     viewport: Rect,
     pixels_per_point: f32,
 }
 
 impl ShapeBuidler {
-    pub fn new(mvp: DMat4, viewport: Rect, pixels_per_point: f32) -> Self {
+    pub(crate) fn new(mvp: DMat4, viewport: Rect, pixels_per_point: f32) -> Self {
         Self {
             mvp,
             viewport,
@@ -64,7 +64,7 @@ impl ShapeBuidler {
             .collect::<Vec<_>>()
     }
 
-    pub fn arc(
+    pub(crate) fn arc(
         &self,
         radius: f64,
         start_angle: f64,
@@ -87,18 +87,23 @@ impl ShapeBuidler {
         })
     }
 
-    pub fn circle(&self, radius: f64, stroke: impl Into<Stroke>) -> Mesh {
+    pub(crate) fn circle(&self, radius: f64, stroke: impl Into<Stroke>) -> Mesh {
         self.arc(radius, 0.0, TAU, stroke)
     }
 
-    pub fn filled_circle(&self, radius: f64, color: Color32, stroke: impl Into<Stroke>) -> Mesh {
+    pub(crate) fn filled_circle(
+        &self,
+        radius: f64,
+        color: Color32,
+        stroke: impl Into<Stroke>,
+    ) -> Mesh {
         let mut points = self.arc_points(radius, 0.0, TAU);
         points.pop();
 
         self.tessellate_shape(Shape::convex_polygon(points, color, stroke.into()))
     }
 
-    pub fn line_segment(&self, from: DVec3, to: DVec3, stroke: impl Into<Stroke>) -> Mesh {
+    pub(crate) fn line_segment(&self, from: DVec3, to: DVec3, stroke: impl Into<Stroke>) -> Mesh {
         let mut points: [Pos2; 2] = Default::default();
 
         for (i, point) in points.iter_mut().enumerate() {
@@ -115,7 +120,7 @@ impl ShapeBuidler {
         })
     }
 
-    pub fn arrow(&self, from: DVec3, to: DVec3, stroke: impl Into<Stroke>) -> Mesh {
+    pub(crate) fn arrow(&self, from: DVec3, to: DVec3, stroke: impl Into<Stroke>) -> Mesh {
         let stroke = stroke.into();
         let arrow_start = world_to_screen(self.viewport, self.mvp, from);
         let arrow_end = world_to_screen(self.viewport, self.mvp, to);
@@ -133,7 +138,7 @@ impl ShapeBuidler {
         })
     }
 
-    pub fn polygon(
+    pub(crate) fn polygon(
         &self,
         points: &[DVec3],
         fill: impl Into<Color32>,
@@ -151,7 +156,7 @@ impl ShapeBuidler {
         })
     }
 
-    pub fn polyline(&self, points: &[DVec3], stroke: impl Into<Stroke>) -> Mesh {
+    pub(crate) fn polyline(&self, points: &[DVec3], stroke: impl Into<Stroke>) -> Mesh {
         let points = points
             .iter()
             .filter_map(|pos| world_to_screen(self.viewport, self.mvp, *pos))
@@ -164,7 +169,7 @@ impl ShapeBuidler {
         })
     }
 
-    pub fn sector(
+    pub(crate) fn sector(
         &self,
         radius: f64,
         start_angle: f64,

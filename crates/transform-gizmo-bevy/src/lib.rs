@@ -1,3 +1,33 @@
+//! A 3D transformation Gizmo for the Bevy game engine.
+//!
+//! transform-gizmo-bevy provides a feature-rich and configurable 3D transformation
+//! gizmo that can be used to manipulate entities' transforms (position, rotation, scale)
+//! visually.
+//!
+//! # Usage
+//!
+//! Add `TransformGizmoPlugin` to your App.
+//!
+//! ```ignore
+//! use bevy::prelude::*;
+//! use transform_gizmo_bevy::prelude::*;
+//!
+//! App::new()
+//!     .add_plugins(DefaultPlugins)
+//!     .add_plugins(TransformGizmoPlugin)
+//!     .run();
+//! ```
+//!
+//! Add [`GizmoCamera`] component to your Camera entity.
+//!
+//! Add [`GizmoTarget`] component to any of your entities that you would like to manipulate the [`Transform`] of.
+//!
+//! # Configuration
+//!
+//! You can configure the gizmo by modifying the [`GizmoOptions`] resource.
+//!
+//! You can either set it up with [`App::insert_resource`] when creating your App, or at any point in a system with [`ResMut<GizmoOptions>`].
+
 use bevy::prelude::*;
 use bevy::utils::{HashMap, Uuid};
 use bevy::window::PrimaryWindow;
@@ -12,6 +42,10 @@ mod render;
 
 const GIZMO_GROUP_UUID: Uuid = Uuid::from_u128(0x_1c90_3d44_0152_45e1_b1c9_889a_0203_e90c);
 
+/// Adds transform gizmos to the App.
+///
+/// Gizmos are interactive tools that appear in the scene, allowing users to manipulate
+/// entities' transforms (position, rotation, scale) visually.
 pub struct TransformGizmoPlugin;
 
 impl Plugin for TransformGizmoPlugin {
@@ -24,18 +58,26 @@ impl Plugin for TransformGizmoPlugin {
     }
 }
 
+/// Various options for configuring the transform gizmos.
+/// Many of these options are
 #[derive(Resource, Copy, Clone, Debug)]
 pub struct GizmoOptions {
+    /// Modes to use in the gizmos
     pub gizmo_modes: EnumSet<GizmoMode>,
+    /// Orientation of the gizmo. This affects the behaviour of transformations.
     pub gizmo_orientation: GizmoOrientation,
+    /// Look and feel of the gizmo.
     pub visuals: GizmoVisuals,
+    /// Whether snapping is enabled in the gizmo transformations.
     pub snapping: bool,
+    /// Angle increment for snapping rotations, in radians.
     pub snap_angle: f32,
+    /// Distance increment for snapping translations.
     pub snap_distance: f32,
+    /// Scale increment for snapping scalings.
     pub snap_scale: f32,
-
-    /// If `true`, all GizmoTargets are transformed
-    /// using a single gizmo. If `false`, each GizmoTarget
+    /// If `true`, all [`GizmoTarget`]s are transformed
+    /// using a single gizmo. If `false`, each target
     /// has its own gizmo.
     pub group_targets: bool,
 }
@@ -55,6 +97,15 @@ impl Default for GizmoOptions {
     }
 }
 
+/// Marks an entity as a gizmo target.
+///
+/// When an entity has this component and a [`Transform`],
+/// a gizmo is shown, which can be used to manipulate the
+/// transform component.
+///
+/// If target grouping is enabled in [`GizmoOptions`],
+/// a single gizmo is used for all targets. Otherwise
+/// a separate gizmo is used for each target entity.
 #[derive(Component, Copy, Clone, Debug, Default)]
 pub struct GizmoTarget {
     /// Whether any part of the gizmo is currently focused.
@@ -64,6 +115,7 @@ pub struct GizmoTarget {
     pub is_active: bool,
 }
 
+/// Marker used to specify which camera to use for gizmos.
 #[derive(Component)]
 pub struct GizmoCamera;
 
@@ -162,11 +214,10 @@ fn update_gizmos(
 
         let gizmo_result = gizmo.update(
             gizmo_interaction,
-            std::iter::once(*target_transform)
-                .map(|transform| transform.compute_matrix().as_dmat4().into()),
+            &[target_transform.compute_matrix().as_dmat4().into()],
         );
 
-        let is_focused = gizmo.is_any_focused();
+        let is_focused = gizmo.is_focused();
 
         gizmo_target.is_active = gizmo_result.is_some();
         gizmo_target.is_focused = is_focused;
@@ -190,10 +241,12 @@ fn update_gizmos(
             gizmo_interaction,
             target_transforms
                 .iter()
-                .map(|transform| transform.compute_matrix().as_dmat4().into()),
+                .map(|transform| transform.compute_matrix().as_dmat4().into())
+                .collect::<Vec<_>>()
+                .as_slice(),
         );
 
-        let is_focused = gizmo.is_any_focused();
+        let is_focused = gizmo.is_focused();
 
         for (i, (_, mut target_transform, mut gizmo_target)) in q_targets.iter_mut().enumerate() {
             gizmo_target.is_active = gizmo_result.is_some();

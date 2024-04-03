@@ -18,8 +18,41 @@ pub(crate) mod rotation;
 pub(crate) mod scale;
 pub(crate) mod translation;
 
+#[derive(Clone, Debug)]
+/// Enumeration of different subgizmo types.
+#[enum_dispatch(SubGizmoControl)]
+pub(crate) enum SubGizmo {
+    Rotate(RotationSubGizmo),
+    Translate(TranslationSubGizmo),
+    Scale(ScaleSubGizmo),
+    Arcball(ArcballSubGizmo),
+}
+
+#[enum_dispatch]
+pub(crate) trait SubGizmoControl {
+    /// Unique identifier for this subgizmo.
+    fn id(&self) -> u64;
+    /// Update the configuration used by the gizmo.
+    fn update_config(&mut self, config: PreparedGizmoConfig);
+    /// Sets whether this subgizmo is currently focused.
+    fn set_focused(&mut self, focused: bool);
+    /// Sets whether this subgizmo is currently active.
+    fn set_active(&mut self, active: bool);
+    /// Returns true if this subgizmo is currently focused.
+    fn is_focused(&self) -> bool;
+    /// Returns true if this subgizmo is currently active.
+    fn is_active(&self) -> bool;
+    /// Pick the subgizmo based on pointer ray. If it is close enough to
+    /// the mouse pointer, distance from camera to the subgizmo is returned.
+    fn pick(&mut self, ray: Ray) -> Option<f64>;
+    /// Update the subgizmo based on pointer ray and interaction.
+    fn update(&mut self, ray: Ray) -> Option<GizmoResult>;
+    /// Draw the subgizmo.
+    fn draw(&self) -> GizmoDrawData;
+}
+
 pub(crate) trait SubGizmoKind: 'static {
-    type Params: Copy + Hash;
+    type Params: Debug + Copy + Hash;
     type State: Debug + Copy + Clone + Send + Sync + Default + 'static;
 
     fn pick(subgizmo: &mut SubGizmoConfig<Self>, ray: Ray) -> Option<f64>
@@ -33,6 +66,7 @@ pub(crate) trait SubGizmoKind: 'static {
         Self: Sized;
 }
 
+#[derive(Clone, Debug)]
 pub(crate) struct SubGizmoConfig<T: SubGizmoKind> {
     id: u64,
     /// Additional parameters depending on the subgizmo kind.
@@ -63,7 +97,7 @@ impl<T> SubGizmoConfig<T>
 where
     T: SubGizmoKind,
 {
-    pub fn new(config: PreparedGizmoConfig, params: T::Params) -> Self {
+    pub(crate) fn new(config: PreparedGizmoConfig, params: T::Params) -> Self {
         let mut hasher = ahash::RandomState::with_seeds(1, 2, 3, 4).build_hasher();
         params.type_id().hash(&mut hasher);
         params.hash(&mut hasher);
@@ -119,35 +153,4 @@ where
     fn draw(&self) -> GizmoDrawData {
         T::draw(self)
     }
-}
-
-#[enum_dispatch]
-pub trait SubGizmoControl {
-    /// Unique identifier for this subgizmo.
-    fn id(&self) -> u64;
-    /// Update the configuration used by the gizmo.
-    fn update_config(&mut self, config: PreparedGizmoConfig);
-    /// Sets whether this subgizmo is currently focused.
-    fn set_focused(&mut self, focused: bool);
-    /// Sets whether this subgizmo is currently active.
-    fn set_active(&mut self, active: bool);
-    /// Returns true if this subgizmo is currently focused.
-    fn is_focused(&self) -> bool;
-    /// Returns true if this subgizmo is currently active.
-    fn is_active(&self) -> bool;
-    /// Pick the subgizmo based on pointer ray. If it is close enough to
-    /// the mouse pointer, distance from camera to the subgizmo is returned.
-    fn pick(&mut self, ray: Ray) -> Option<f64>;
-    /// Update the subgizmo based on pointer ray and interaction.
-    fn update(&mut self, ray: Ray) -> Option<GizmoResult>;
-    /// Draw the subgizmo.
-    fn draw(&self) -> GizmoDrawData;
-}
-
-#[enum_dispatch(SubGizmoControl)]
-pub enum SubGizmo {
-    Rotate(RotationSubGizmo),
-    Translate(TranslationSubGizmo),
-    Scale(ScaleSubGizmo),
-    Arcball(ArcballSubGizmo),
 }

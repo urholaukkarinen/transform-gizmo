@@ -1,21 +1,33 @@
-//! Provides a 3d transformation gizmo that can be used to manipulate 4x4
-//! transformation matrices. Such gizmos are commonly used in applications
-//! such as game engines and 3d modeling software.
+//! Provides a feature-rich and configurable 3D transformation
+//! gizmo that can be used to manipulate 4x4 transformation matrices (position, rotation, scale)
+//! visually.
 //!
-//! # Creating a gizmo
+//! Such gizmos are commonly used in applications such as game engines and 3d modeling software.
+//!
+//! # Usage
+//!
+//! If you are using the [Bevy](https://bevyengine.org/) game engine or [Egui](https://github.com/emilk/egui) library in your
+//! application, you will most likely want to use [transform-gizmo-bevy](https://docs.rs/transform-gizmo-bevy)
+//! or [transform-gizmo-egui](https://docs.rs/transform-gizmo-egui).
+//!
+//! Alternatively, this library can be easily used with any framework. For interacting with the gizmo,
+//! all you will need to do is give [`Gizmo::update`] sufficient
+//! information about user interaction, in the form of [`GizmoInteraction`].
+//!
+//! For rendering the gizmo, [`Gizmo::draw`] provides vertices in viewport coordinates that can be easily rendered
+//! with your favorite graphics APIs.
+//!
 //! For a more complete example, see the online demo at <https://urholaukkarinen.github.io/transform-gizmo/>.
 //! The demo sources can be found at <https://github.com/urholaukkarinen/transform-gizmo/blob/main/crates/transform-gizmo-demo/src/main.rs>.
 //! ```
 
-pub mod config;
-pub mod gizmo;
-pub mod math;
 mod shape;
 mod subgizmo;
 
+pub mod config;
+pub mod gizmo;
+pub mod math;
+
 pub mod prelude;
 
-pub use config::{GizmoConfig, GizmoDirection, GizmoMode, GizmoOrientation, GizmoVisuals};
-pub use gizmo::{Gizmo, GizmoDrawData, GizmoInteraction, GizmoResult};
-
-pub use enumset::{enum_set, EnumSet};
+pub use prelude::*;

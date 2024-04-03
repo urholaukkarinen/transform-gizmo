@@ -142,7 +142,7 @@ impl SubGizmoKind for Rotation {
 
             // The polyline does not get rendered correctly if
             // the start and end lines are exactly the same
-            end_angle = end_angle + 1e-5;
+            end_angle += 1e-5;
 
             let total_angle = end_angle - start_angle;
 

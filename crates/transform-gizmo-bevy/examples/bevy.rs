@@ -1,6 +1,6 @@
 use bevy::{prelude::*, window::WindowResolution};
 
-use transform_gizmo_bevy::prelude::*;
+use transform_gizmo_bevy::*;
 
 fn main() {
     App::new()

@@ -15,9 +15,18 @@ use crate::subgizmo::{
     SubGizmoControl, TranslationSubGizmo,
 };
 
+/// A transform gizmo for manipulating 4x4 matrices.
+#[derive(Clone, Debug)]
 pub struct Gizmo {
+    /// Prepared configuration of the gizmo.
+    /// Includes the original [`GizmoConfig`] as well as
+    /// various other values calculated from it, used for
+    /// interaction and drawing the gizmo.
     config: PreparedGizmoConfig,
+    /// The last enabled modes of the gizmo.
+    /// The subgizmos are rebuilt when modes change.
     last_modes: EnumSet<GizmoMode>,
+    /// Subgizmos used in the gizmo.
     subgizmos: Vec<SubGizmo>,
     active_subgizmo_id: Option<u64>,
 
@@ -31,6 +40,7 @@ impl Default for Gizmo {
 }
 
 impl Gizmo {
+    /// Creates a new gizmo from given configuration
     pub fn new(config: GizmoConfig) -> Self {
         Self {
             config: PreparedGizmoConfig::from_config(config),
@@ -47,13 +57,13 @@ impl Gizmo {
         &self.config
     }
 
-    /// Update the configuration used by the gizmo.
+    /// Updates the configuration used by the gizmo.
     pub fn update_config(&mut self, config: GizmoConfig) {
         self.config = PreparedGizmoConfig::from_config(config);
     }
 
-    /// Were any of the subgizmoes focused after latest [`Gizmo::update`] call.
-    pub fn is_any_focused(&self) -> bool {
+    /// Was this gizmo focused after the latest [`Gizmo::update`] call.
+    pub fn is_focused(&self) -> bool {
         self.subgizmos.iter().any(|subgizmo| subgizmo.is_focused())
     }
 
@@ -65,12 +75,8 @@ impl Gizmo {
     pub fn update(
         &mut self,
         interaction: GizmoInteraction,
-        targets: impl Iterator<Item = mint::RowMatrix4<f64>>,
+        targets: &[mint::RowMatrix4<f64>],
     ) -> Option<GizmoResult> {
-        if !self.config.viewport.is_finite() {
-            return None;
-        }
-
         // Mode was changed. Update all subgizmos accordingly.
         if self.config.modes != self.last_modes {
             self.last_modes = self.config.modes;
@@ -93,7 +99,11 @@ impl Gizmo {
             }
         }
 
-        let targets = targets.map(DMat4::from).collect::<Vec<_>>();
+        if !self.config.viewport.is_finite() {
+            return None;
+        }
+
+        let targets = targets.iter().copied().map(DMat4::from).collect::<Vec<_>>();
 
         // Update the gizmo based on the given targets.
         self.config.update_for_targets(&targets);
@@ -191,6 +201,10 @@ impl Gizmo {
     ///
     /// The gizmo draw data consists of vertices in viewport coordinates.
     pub fn draw(&self) -> GizmoDrawData {
+        if !self.config.viewport.is_finite() {
+            return GizmoDrawData::default();
+        }
+
         let mut draw_data = GizmoDrawData::default();
         for subgizmo in &self.subgizmos {
             if self.active_subgizmo_id.is_none() || subgizmo.is_active() {
@@ -452,17 +466,14 @@ impl Default for GizmoResult {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-pub(crate) struct Ray {
-    pub screen_pos: Pos2,
-    pub origin: DVec3,
-    pub direction: DVec3,
-}
-
+/// Data used to draw [`Gizmo`].
 #[derive(Default, Clone, Debug)]
 pub struct GizmoDrawData {
+    /// Vertices in viewport space.
     pub vertices: Vec<[f32; 2]>,
+    /// RGBA colors.
     pub colors: Vec<[f32; 4]>,
+    /// Indices to the vertex data.
     pub indices: Vec<u32>,
 }
 
@@ -504,4 +515,11 @@ impl Add for GizmoDrawData {
         self += rhs;
         self
     }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct Ray {
+    pub(crate) screen_pos: Pos2,
+    pub(crate) origin: DVec3,
+    pub(crate) direction: DVec3,
 }

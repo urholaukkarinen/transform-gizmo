@@ -33,7 +33,7 @@ use bevy::utils::{HashMap, HashSet, Uuid};
 
 const GIZMO_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(7414812681337026784);
 
-pub struct TransformGizmoRenderPlugin;
+pub(crate) struct TransformGizmoRenderPlugin;
 
 impl Plugin for TransformGizmoRenderPlugin {
     fn build(&self, app: &mut App) {
@@ -86,7 +86,7 @@ fn extract_gizmo_data(mut commands: Commands, handles: Extract<Res<DrawDataHandl
 }
 
 #[derive(Asset, Debug, Default, Clone, TypePath)]
-pub(crate) struct GizmoDrawData(pub transform_gizmo::GizmoDrawData);
+pub(crate) struct GizmoDrawData(pub(crate) transform_gizmo::GizmoDrawData);
 
 #[derive(Debug, Clone)]
 pub(crate) struct GizmoBuffers {

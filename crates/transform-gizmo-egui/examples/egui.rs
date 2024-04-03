@@ -1,7 +1,8 @@
 use eframe::{egui, NativeOptions};
-use transform_gizmo::math::{DMat4, DVec3};
-use transform_gizmo::{enum_set, prelude::*, EnumSet};
-use transform_gizmo_egui::GizmoExt;
+use transform_gizmo_egui::{
+    math::{DMat4, DVec3},
+    *,
+};
 
 struct ExampleApp {
     gizmo: Gizmo,
@@ -49,10 +50,7 @@ impl ExampleApp {
             ..Default::default()
         });
 
-        if let Some(result) = self
-            .gizmo
-            .interact(ui, std::iter::once(self.model_matrix.into()))
-        {
+        if let Some(result) = self.gizmo.interact(ui, &[self.model_matrix.into()]) {
             self.model_matrix = result.targets.first().copied().unwrap().into();
         }
     }

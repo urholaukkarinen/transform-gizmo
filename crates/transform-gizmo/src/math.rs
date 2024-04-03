@@ -4,7 +4,7 @@ pub use glam::{DMat3, DMat4, DQuat, DVec2, DVec3, DVec4, Mat4, Quat, Vec3, Vec4S
 /// Creates a matrix that represents rotation between two 3d vectors
 ///
 /// Credit: <https://www.iquilezles.org/www/articles/noacos/noacos.htm>
-pub fn rotation_align(from: DVec3, to: DVec3) -> DMat3 {
+pub(crate) fn rotation_align(from: DVec3, to: DVec3) -> DMat3 {
     let v = from.cross(to);
     let c = from.dot(to);
     let k = 1.0 / (1.0 + c);
@@ -26,7 +26,7 @@ pub fn rotation_align(from: DVec3, to: DVec3) -> DMat3 {
 /// This can be used to determine the shortest distance between those two rays.
 ///
 /// Credit: Practical Geometry Algorithms by Daniel Sunday: <http://geomalgorithms.com/code.html>
-pub fn ray_to_ray(a1: DVec3, adir: DVec3, b1: DVec3, bdir: DVec3) -> (f64, f64) {
+pub(crate) fn ray_to_ray(a1: DVec3, adir: DVec3, b1: DVec3, bdir: DVec3) -> (f64, f64) {
     let b = adir.dot(bdir);
     let w = a1 - b1;
     let d = adir.dot(w);
@@ -50,7 +50,7 @@ pub fn ray_to_ray(a1: DVec3, adir: DVec3, b1: DVec3, bdir: DVec3) -> (f64, f64) 
 /// This can be used to determine the shortest distance between those two segments.
 ///
 /// Credit: Practical Geometry Algorithms by Daniel Sunday: <http://geomalgorithms.com/code.html>
-pub fn segment_to_segment(a1: DVec3, a2: DVec3, b1: DVec3, b2: DVec3) -> (f64, f64) {
+pub(crate) fn segment_to_segment(a1: DVec3, a2: DVec3, b1: DVec3, b2: DVec3) -> (f64, f64) {
     let da = a2 - a1;
     let db = b2 - b1;
     let la = da.length_squared();
@@ -114,7 +114,7 @@ pub fn segment_to_segment(a1: DVec3, a2: DVec3, b1: DVec3, b2: DVec3) -> (f64, f
 }
 
 /// Finds the intersection point of a ray and a plane
-pub fn intersect_plane(
+pub(crate) fn intersect_plane(
     plane_normal: DVec3,
     plane_origin: DVec3,
     ray_origin: DVec3,
@@ -133,7 +133,7 @@ pub fn intersect_plane(
 
 /// Finds the intersection point of a ray and a plane
 /// and distance from the intersection to the plane origin
-pub fn ray_to_plane_origin(
+pub(crate) fn ray_to_plane_origin(
     disc_normal: DVec3,
     disc_origin: DVec3,
     ray_origin: DVec3,
@@ -151,12 +151,12 @@ pub fn ray_to_plane_origin(
 }
 
 /// Rounds given value to the nearest interval
-pub fn round_to_interval(val: f64, interval: f64) -> f64 {
+pub(crate) fn round_to_interval(val: f64, interval: f64) -> f64 {
     (val / interval).round() * interval
 }
 
 /// Calculates 2d screen coordinates from 3d world coordinates
-pub fn world_to_screen(viewport: Rect, mvp: DMat4, pos: DVec3) -> Option<Pos2> {
+pub(crate) fn world_to_screen(viewport: Rect, mvp: DMat4, pos: DVec3) -> Option<Pos2> {
     let mut pos = mvp * DVec4::from((pos, 1.0));
 
     if pos.w < 1e-10 {
@@ -175,7 +175,7 @@ pub fn world_to_screen(viewport: Rect, mvp: DMat4, pos: DVec3) -> Option<Pos2> {
 }
 
 /// Calculates 3d world coordinates from 2d screen coordinates
-pub fn screen_to_world(viewport: Rect, mat: DMat4, pos: Pos2, z: f64) -> DVec3 {
+pub(crate) fn screen_to_world(viewport: Rect, mat: DMat4, pos: Pos2, z: f64) -> DVec3 {
     let x = (((pos.x - viewport.min.x) / viewport.width()) * 2.0 - 1.0) as f64;
     let y = (((pos.y - viewport.min.y) / viewport.height()) * 2.0 - 1.0) as f64;
 
