@@ -181,7 +181,7 @@ impl SubGizmoKind for Rotation {
                         radius,
                         start_angle_2,
                         end_angle_2,
-                        color.gamma_multiply((0.2 * full_circles as f32).min(1.0)),
+                        color.linear_multiply((0.25 * full_circles as f32).min(1.0)),
                         (0.0, Color32::TRANSPARENT),
                     )
                     .into();
@@ -192,7 +192,7 @@ impl SubGizmoKind for Rotation {
                     radius,
                     start_angle,
                     end_angle,
-                    color.gamma_multiply((0.2 * (full_circles + 1) as f32).min(1.0)),
+                    color.linear_multiply((0.25 * (full_circles + 1) as f32).min(1.0)),
                     (0.0, Color32::TRANSPARENT),
                 )
                 .into();
