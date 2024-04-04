@@ -20,12 +20,12 @@ fn update_ui(
     mut contexts: EguiContexts,
     mut gizmo_options: ResMut<GizmoOptions>,
     mut camera: Query<&mut Camera>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
     // Snapping is enabled when CTRL is pressed.
-    // When using Bevy, you'll probably want to use Bevy's input system for this.
-    let snapping = contexts.ctx_mut().input(|input| input.modifiers.ctrl);
+    let snapping = keyboard_input.pressed(KeyCode::ControlLeft);
     // Accurate snapping is enabled when both CTRL and SHIFT are pressed
-    let accurate_snapping = snapping && contexts.ctx_mut().input(|input| input.modifiers.shift);
+    let accurate_snapping = snapping && keyboard_input.pressed(KeyCode::ShiftLeft);
 
     gizmo_options.snapping = snapping;
 
