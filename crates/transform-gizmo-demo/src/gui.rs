@@ -1,5 +1,5 @@
 use bevy::{prelude::*, render::camera::Viewport};
-use bevy_egui_next::{
+use bevy_egui::{
     egui::{self, Layout, Widget},
     EguiContexts, EguiPlugin,
 };

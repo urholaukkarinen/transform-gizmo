@@ -11,9 +11,10 @@ repository.workspace = true
 
 [dependencies]
 transform-gizmo-bevy.workspace = true
+transform-gizmo-egui.workspace = true
 
 bevy.workspace = true
-bevy_egui_next = { git = "https://github.com/bfleischhacker/bevy_egui_next.git", rev = "935904398c77ea7195a0a59a7cf05be030c4d2eb" }
+bevy_egui = { git = "https://github.com/mvlabat/bevy_egui.git", rev = "cfd819ee9bdfb58101ac3efb6bcd4b6336860773" }
 bevy_infinite_grid = { git = "https://github.com/XYCaptain/bevy_infinite_grid.git", rev = "1e5259a52a7dfaca65402c2c57c1d81c2bc443e9" }
 bevy_mod_picking = "0.18.0"
 bevy_mod_outline = "0.7.0"
