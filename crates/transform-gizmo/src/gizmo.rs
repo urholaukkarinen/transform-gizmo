@@ -6,7 +6,7 @@ use std::ops::{Add, AddAssign, Sub};
 use crate::config::{GizmoConfig, GizmoDirection, GizmoMode, PreparedGizmoConfig};
 use crate::math::screen_to_world;
 use epaint::Mesh;
-use glam::{DMat4, DQuat, DVec3};
+use glam::{DMat4, DVec3};
 
 use crate::subgizmo::rotation::RotationParams;
 use crate::subgizmo::scale::ScaleParams;
@@ -77,7 +77,7 @@ impl Gizmo {
         &mut self,
         interaction: GizmoInteraction,
         targets: &[mint::RowMatrix4<f64>],
-    ) -> Option<GizmoResult> {
+    ) -> Option<(GizmoResult, Vec<mint::RowMatrix4<f64>>)> {
         // Mode was changed. Update all subgizmos accordingly.
         if self.config.modes != self.last_modes {
             self.last_modes = self.config.modes;
@@ -116,8 +116,6 @@ impl Gizmo {
             subgizmo.set_focused(false);
         }
 
-        let mut result = None;
-
         let pointer_ray = self.pointer_ray(Pos2::from(interaction.cursor_pos));
 
         // If there is no active subgizmo, find which one of them
@@ -140,6 +138,8 @@ impl Gizmo {
                 .find(|subgizmo| subgizmo.id() == id)
         });
 
+        let mut result = None;
+
         if let Some(subgizmo) = active_subgizmo.as_mut() {
             if interaction.dragging {
                 subgizmo.set_active(true);
@@ -152,50 +152,55 @@ impl Gizmo {
             }
         }
 
-        if let Some((_, result)) = active_subgizmo.zip(result.as_mut()) {
-            for (target_start_transform, target_transform) in
-                self.target_start_transforms.iter().zip(targets)
-            {
-                let mut new_target_transform = target_transform;
+        let Some(result) = result else {
+            // No interaction, no result.
+            return None;
+        };
 
-                match result.mode {
-                    GizmoMode::Rotate => {
-                        // Rotate around the target group origin
+        let mut updated_targets = Vec::<mint::RowMatrix4<f64>>::new();
 
-                        let group_translation = DMat4::from_translation(self.config.translation);
+        for (target_start_transform, target_transform) in
+            self.target_start_transforms.iter().zip(targets)
+        {
+            let mut new_target_transform = target_transform;
 
-                        new_target_transform =
-                            group_translation.inverse().mul_mat4(&new_target_transform);
+            match result {
+                GizmoResult::Rotation { delta, total: _ } => {
+                    // Rotate around the target group origin
 
-                        new_target_transform = DMat4::from_quat(result.rotation.into())
-                            .mul_mat4(&new_target_transform);
+                    let group_translation = DMat4::from_translation(self.config.translation);
 
-                        new_target_transform = group_translation.mul_mat4(&new_target_transform);
-                    }
-                    GizmoMode::Translate => {
-                        new_target_transform = DMat4::from_translation(result.translation.into())
-                            .mul_mat4(&new_target_transform);
-                    }
-                    GizmoMode::Scale => {
-                        let (start_scale, _, _) =
-                            target_start_transform.to_scale_rotation_translation();
+                    new_target_transform =
+                        group_translation.inverse().mul_mat4(&new_target_transform);
 
-                        let (_, target_rotation, target_translation) =
-                            target_transform.to_scale_rotation_translation();
+                    new_target_transform =
+                        DMat4::from_quat(delta.into()).mul_mat4(&new_target_transform);
 
-                        new_target_transform = DMat4::from_scale_rotation_translation(
-                            start_scale * DVec3::from(result.scale),
-                            target_rotation,
-                            target_translation,
-                        );
-                    }
+                    new_target_transform = group_translation.mul_mat4(&new_target_transform);
                 }
+                GizmoResult::Translation { delta, total: _ } => {
+                    new_target_transform =
+                        DMat4::from_translation(delta.into()).mul_mat4(&new_target_transform);
+                }
+                GizmoResult::Scale { total } => {
+                    let (start_scale, _, _) =
+                        target_start_transform.to_scale_rotation_translation();
 
-                result.targets.push(new_target_transform.into());
+                    let (_, target_rotation, target_translation) =
+                        target_transform.to_scale_rotation_translation();
+
+                    new_target_transform = DMat4::from_scale_rotation_translation(
+                        start_scale * DVec3::from(total),
+                        target_rotation,
+                        target_translation,
+                    );
+                }
             }
+
+            updated_targets.push(new_target_transform.into());
         }
 
-        result
+        Some((result, updated_targets))
     }
 
     /// Return all the necessary data to draw the latest gizmo interaction.
@@ -441,30 +446,24 @@ pub struct GizmoInteraction {
 }
 
 /// Result of a gizmo transformation
-#[derive(Debug, Clone)]
-pub struct GizmoResult {
-    /// Updated scale
-    pub scale: mint::Vector3<f64>,
-    /// Updated rotation
-    pub rotation: mint::Quaternion<f64>,
-    /// Updated translation
-    pub translation: mint::Vector3<f64>,
-    /// Mode of the active subgizmo
-    pub mode: GizmoMode,
-
-    pub targets: Vec<mint::RowMatrix4<f64>>,
-}
-
-impl Default for GizmoResult {
-    fn default() -> Self {
-        Self {
-            scale: DVec3::ONE.into(),
-            rotation: DQuat::IDENTITY.into(),
-            translation: DVec3::ZERO.into(),
-            mode: GizmoMode::Rotate,
-            targets: vec![],
-        }
-    }
+#[derive(Debug, Copy, Clone)]
+pub enum GizmoResult {
+    Rotation {
+        /// The latest rotation delta
+        delta: mint::Quaternion<f64>,
+        /// Total rotation of the gizmo interaction
+        total: mint::Quaternion<f64>,
+    },
+    Translation {
+        /// The latest translation delta
+        delta: mint::Vector3<f64>,
+        /// Total translation of the gizmo interaction
+        total: mint::Vector3<f64>,
+    },
+    Scale {
+        /// Total scale of the gizmo interaction
+        total: mint::Vector3<f64>,
+    },
 }
 
 /// Data used to draw [`Gizmo`].

@@ -34,21 +34,6 @@ fn setup_scene(
 
     let cube_mesh = meshes.add(Cuboid::default());
 
-    // Ground
-    commands.spawn((
-        PbrBundle {
-            mesh: cube_mesh.clone(),
-            material: materials.add(Color::NONE),
-            transform: Transform::from_xyz(0.0, -0.5, 0.0).with_scale(Vec3::new(100.0, 1.0, 100.0)),
-            ..default()
-        },
-        NoDeselect,
-        Pickable {
-            should_block_lower: false,
-            is_hoverable: false,
-        },
-    ));
-
     let cube_count: i32 = 3;
 
     let colors = [Color::RED, Color::GREEN, Color::BLUE];

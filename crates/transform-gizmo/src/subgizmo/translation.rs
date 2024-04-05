@@ -81,15 +81,15 @@ impl SubGizmoKind for Translation {
             new_point = subgizmo.state.start_point + new_delta;
         }
 
-        let translation = new_point - subgizmo.state.last_point;
+        let translation_delta = new_point - subgizmo.state.last_point;
+        let total_translation = new_point - subgizmo.state.start_point;
 
         subgizmo.state.last_point = new_point;
         subgizmo.state.current_delta = new_delta;
 
-        Some(GizmoResult {
-            translation: translation.into(),
-            mode: GizmoMode::Translate,
-            ..Default::default()
+        Some(GizmoResult::Translation {
+            delta: translation_delta.into(),
+            total: total_translation.into(),
         })
     }
 

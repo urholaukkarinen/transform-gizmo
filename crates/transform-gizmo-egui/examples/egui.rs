@@ -1,4 +1,5 @@
 use eframe::{egui, NativeOptions};
+use transform_gizmo::math::DQuat;
 use transform_gizmo_egui::{
     math::{DMat4, DVec3},
     *,
@@ -46,12 +47,36 @@ impl ExampleApp {
             modes: self.gizmo_modes,
             orientation: self.gizmo_orientation,
             snapping,
-            pixels_per_point: ui.ctx().pixels_per_point(),
             ..Default::default()
         });
 
-        if let Some(result) = self.gizmo.interact(ui, &[self.model_matrix.into()]) {
-            self.model_matrix = result.targets.first().copied().unwrap().into();
+        if let Some((result, targets)) = self.gizmo.interact(ui, &[self.model_matrix.into()]) {
+            self.model_matrix = targets.first().copied().unwrap().into();
+
+            match result {
+                GizmoResult::Rotation { delta: _, total } => {
+                    let (axis, angle) = DQuat::from(total).to_axis_angle();
+                    ui.label(format!(
+                        "Rotation axis: ({:.2}, {:.2}, {:.2}), Angle: {:.2} deg",
+                        axis.x,
+                        axis.y,
+                        axis.z,
+                        angle.to_degrees()
+                    ));
+                }
+                GizmoResult::Translation { delta: _, total } => {
+                    ui.label(format!(
+                        "Translation: ({:.2}, {:.2}, {:.2})",
+                        total.x, total.y, total.z,
+                    ));
+                }
+                GizmoResult::Scale { total } => {
+                    ui.label(format!(
+                        "Scale: ({:.2}, {:.2}, {:.2})",
+                        total.x, total.y, total.z,
+                    ));
+                }
+            }
         }
     }
 

@@ -9,7 +9,7 @@ use crate::math::{
 use crate::shape::ShapeBuidler;
 use crate::subgizmo::common::{gizmo_color, gizmo_local_normal, gizmo_normal, outer_circle_radius};
 use crate::subgizmo::{SubGizmoConfig, SubGizmoKind};
-use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult};
+use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoResult};
 
 pub(crate) type RotationSubGizmo = SubGizmoConfig<Rotation>;
 
@@ -97,15 +97,13 @@ impl SubGizmoKind for Rotation {
         subgizmo.state.last_rotation_angle = rotation_angle;
         subgizmo.state.current_delta += angle_delta;
 
-        let rotation = DQuat::from_axis_angle(
-            gizmo_normal(&subgizmo.config, subgizmo.direction),
-            -angle_delta,
-        );
+        let normal = gizmo_normal(&subgizmo.config, subgizmo.direction);
+        let rotation_delta = DQuat::from_axis_angle(normal, -angle_delta);
+        let total_rotation = DQuat::from_axis_angle(normal, subgizmo.state.current_delta);
 
-        Some(GizmoResult {
-            rotation: rotation.into(),
-            mode: GizmoMode::Rotate,
-            ..Default::default()
+        Some(GizmoResult::Rotation {
+            delta: rotation_delta.into(),
+            total: total_rotation.into(),
         })
     }
 

@@ -47,11 +47,19 @@ pub trait GizmoExt {
     /// Interact with the gizmo and draw it to Ui.
     ///
     /// Returns result of the gizmo interaction.
-    fn interact(&mut self, ui: &Ui, targets: &[mint::RowMatrix4<f64>]) -> Option<GizmoResult>;
+    fn interact(
+        &mut self,
+        ui: &Ui,
+        targets: &[mint::RowMatrix4<f64>],
+    ) -> Option<(GizmoResult, Vec<mint::RowMatrix4<f64>>)>;
 }
 
 impl GizmoExt for Gizmo {
-    fn interact(&mut self, ui: &Ui, targets: &[mint::RowMatrix4<f64>]) -> Option<GizmoResult> {
+    fn interact(
+        &mut self,
+        ui: &Ui,
+        targets: &[mint::RowMatrix4<f64>],
+    ) -> Option<(GizmoResult, Vec<mint::RowMatrix4<f64>>)> {
         let config = self.config();
 
         let egui_viewport = egui::Rect {

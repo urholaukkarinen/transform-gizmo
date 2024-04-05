@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::camera::Viewport};
+use bevy::{math::DQuat, prelude::*, render::camera::Viewport};
 use bevy_egui::{
     egui::{self, Layout, Widget},
     EguiContexts, EguiPlugin,
@@ -21,6 +21,8 @@ fn update_ui(
     mut gizmo_options: ResMut<GizmoOptions>,
     mut camera: Query<&mut Camera>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
+
+    gizmo_targets: Query<&GizmoTarget>,
 ) {
     // Snapping is enabled when CTRL is pressed.
     let snapping = keyboard_input.pressed(KeyCode::ControlLeft);
@@ -56,8 +58,45 @@ fn update_ui(
                     physical_size: UVec2::new(clip_rect.width() as _, clip_rect.height() as _),
                     ..default()
                 });
+
+                let latest_gizmo_result =
+                    gizmo_targets.iter().find_map(|target| target.latest_result);
+
+                draw_gizmo_result(ui, latest_gizmo_result);
             });
         });
+}
+
+fn draw_gizmo_result(ui: &mut egui::Ui, gizmo_result: Option<GizmoResult>) {
+    if let Some(result) = gizmo_result {
+        let text = match result {
+            GizmoResult::Rotation { delta: _, total } => {
+                let (axis, angle) = DQuat::from(total).to_axis_angle();
+                format!(
+                    "Rotation axis: ({:.2}, {:.2}, {:.2}), Angle: {:.2} deg",
+                    axis.x,
+                    axis.y,
+                    axis.z,
+                    angle.to_degrees()
+                )
+            }
+            GizmoResult::Translation { delta: _, total } => {
+                format!(
+                    "Translation: ({:.2}, {:.2}, {:.2})",
+                    total.x, total.y, total.z,
+                )
+            }
+            GizmoResult::Scale { total } => {
+                format!("Scale: ({:.2}, {:.2}, {:.2})", total.x, total.y, total.z,)
+            }
+        };
+
+        egui::Frame::none()
+            .outer_margin(egui::Margin::same(10.0))
+            .show(ui, |ui| {
+                ui.label(text);
+            });
+    }
 }
 
 fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {

@@ -113,6 +113,10 @@ pub struct GizmoTarget {
 
     /// Whether the gizmo is currently being interacted with.
     pub is_active: bool,
+
+    /// This gets replaced with the result of the most recent
+    /// gizmo interaction that affected this entity.
+    pub latest_result: Option<GizmoResult>,
 }
 
 /// Marker used to specify which camera to use for gizmos.
@@ -222,8 +226,8 @@ fn update_gizmos(
         gizmo_target.is_active = gizmo_result.is_some();
         gizmo_target.is_focused = is_focused;
 
-        if let Some(result) = &gizmo_result {
-            let Some(result_transform) = result.targets.first() else {
+        if let Some((_, updated_targets)) = &gizmo_result {
+            let Some(result_transform) = updated_targets.first() else {
                 bevy::log::warn!("No transform found in GizmoResult!");
                 continue;
             };
@@ -231,6 +235,8 @@ fn update_gizmos(
             *target_transform =
                 Transform::from_matrix(bevy::math::DMat4::from(*result_transform).as_mat4());
         }
+
+        gizmo_target.latest_result = gizmo_result.map(|(result, _)| result);
     }
 
     if gizmo_options.group_targets {
@@ -252,8 +258,8 @@ fn update_gizmos(
             gizmo_target.is_active = gizmo_result.is_some();
             gizmo_target.is_focused = is_focused;
 
-            if let Some(result) = &gizmo_result {
-                let Some(result_transform) = result.targets.get(i) else {
+            if let Some((_, updated_targets)) = &gizmo_result {
+                let Some(result_transform) = updated_targets.get(i) else {
                     bevy::log::warn!("No transform {i} found in GizmoResult!");
                     continue;
                 };
@@ -261,6 +267,8 @@ fn update_gizmos(
                 *target_transform =
                     Transform::from_matrix(bevy::math::DMat4::from(*result_transform).as_mat4());
             }
+
+            gizmo_target.latest_result = gizmo_result.as_ref().map(|(result, _)| *result);
         }
     }
 

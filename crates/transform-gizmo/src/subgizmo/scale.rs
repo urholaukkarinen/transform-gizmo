@@ -86,10 +86,8 @@ impl SubGizmoKind for Scale {
 
         let scale = DVec3::ONE + (direction * delta);
 
-        Some(GizmoResult {
-            scale: scale.into(),
-            mode: GizmoMode::Scale,
-            ..Default::default()
+        Some(GizmoResult::Scale {
+            total: scale.into(),
         })
     }
 
