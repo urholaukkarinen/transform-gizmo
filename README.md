@@ -19,7 +19,7 @@
 
 ### Egui
 
-[`transform-gizmo-egui`](https://docs.rs/transform-gizmo-bevy) enables you to use the Gizmo wherever [Egui](https://github.com/emilk/egui) is used.
+[`transform-gizmo-egui`](https://docs.rs/transform-gizmo-egui) enables you to use the Gizmo wherever [Egui](https://github.com/emilk/egui) is used.
 
 ### Other
 
@@ -32,6 +32,7 @@ with your favorite graphics APIs.
 ## Demo
 
 For a more complete example, see the online demo at <https://urholaukkarinen.github.io/transform-gizmo/>.
+
 The demo sources can be found at <https://github.com/urholaukkarinen/transform-gizmo/blob/main/crates/transform-gizmo-demo/src/main.rs>.
 
 ## Other
