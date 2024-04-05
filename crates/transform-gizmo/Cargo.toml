@@ -1,5 +1,6 @@
 [package]
 name = "transform-gizmo"
+description = "3D transformation gizmo"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
