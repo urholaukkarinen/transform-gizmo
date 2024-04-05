@@ -9,9 +9,7 @@
 
 [Try it out in a web demo](https://urholaukkarinen.github.io/transform-gizmo/)
 
-![Rotation](media/rotation.png)
-![Translation](media/translation.png)
-![Scale](media/scale.png)
+![All modes](media/all_modes.png)
 
 ## Usage
 
