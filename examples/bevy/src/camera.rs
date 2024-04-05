@@ -2,7 +2,7 @@ use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::math::vec2;
 use bevy::prelude::*;
 
-/// https://bevy-cheatbook.github.io/cookbook/pan-orbit-camera.html
+// https://bevy-cheatbook.github.io/cookbook/pan-orbit-camera.html
 pub struct PanOrbitCameraPlugin;
 impl Plugin for PanOrbitCameraPlugin {
     fn build(&self, app: &mut App) {
