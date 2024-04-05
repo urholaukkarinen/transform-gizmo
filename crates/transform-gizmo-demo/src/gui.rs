@@ -1,4 +1,4 @@
-use bevy::{math::DQuat, prelude::*, render::camera::Viewport};
+use bevy::{math::DQuat, prelude::*};
 use bevy_egui::{
     egui::{self, Layout, Widget},
     EguiContexts, EguiPlugin,
@@ -19,7 +19,6 @@ impl Plugin for GuiPlugin {
 fn update_ui(
     mut contexts: EguiContexts,
     mut gizmo_options: ResMut<GizmoOptions>,
-    mut camera: Query<&mut Camera>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 
     gizmo_targets: Query<&GizmoTarget>,
@@ -45,25 +44,12 @@ fn update_ui(
         draw_options(ui, &mut gizmo_options);
     });
 
-    // Use a transparent panel as the camera viewport
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
         .show(contexts.ctx_mut(), |ui| {
-            ui.allocate_ui(ui.available_size(), |ui| {
-                let clip_rect = ui.clip_rect();
+            let latest_gizmo_result = gizmo_targets.iter().find_map(|target| target.latest_result);
 
-                let mut camera = camera.single_mut();
-                camera.viewport = Some(Viewport {
-                    physical_position: UVec2::new(clip_rect.left() as _, clip_rect.top() as _),
-                    physical_size: UVec2::new(clip_rect.width() as _, clip_rect.height() as _),
-                    ..default()
-                });
-
-                let latest_gizmo_result =
-                    gizmo_targets.iter().find_map(|target| target.latest_result);
-
-                draw_gizmo_result(ui, latest_gizmo_result);
-            });
+            draw_gizmo_result(ui, latest_gizmo_result);
         });
 }
 

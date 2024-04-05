@@ -34,7 +34,10 @@ use bevy::window::PrimaryWindow;
 use render::{DrawDataHandles, TransformGizmoRenderPlugin};
 use transform_gizmo::config::{DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE};
 
-pub use transform_gizmo::{GizmoConfig, *};
+pub use transform_gizmo::{
+    math::{Pos2, Rect},
+    GizmoConfig, *,
+};
 
 pub mod prelude;
 
@@ -155,13 +158,13 @@ fn update_gizmos(
         return;
     };
 
-    let Some(viewport) = camera.physical_viewport_rect() else {
+    let Some(viewport) = camera.logical_viewport_rect() else {
         return;
     };
 
-    let viewport = transform_gizmo::math::Rect::from_min_max(
-        transform_gizmo::math::Pos2::new(viewport.min.x as _, viewport.min.y as _),
-        transform_gizmo::math::Pos2::new(viewport.max.x as _, viewport.max.y as _),
+    let viewport = Rect::from_min_max(
+        Pos2::new(viewport.min.x, viewport.min.y),
+        Pos2::new(viewport.max.x, viewport.max.y),
     );
 
     let projection_matrix = camera.projection_matrix();

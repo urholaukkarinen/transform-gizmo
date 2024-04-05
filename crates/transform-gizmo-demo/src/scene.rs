@@ -46,7 +46,7 @@ fn setup_scene(
                     material: materials.add(colors[i as usize % colors.len()]),
                     transform: Transform::from_xyz(
                         -(cube_count / 2) as f32 * 1.5 + (i as f32 * 1.5),
-                        1.0,
+                        0.0,
                         0.0,
                     ),
                     ..default()
