@@ -82,6 +82,7 @@ impl Gizmo {
         if self.config.modes != self.last_modes {
             self.last_modes = self.config.modes;
 
+            self.active_subgizmo_id = None;
             self.subgizmos.clear();
 
             // Choose subgizmos based on the gizmo mode
