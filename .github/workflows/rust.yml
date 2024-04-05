@@ -13,6 +13,9 @@ jobs:
         with:
           toolchain: 1.72.0
 
+      - name: install dependencies
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
+
       - name: cache
         uses: Swatinem/rust-cache@v2
 
