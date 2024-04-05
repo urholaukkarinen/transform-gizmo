@@ -18,7 +18,7 @@
 //! with your favorite graphics APIs.
 //!
 //! For a more complete example, see the online demo at <https://urholaukkarinen.github.io/transform-gizmo/>.
-//! The demo sources can be found at <https://github.com/urholaukkarinen/transform-gizmo/blob/main/crates/transform-gizmo-demo/src/main.rs>.
+//! The demo sources can be found at <https://github.com/urholaukkarinen/transform-gizmo/blob/main/examples/bevy/src/main.rs>.
 //! ```
 
 mod shape;

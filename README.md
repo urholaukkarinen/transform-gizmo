@@ -29,12 +29,6 @@ information about user interaction, in the form of `GizmoInteraction`.
 For rendering the gizmo, `Gizmo::draw` provides vertices in viewport coordinates that can be easily rendered
 with your favorite graphics APIs.
 
-## Demo
-
-For a more complete example, see the online demo at <https://urholaukkarinen.github.io/transform-gizmo/>.
-
-The demo sources can be found at <https://github.com/urholaukkarinen/transform-gizmo/blob/main/crates/transform-gizmo-demo/src/main.rs>.
-
 ## Other
 
 The gizmo exposes matrices and vectors as [mint](https://github.com/kvark/mint) types, which means it is easy to use with matrix types from various crates
