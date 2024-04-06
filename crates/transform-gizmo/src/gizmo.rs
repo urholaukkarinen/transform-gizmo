@@ -131,7 +131,7 @@ impl Gizmo {
         for subgizmo in &mut self.subgizmos {
             // Update current configuration to each subgizmo.
             subgizmo.update_config(self.config);
-            // All subgizmoes are initially considered unfocused.
+            // All subgizmos are initially considered unfocused.
             subgizmo.set_focused(false);
         }
 
@@ -151,13 +151,13 @@ impl Gizmo {
             }
         }
 
+        let mut result = None;
+
         let mut active_subgizmo = self.active_subgizmo_id.and_then(|id| {
             self.subgizmos
                 .iter_mut()
                 .find(|subgizmo| subgizmo.id() == id)
         });
-
-        let mut result = None;
 
         if let Some(subgizmo) = active_subgizmo.as_mut() {
             if interaction.dragging {
@@ -176,37 +176,7 @@ impl Gizmo {
             return None;
         };
 
-        let mut updated_targets = Vec::<Transform>::new();
-
-        for (target_start_transform, target_transform) in
-            self.target_start_transforms.iter().zip(targets)
-        {
-            let mut new_target_transform = *target_transform;
-
-            match result {
-                GizmoResult::Rotation { delta, total: _ } => {
-                    // Rotate around the target group origin
-                    let rotation_delta = DQuat::from(delta);
-                    let origin = self.config.translation;
-
-                    new_target_transform.translation = (origin
-                        + rotation_delta * (DVec3::from(target_transform.translation) - origin))
-                        .into();
-                    new_target_transform.rotation =
-                        (rotation_delta * DQuat::from(target_transform.rotation)).into();
-                }
-                GizmoResult::Translation { delta, total: _ } => {
-                    new_target_transform.translation =
-                        (DVec3::from(delta) + DVec3::from(new_target_transform.translation)).into();
-                }
-                GizmoResult::Scale { total } => {
-                    new_target_transform.scale =
-                        (DVec3::from(target_start_transform.scale) * DVec3::from(total)).into();
-                }
-            }
-
-            updated_targets.push(new_target_transform);
-        }
+        let updated_targets = self.update_transforms_with_result(result, targets);
 
         Some((result, updated_targets))
     }
@@ -227,6 +197,44 @@ impl Gizmo {
         }
 
         draw_data
+    }
+
+    fn update_transforms_with_result(
+        &self,
+        result: GizmoResult,
+        transforms: &[Transform],
+    ) -> Vec<Transform> {
+        transforms
+            .iter()
+            .zip(&self.target_start_transforms)
+            .map(|(transform, start_transform)| {
+                let mut new_transform = *transform;
+
+                match result {
+                    GizmoResult::Rotation { delta, total: _ } => {
+                        // Rotate around the target group origin
+                        let rotation_delta = DQuat::from(delta);
+                        let origin = self.config.translation;
+
+                        new_transform.translation = (origin
+                            + rotation_delta * (DVec3::from(transform.translation) - origin))
+                            .into();
+                        new_transform.rotation =
+                            (rotation_delta * DQuat::from(transform.rotation)).into();
+                    }
+                    GizmoResult::Translation { delta, total: _ } => {
+                        new_transform.translation =
+                            (DVec3::from(delta) + DVec3::from(new_transform.translation)).into();
+                    }
+                    GizmoResult::Scale { total } => {
+                        new_transform.scale =
+                            (DVec3::from(start_transform.scale) * DVec3::from(total)).into();
+                    }
+                }
+
+                new_transform
+            })
+            .collect()
     }
 
     /// Picks the subgizmo that is closest to the given world space ray.
