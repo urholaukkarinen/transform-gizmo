@@ -1,6 +1,5 @@
 use ecolor::Rgba;
 use emath::Pos2;
-use enumset::EnumSet;
 use std::ops::{Add, AddAssign, Sub};
 
 use crate::config::{GizmoConfig, GizmoDirection, GizmoMode, PreparedGizmoConfig};
@@ -24,9 +23,6 @@ pub struct Gizmo {
     /// various other values calculated from it, used for
     /// interaction and drawing the gizmo.
     config: PreparedGizmoConfig,
-    /// The last enabled modes of the gizmo.
-    /// The subgizmos are rebuilt when modes change.
-    last_modes: EnumSet<GizmoMode>,
     /// Subgizmos used in the gizmo.
     subgizmos: Vec<SubGizmo>,
     active_subgizmo_id: Option<u64>,
@@ -45,7 +41,6 @@ impl Gizmo {
     pub fn new(config: GizmoConfig) -> Self {
         Self {
             config: PreparedGizmoConfig::from_config(config),
-            last_modes: Default::default(),
             subgizmos: Default::default(),
             active_subgizmo_id: None,
 
@@ -60,7 +55,28 @@ impl Gizmo {
 
     /// Updates the configuration used by the gizmo.
     pub fn update_config(&mut self, config: GizmoConfig) {
+        if config.modes != self.config.modes {
+            self.subgizmos.clear();
+            self.active_subgizmo_id = None;
+        }
+
         self.config = PreparedGizmoConfig::from_config(config);
+
+        if self.subgizmos.is_empty() {
+            for mode in self.config.modes {
+                match mode {
+                    GizmoMode::Rotate => {
+                        self.add_rotation();
+                    }
+                    GizmoMode::Translate => {
+                        self.add_translation();
+                    }
+                    GizmoMode::Scale => {
+                        self.add_scale();
+                    }
+                };
+            }
+        }
     }
 
     /// Was this gizmo focused after the latest [`Gizmo::update`] call.
@@ -105,29 +121,6 @@ impl Gizmo {
         interaction: GizmoInteraction,
         targets: &[Transform],
     ) -> Option<(GizmoResult, Vec<Transform>)> {
-        // Mode was changed. Update all subgizmos accordingly.
-        if self.config.modes != self.last_modes {
-            self.last_modes = self.config.modes;
-
-            self.active_subgizmo_id = None;
-            self.subgizmos.clear();
-
-            // Choose subgizmos based on the gizmo mode
-            for mode in self.config.modes {
-                match mode {
-                    GizmoMode::Rotate => {
-                        self.add_rotation();
-                    }
-                    GizmoMode::Translate => {
-                        self.add_translation();
-                    }
-                    GizmoMode::Scale => {
-                        self.add_scale();
-                    }
-                };
-            }
-        }
-
         if !self.config.viewport.is_finite() {
             return None;
         }
