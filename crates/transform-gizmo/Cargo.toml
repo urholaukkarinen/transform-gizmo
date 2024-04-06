@@ -1,0 +1,27 @@
+[package]
+name = "transform-gizmo"
+description = "3D transformation gizmo"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+authors.workspace = true
+categories = ["gui", "game-development", "game-engines"]
+keywords = ["gizmo"]
+readme = "../../README.md"
+include = ["../../LICENSE-APACHE", "../../LICENSE-MIT", "**/*.rs", "Cargo.toml"]
+
+[dependencies]
+emath.workspace = true
+epaint.workspace = true
+ecolor.workspace = true
+glam.workspace = true
+mint.workspace = true
+enum_dispatch.workspace = true
+ahash.workspace = true
+enumset.workspace = true
+
+[lints]
+workspace = true

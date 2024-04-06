@@ -1,33 +1,44 @@
-# egui-gizmo
+# transform-gizmo
 
-[![Latest version](https://img.shields.io/crates/v/egui-gizmo.svg)](https://crates.io/crates/egui-gizmo)
-[![Documentation](https://docs.rs/egui-gizmo/badge.svg)](https://docs.rs/egui-gizmo)
-![MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+[![Latest version](https://img.shields.io/crates/v/transform-gizmo.svg)](https://crates.io/crates/transform-gizmo)
+[![Documentation](https://docs.rs/transform-gizmo/badge.svg)](https://docs.rs/transform-gizmo)
+[![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/urholaukkarinen/transform-gizmo/blob/main/LICENSE-MIT)
+[![Apache](https://img.shields.io/badge/license-Apache-blue.svg)](https://github.com/urholaukkarinen/transform-gizmo/blob/main/LICENSE-APACHE)
 
-3d transformation gizmo built on top of the [egui](https://github.com/emilk/egui) library.
+`transform-gizmo` is a framework-agnostic Rust crate that provides a feature-rich and customizable 3D transformation gizmo for manipulating the position, rotation and scale of 3D entities.
 
-[Try it out in a web demo](https://urholaukkarinen.github.io/egui-gizmo/)
+[Try it out in a web demo](https://urholaukkarinen.github.io/transform-gizmo/)
 
-![Rotation](media/rotation.png)
-![Translation](media/translation.png)
-![Scale](media/scale.png)
+![All modes](media/all_modes.png)
 
 ## Usage
 
-```rust 
-let gizmo = Gizmo::new("My gizmo")
-    .view_matrix(view_matrix)
-    .projection_matrix(projection_matrix)
-    .model_matrix(model_matrix)
-    .mode(GizmoMode::Rotate);
+### Bevy
 
-if let Some(response) = gizmo.interact(ui) {
-    model_matrix = response.transform();
-}
-```
+[`transform-gizmo-bevy`](https://docs.rs/transform-gizmo-bevy) provides a Plugin for easy integration into the [Bevy Engine](https://bevyengine.org/).
 
-For a more complete example, see the [demo source code](demo/src/main.rs).
+### Egui
 
-The gizmo exposes matrices and vectors as [mint](https://github.com/kvark/mint) types, which means it is easy to use with matrix types from various crates
+[`transform-gizmo-egui`](https://docs.rs/transform-gizmo-egui) enables you to use the Gizmo wherever [Egui](https://github.com/emilk/egui) is used.
+
+### Other
+
+For interacting with the gizmo, all you will need to do is give `Gizmo::update` sufficient
+information about user interaction, in the form of `GizmoInteraction`.
+
+For rendering the gizmo, `Gizmo::draw` provides vertices in viewport coordinates that can be easily rendered
+with your favorite graphics APIs.
+
+## Other
+
+The gizmo exposes mathematical types as [mint](https://github.com/kvark/mint) types, which means it is easy to use with types from various crates
 such as [nalgebra](https://github.com/dimforge/nalgebra), [glam](https://github.com/bitshifter/glam-rs)
 and [cgmath](https://github.com/rustgd/cgmath). You may need to enable a `mint` feature, depending on the math library.
+
+## License
+
+This crate is dual licensed under MIT and Apache 2.0.
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)

@@ -1,0 +1,3 @@
+[build]
+filehash = false
+dist = "../../docs"

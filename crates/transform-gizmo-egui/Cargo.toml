@@ -1,0 +1,24 @@
+[package]
+name = "transform-gizmo-egui"
+description = "egui integration for transform-gizmo"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+authors.workspace = true
+categories = ["gui", "game-development", "game-engines"]
+keywords = ["gizmo", "egui"]
+readme = "../../README.md"
+include = ["../../LICENSE-APACHE", "../../LICENSE-MIT", "**/*.rs", "Cargo.toml"]
+
+[dependencies]
+transform-gizmo.workspace = true
+egui.workspace = true
+
+[dev-dependencies]
+eframe.workspace = true
+
+[lints]
+workspace = true

@@ -1,4 +1,0 @@
-[build]
-public_url = "./"
-filehash = false
-dist = "../docs"
