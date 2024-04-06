@@ -11,7 +11,13 @@ authors.workspace = true
 categories = ["gui", "game-development", "game-engines"]
 keywords = ["gizmo", "bevy"]
 readme = "../../README.md"
-include = ["../../LICENSE-APACHE", "../../LICENSE-MIT", "**/*.rs", "Cargo.toml"]
+include = [
+    "../../LICENSE-APACHE",
+    "../../LICENSE-MIT",
+    "**/*.rs",
+    "**/*.wgsl",
+    "Cargo.toml",
+]
 
 [dependencies]
 transform-gizmo.workspace = true
