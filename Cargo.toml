@@ -12,9 +12,9 @@ repository = "https://github.com/urholaukkarinen/transform-gizmo"
 authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 
 [workspace.dependencies]
-transform-gizmo = { path = "crates/transform-gizmo" }
-transform-gizmo-egui = { path = "crates/transform-gizmo-egui" }
-transform-gizmo-bevy = { path = "crates/transform-gizmo-bevy" }
+transform-gizmo = { version = "0.1.0", path = "crates/transform-gizmo" }
+transform-gizmo-egui = { version = "0.1.0", path = "crates/transform-gizmo-egui" }
+transform-gizmo-bevy = { version = "0.1.0", path = "crates/transform-gizmo-bevy" }
 
 egui = "0.27.2"
 eframe = "0.27.2"
