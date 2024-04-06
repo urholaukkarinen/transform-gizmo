@@ -14,7 +14,7 @@ mod scene;
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::BLACK))
+        .insert_resource(ClearColor(Color::rgb_u8(20, 20, 20)))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "transform-gizmo-demo".into(),
