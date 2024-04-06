@@ -1,8 +1,7 @@
 //! Provides a 3D transformation gizmo for the Egui library.
 //!
-//! transform-gizmo-egui provides a feature-rich and configurable 3D transformation
-//! gizmo that can be used to manipulate 4x4 transformation matrices (position, rotation, scale)
-//! visually.
+//! transform-gizmo-egui provides a feature-rich and configurable gizmo
+//! that can be used for 3d transformations (translation, rotation, scale).
 //!
 //! # Usage
 //!
@@ -14,7 +13,7 @@
 //! let gizmo = Gizmo::default();
 //! ```
 //!
-//! When drawing the gui, update the gizmo configuration.
+//! Update the gizmo configuration as needed, for example, when the camera moves.
 //!
 //! ```ignore
 //! gizmo.update_config(GizmoConfig {
@@ -26,20 +25,28 @@
 //! });
 //! ```
 //!
-//! Finally, interact with the gizmo. The function takes a slice of matrices as an
+//! Finally, interact with the gizmo. The function takes a slice of transforms as an
 //! input. The result is [`Some`] if the gizmo was successfully interacted with this frame.
-//! In the result you can find the modified matrices, in the same order as was given to the function
+//! In the result you can find the modified transforms, in the same order as was given to the function
 //! as arguments.
 //!
 //! ```ignore
-//!  if let Some(result) = gizmo.interact(ui, &[model_matrix.into()]) {
-//!      model_matrix = result.targets.first().copied().unwrap().into();
+//!  let mut transform = Transform::from_scale_rotation_translation(scale, rotation, translation);
+//!
+//!  if let Some((result, new_transforms)) = gizmo.interact(ui, &[transform]) {
+//!      for (new_transform, transform) in
+//!          new_transforms.iter().zip(std::iter::once(&mut transform))
+//!      {
+//!          // Apply the modified transforms
+//!          *transform = *new_transform;
+//!      }
 //!  }
 //! ```
 //!
 //!
 use egui::{epaint::Vertex, Mesh, PointerButton, Pos2, Rgba, Ui};
 
+use transform_gizmo::math::Transform;
 pub use transform_gizmo::*;
 pub mod prelude;
 
@@ -47,19 +54,16 @@ pub trait GizmoExt {
     /// Interact with the gizmo and draw it to Ui.
     ///
     /// Returns result of the gizmo interaction.
-    fn interact(
-        &mut self,
-        ui: &Ui,
-        targets: &[mint::RowMatrix4<f64>],
-    ) -> Option<(GizmoResult, Vec<mint::RowMatrix4<f64>>)>;
+    fn interact(&mut self, ui: &Ui, targets: &[Transform])
+        -> Option<(GizmoResult, Vec<Transform>)>;
 }
 
 impl GizmoExt for Gizmo {
     fn interact(
         &mut self,
         ui: &Ui,
-        targets: &[mint::RowMatrix4<f64>],
-    ) -> Option<(GizmoResult, Vec<mint::RowMatrix4<f64>>)> {
+        targets: &[Transform],
+    ) -> Option<(GizmoResult, Vec<Transform>)> {
         let config = self.config();
 
         let egui_viewport = egui::Rect {

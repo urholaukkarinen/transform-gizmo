@@ -4,9 +4,9 @@ use enumset::EnumSet;
 use std::ops::{Add, AddAssign, Sub};
 
 use crate::config::{GizmoConfig, GizmoDirection, GizmoMode, PreparedGizmoConfig};
-use crate::math::screen_to_world;
+use crate::math::{screen_to_world, Transform};
 use epaint::Mesh;
-use glam::{DMat4, DVec3};
+use glam::{DQuat, DVec3};
 
 use crate::subgizmo::rotation::RotationParams;
 use crate::subgizmo::scale::ScaleParams;
@@ -16,7 +16,7 @@ use crate::subgizmo::{
     SubGizmoControl, TranslationSubGizmo,
 };
 
-/// A transform gizmo for manipulating 4x4 matrices.
+/// A 3D transformation gizmo.
 #[derive(Clone, Debug)]
 pub struct Gizmo {
     /// Prepared configuration of the gizmo.
@@ -31,7 +31,7 @@ pub struct Gizmo {
     subgizmos: Vec<SubGizmo>,
     active_subgizmo_id: Option<u64>,
 
-    target_start_transforms: Vec<DMat4>,
+    target_start_transforms: Vec<Transform>,
 }
 
 impl Default for Gizmo {
@@ -70,14 +70,41 @@ impl Gizmo {
 
     /// Updates the gizmo based on given interaction information.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// # // Dummy values
+    /// # use transform_gizmo::GizmoInteraction;
+    /// # let mut gizmo = transform_gizmo::Gizmo::default();
+    /// # let cursor_pos = Default::default();
+    /// # let drag_started = true;
+    /// # let dragging = true;
+    /// # let mut transforms = vec![];
+    ///
+    /// let interaction = GizmoInteraction {
+    ///     cursor_pos,
+    ///     drag_started,
+    ///     dragging
+    /// };
+    ///
+    /// if let Some((_result, new_transforms)) = gizmo.update(interaction, &transforms) {
+    ///                 for (new_transform, transform) in
+    ///     // Update transforms
+    ///     new_transforms.iter().zip(&mut transforms)
+    ///     {
+    ///         *transform = *new_transform;
+    ///     }
+    /// }
+    /// ```
+    ///
     /// Returns the result of the interaction with the updated transformation.
     ///
     /// [`Some`] is returned when any of the subgizmos is being dragged, [`None`] otherwise.
     pub fn update(
         &mut self,
         interaction: GizmoInteraction,
-        targets: &[mint::RowMatrix4<f64>],
-    ) -> Option<(GizmoResult, Vec<mint::RowMatrix4<f64>>)> {
+        targets: &[Transform],
+    ) -> Option<(GizmoResult, Vec<Transform>)> {
         // Mode was changed. Update all subgizmos accordingly.
         if self.config.modes != self.last_modes {
             self.last_modes = self.config.modes;
@@ -105,10 +132,8 @@ impl Gizmo {
             return None;
         }
 
-        let targets = targets.iter().copied().map(DMat4::from).collect::<Vec<_>>();
-
         // Update the gizmo based on the given targets.
-        self.config.update_for_targets(&targets);
+        self.config.update_for_targets(targets);
 
         for subgizmo in &mut self.subgizmos {
             // Update current configuration to each subgizmo.
@@ -128,7 +153,7 @@ impl Gizmo {
                 // If we started dragging from one of the subgizmos, mark it as active.
                 if interaction.drag_started {
                     self.active_subgizmo_id = Some(subgizmo.id());
-                    self.target_start_transforms = targets.clone();
+                    self.target_start_transforms = targets.to_vec();
                 }
             }
         }
@@ -158,47 +183,36 @@ impl Gizmo {
             return None;
         };
 
-        let mut updated_targets = Vec::<mint::RowMatrix4<f64>>::new();
+        let mut updated_targets = Vec::<Transform>::new();
 
         for (target_start_transform, target_transform) in
             self.target_start_transforms.iter().zip(targets)
         {
-            let mut new_target_transform = target_transform;
+            let mut new_target_transform = *target_transform;
 
             match result {
                 GizmoResult::Rotation { delta, total: _ } => {
                     // Rotate around the target group origin
+                    let rotation_delta = DQuat::from(delta);
+                    let origin = self.config.translation;
 
-                    let group_translation = DMat4::from_translation(self.config.translation);
-
-                    new_target_transform =
-                        group_translation.inverse().mul_mat4(&new_target_transform);
-
-                    new_target_transform =
-                        DMat4::from_quat(delta.into()).mul_mat4(&new_target_transform);
-
-                    new_target_transform = group_translation.mul_mat4(&new_target_transform);
+                    new_target_transform.translation = (origin
+                        + rotation_delta * (DVec3::from(target_transform.translation) - origin))
+                        .into();
+                    new_target_transform.rotation =
+                        (rotation_delta * DQuat::from(target_transform.rotation)).into();
                 }
                 GizmoResult::Translation { delta, total: _ } => {
-                    new_target_transform =
-                        DMat4::from_translation(delta.into()).mul_mat4(&new_target_transform);
+                    new_target_transform.translation =
+                        (DVec3::from(delta) + DVec3::from(new_target_transform.translation)).into();
                 }
                 GizmoResult::Scale { total } => {
-                    let (start_scale, _, _) =
-                        target_start_transform.to_scale_rotation_translation();
-
-                    let (_, target_rotation, target_translation) =
-                        target_transform.to_scale_rotation_translation();
-
-                    new_target_transform = DMat4::from_scale_rotation_translation(
-                        start_scale * DVec3::from(total),
-                        target_rotation,
-                        target_translation,
-                    );
+                    new_target_transform.scale =
+                        (DVec3::from(target_start_transform.scale) * DVec3::from(total)).into();
                 }
             }
 
-            updated_targets.push(new_target_transform.into());
+            updated_targets.push(new_target_transform);
         }
 
         Some((result, updated_targets))
@@ -472,7 +486,7 @@ pub enum GizmoResult {
 pub struct GizmoDrawData {
     /// Vertices in viewport space.
     pub vertices: Vec<[f32; 2]>,
-    /// RGBA colors.
+    /// Linear RGBA colors.
     pub colors: Vec<[f32; 4]>,
     /// Indices to the vertex data.
     pub indices: Vec<u32>,

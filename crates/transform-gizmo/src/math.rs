@@ -1,6 +1,27 @@
 pub use emath::{Pos2, Rect, Vec2};
 pub use glam::{DMat3, DMat4, DQuat, DVec2, DVec3, DVec4, Mat4, Quat, Vec3, Vec4Swizzles};
 
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+pub struct Transform {
+    pub scale: mint::Vector3<f64>,
+    pub rotation: mint::Quaternion<f64>,
+    pub translation: mint::Vector3<f64>,
+}
+
+impl Transform {
+    pub fn from_scale_rotation_translation(
+        scale: impl Into<mint::Vector3<f64>>,
+        rotation: impl Into<mint::Quaternion<f64>>,
+        translation: impl Into<mint::Vector3<f64>>,
+    ) -> Self {
+        Self {
+            scale: scale.into(),
+            rotation: rotation.into(),
+            translation: translation.into(),
+        }
+    }
+}
+
 /// Creates a matrix that represents rotation between two 3d vectors
 ///
 /// Credit: <https://www.iquilezles.org/www/articles/noacos/noacos.htm>

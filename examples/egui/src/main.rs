@@ -1,5 +1,5 @@
 use eframe::{egui, NativeOptions};
-use transform_gizmo_egui::math::DQuat;
+use transform_gizmo_egui::math::{DQuat, Transform};
 use transform_gizmo_egui::{
     math::{DMat4, DVec3},
     *,
@@ -11,7 +11,9 @@ struct ExampleApp {
     gizmo_modes: EnumSet<GizmoMode>,
     gizmo_orientation: GizmoOrientation,
 
-    model_matrix: DMat4,
+    scale: DVec3,
+    rotation: DQuat,
+    translation: DVec3,
 }
 
 impl ExampleApp {
@@ -20,7 +22,9 @@ impl ExampleApp {
             gizmo: Gizmo::default(),
             gizmo_modes: enum_set!(GizmoMode::Rotate | GizmoMode::Translate),
             gizmo_orientation: GizmoOrientation::Local,
-            model_matrix: DMat4::IDENTITY,
+            scale: DVec3::ONE,
+            rotation: DQuat::IDENTITY,
+            translation: DVec3::ZERO,
         }
     }
 
@@ -50,8 +54,19 @@ impl ExampleApp {
             ..Default::default()
         });
 
-        if let Some((result, targets)) = self.gizmo.interact(ui, &[self.model_matrix.into()]) {
-            self.model_matrix = targets.first().copied().unwrap().into();
+        let mut transform =
+            Transform::from_scale_rotation_translation(self.scale, self.rotation, self.translation);
+
+        if let Some((result, new_transforms)) = self.gizmo.interact(ui, &[transform]) {
+            for (new_transform, transform) in
+                new_transforms.iter().zip(std::iter::once(&mut transform))
+            {
+                *transform = *new_transform;
+            }
+
+            self.scale = transform.scale.into();
+            self.rotation = transform.rotation.into();
+            self.translation = transform.translation.into();
 
             match result {
                 GizmoResult::Rotation { delta: _, total } => {

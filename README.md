@@ -31,7 +31,7 @@ with your favorite graphics APIs.
 
 ## Other
 
-The gizmo exposes matrices and vectors as [mint](https://github.com/kvark/mint) types, which means it is easy to use with matrix types from various crates
+The gizmo exposes mathematical types as [mint](https://github.com/kvark/mint) types, which means it is easy to use with types from various crates
 such as [nalgebra](https://github.com/dimforge/nalgebra), [glam](https://github.com/bitshifter/glam-rs)
 and [cgmath](https://github.com/rustgd/cgmath). You may need to enable a `mint` feature, depending on the math library.
 

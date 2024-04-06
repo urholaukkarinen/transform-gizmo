@@ -1,6 +1,4 @@
-//! Provides a feature-rich and configurable 3D transformation
-//! gizmo that can be used to manipulate 4x4 transformation matrices (position, rotation, scale)
-//! visually.
+//! Provides a feature-rich and configurable gizmo that can be used for 3d transformations (translation, rotation, scale).
 //!
 //! Such gizmos are commonly used in applications such as game engines and 3d modeling software.
 //!

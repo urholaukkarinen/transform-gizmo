@@ -5,7 +5,9 @@ pub use ecolor::Color32;
 use emath::Rect;
 use enumset::{enum_set, EnumSet, EnumSetType};
 
-use crate::math::{screen_to_world, world_to_screen, DMat4, DQuat, DVec3, DVec4, Vec4Swizzles};
+use crate::math::{
+    screen_to_world, world_to_screen, DMat4, DQuat, DVec3, DVec4, Transform, Vec4Swizzles,
+};
 
 /// The default snapping distance for rotation in radians
 pub const DEFAULT_SNAP_ANGLE: f32 = std::f32::consts::PI / 32.0;
@@ -149,19 +151,16 @@ impl PreparedGizmoConfig {
         }
     }
 
-    pub(crate) fn update_for_targets(&mut self, targets: &[DMat4]) {
+    pub(crate) fn update_for_targets(&mut self, targets: &[Transform]) {
         let mut scale = DVec3::ZERO;
         let mut translation = DVec3::ZERO;
         let mut rotation = DQuat::IDENTITY;
 
         let mut target_count = 0;
         for target in targets {
-            let (s, r, t) = target.to_scale_rotation_translation();
-
-            scale += s;
-            translation += t;
-
-            rotation = r;
+            scale += DVec3::from(target.scale);
+            translation += DVec3::from(target.translation);
+            rotation = DQuat::from(target.rotation);
 
             target_count += 1;
         }

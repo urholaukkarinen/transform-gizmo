@@ -31,6 +31,7 @@
 use bevy::prelude::*;
 use bevy::utils::{HashMap, Uuid};
 use bevy::window::PrimaryWindow;
+use bevy_math::{DQuat, DVec3};
 use render::{DrawDataHandles, TransformGizmoRenderPlugin};
 use transform_gizmo::config::{DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE};
 
@@ -221,7 +222,11 @@ fn update_gizmos(
 
         let gizmo_result = gizmo.update(
             gizmo_interaction,
-            &[target_transform.compute_matrix().as_dmat4().into()],
+            &[transform_gizmo::math::Transform {
+                translation: target_transform.translation.as_dvec3().into(),
+                rotation: target_transform.rotation.as_dquat().into(),
+                scale: target_transform.scale.as_dvec3().into(),
+            }],
         );
 
         let is_focused = gizmo.is_focused();
@@ -235,8 +240,9 @@ fn update_gizmos(
                 continue;
             };
 
-            *target_transform =
-                Transform::from_matrix(bevy::math::DMat4::from(*result_transform).as_mat4());
+            target_transform.translation = DVec3::from(result_transform.translation).as_vec3();
+            target_transform.rotation = DQuat::from(result_transform.rotation).as_quat();
+            target_transform.scale = DVec3::from(result_transform.scale).as_vec3();
         }
 
         gizmo_target.latest_result = gizmo_result.map(|(result, _)| result);
@@ -250,7 +256,11 @@ fn update_gizmos(
             gizmo_interaction,
             target_transforms
                 .iter()
-                .map(|transform| transform.compute_matrix().as_dmat4().into())
+                .map(|transform| transform_gizmo::math::Transform {
+                    translation: transform.translation.as_dvec3().into(),
+                    rotation: transform.rotation.as_dquat().into(),
+                    scale: transform.scale.as_dvec3().into(),
+                })
                 .collect::<Vec<_>>()
                 .as_slice(),
         );
@@ -267,8 +277,9 @@ fn update_gizmos(
                     continue;
                 };
 
-                *target_transform =
-                    Transform::from_matrix(bevy::math::DMat4::from(*result_transform).as_mat4());
+                target_transform.translation = DVec3::from(result_transform.translation).as_vec3();
+                target_transform.rotation = DQuat::from(result_transform.rotation).as_quat();
+                target_transform.scale = DVec3::from(result_transform.scale).as_vec3();
             }
 
             gizmo_target.latest_result = gizmo_result.as_ref().map(|(result, _)| *result);
