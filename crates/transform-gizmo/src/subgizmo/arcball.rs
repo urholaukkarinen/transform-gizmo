@@ -53,10 +53,9 @@ impl SubGizmoKind for Arcball {
         };
 
         subgizmo.state.last_pos = ray.screen_pos;
-
         subgizmo.state.total_rotation = rotation_delta.mul_quat(subgizmo.state.total_rotation);
 
-        Some(GizmoResult::Rotation {
+        Some(GizmoResult::Arcball {
             delta: rotation_delta.into(),
             total: subgizmo.state.total_rotation.into(),
         })

@@ -138,7 +138,7 @@ impl DerefMut for PreparedGizmoConfig {
 
 impl PreparedGizmoConfig {
     pub(crate) fn from_config(config: GizmoConfig) -> Self {
-        let mut prepared_config = PreparedGizmoConfig::default();
+        let mut prepared_config = Self::default();
         prepared_config.update_for_config(config);
         prepared_config
     }
