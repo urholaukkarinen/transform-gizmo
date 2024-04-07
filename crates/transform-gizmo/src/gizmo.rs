@@ -4,6 +4,7 @@ use std::ops::{Add, AddAssign, Sub};
 
 use crate::config::{GizmoConfig, GizmoDirection, GizmoMode, PreparedGizmoConfig};
 use crate::math::{screen_to_world, Transform};
+use crate::GizmoOrientation;
 use epaint::Mesh;
 use glam::{DQuat, DVec3};
 
@@ -28,6 +29,8 @@ pub struct Gizmo {
     active_subgizmo_id: Option<u64>,
 
     target_start_transforms: Vec<Transform>,
+
+    gizmo_start_transform: Transform,
 }
 
 impl Default for Gizmo {
@@ -45,6 +48,8 @@ impl Gizmo {
             active_subgizmo_id: None,
 
             target_start_transforms: vec![],
+
+            gizmo_start_transform: Default::default(),
         }
     }
 
@@ -60,7 +65,7 @@ impl Gizmo {
             self.active_subgizmo_id = None;
         }
 
-        self.config = PreparedGizmoConfig::from_config(config);
+        self.config.update_for_config(config);
 
         if self.subgizmos.is_empty() {
             for mode in self.config.modes {
@@ -125,8 +130,11 @@ impl Gizmo {
             return None;
         }
 
-        // Update the gizmo based on the given targets.
-        self.config.update_for_targets(targets);
+        // Update the gizmo based on the given target transforms,
+        // unless the gizmo is currently being interacted with.
+        if self.active_subgizmo_id.is_none() {
+            self.config.update_for_targets(targets);
+        }
 
         for subgizmo in &mut self.subgizmos {
             // Update current configuration to each subgizmo.
@@ -147,6 +155,7 @@ impl Gizmo {
                 if interaction.drag_started {
                     self.active_subgizmo_id = Some(subgizmo.id());
                     self.target_start_transforms = targets.to_vec();
+                    self.gizmo_start_transform = self.config.as_transform();
                 }
             }
         }
@@ -173,10 +182,20 @@ impl Gizmo {
 
         let Some(result) = result else {
             // No interaction, no result.
+
+            self.config.update_for_targets(targets);
+
+            for subgizmo in &mut self.subgizmos {
+                subgizmo.update_config(self.config);
+            }
+
             return None;
         };
 
-        let updated_targets = self.update_transforms_with_result(result, targets);
+        self.update_config_with_result(result);
+
+        let updated_targets =
+            self.update_transforms_with_result(result, targets, &self.target_start_transforms);
 
         Some((result, updated_targets))
     }
@@ -203,10 +222,11 @@ impl Gizmo {
         &self,
         result: GizmoResult,
         transforms: &[Transform],
+        start_transforms: &[Transform],
     ) -> Vec<Transform> {
         transforms
             .iter()
-            .zip(&self.target_start_transforms)
+            .zip(start_transforms)
             .map(|(transform, start_transform)| {
                 let mut new_transform = *transform;
 
@@ -223,8 +243,19 @@ impl Gizmo {
                             (rotation_delta * DQuat::from(transform.rotation)).into();
                     }
                     GizmoResult::Translation { delta, total: _ } => {
-                        new_transform.translation =
-                            (DVec3::from(delta) + DVec3::from(new_transform.translation)).into();
+                        match self.config.orientation() {
+                            GizmoOrientation::Global => {
+                                new_transform.translation = (DVec3::from(delta)
+                                    + DVec3::from(new_transform.translation))
+                                .into();
+                            }
+                            GizmoOrientation::Local => {
+                                new_transform.translation =
+                                    ((DQuat::from(start_transform.rotation) * DVec3::from(delta))
+                                        + DVec3::from(new_transform.translation))
+                                    .into();
+                            }
+                        }
                     }
                     GizmoResult::Scale { total } => {
                         new_transform.scale =
@@ -235,6 +266,16 @@ impl Gizmo {
                 new_transform
             })
             .collect()
+    }
+
+    fn update_config_with_result(&mut self, result: GizmoResult) {
+        let new_config_transform = self.update_transforms_with_result(
+            result,
+            &[self.config.as_transform()],
+            &[self.gizmo_start_transform],
+        )[0];
+
+        self.config.update_transform(new_config_transform);
     }
 
     /// Picks the subgizmo that is closest to the given world space ray.

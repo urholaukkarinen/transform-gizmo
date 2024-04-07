@@ -8,6 +8,16 @@ pub struct Transform {
     pub translation: mint::Vector3<f64>,
 }
 
+impl Default for Transform {
+    fn default() -> Self {
+        Self {
+            scale: DVec3::ONE.into(),
+            rotation: DQuat::IDENTITY.into(),
+            translation: DVec3::ZERO.into(),
+        }
+    }
+}
+
 impl Transform {
     pub fn from_scale_rotation_translation(
         scale: impl Into<mint::Vector3<f64>>,
