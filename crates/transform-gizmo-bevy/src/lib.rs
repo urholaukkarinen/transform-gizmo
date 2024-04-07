@@ -33,7 +33,9 @@ use bevy::utils::{HashMap, Uuid};
 use bevy::window::PrimaryWindow;
 use bevy_math::{DQuat, DVec3};
 use render::{DrawDataHandles, TransformGizmoRenderPlugin};
-use transform_gizmo::config::{DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE};
+use transform_gizmo::config::{
+    TransformPivotPoint, DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE,
+};
 
 pub use transform_gizmo::{
     math::{Pos2, Rect},
@@ -70,6 +72,8 @@ pub struct GizmoOptions {
     pub gizmo_modes: EnumSet<GizmoMode>,
     /// Orientation of the gizmo. This affects the behaviour of transformations.
     pub gizmo_orientation: GizmoOrientation,
+    /// Orientation of the gizmo. This affects the behaviour of transformations.
+    pub pivot_point: TransformPivotPoint,
     /// Look and feel of the gizmo.
     pub visuals: GizmoVisuals,
     /// Whether snapping is enabled in the gizmo transformations.
@@ -90,7 +94,8 @@ impl Default for GizmoOptions {
     fn default() -> Self {
         Self {
             gizmo_modes: EnumSet::only(GizmoMode::Rotate),
-            gizmo_orientation: GizmoOrientation::Global,
+            gizmo_orientation: GizmoOrientation::default(),
+            pivot_point: TransformPivotPoint::default(),
             visuals: Default::default(),
             snapping: false,
             snap_angle: DEFAULT_SNAP_ANGLE,
@@ -178,6 +183,7 @@ fn update_gizmos(
         viewport,
         modes: gizmo_options.gizmo_modes,
         orientation: gizmo_options.gizmo_orientation,
+        pivot_point: gizmo_options.pivot_point,
         visuals: gizmo_options.visuals,
         snapping: gizmo_options.snapping,
         snap_angle: gizmo_options.snap_angle,

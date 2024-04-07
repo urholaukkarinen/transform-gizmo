@@ -2,7 +2,9 @@ use ecolor::Rgba;
 use emath::Pos2;
 use std::ops::{Add, AddAssign, Sub};
 
-use crate::config::{GizmoConfig, GizmoDirection, GizmoMode, PreparedGizmoConfig};
+use crate::config::{
+    GizmoConfig, GizmoDirection, GizmoMode, PreparedGizmoConfig, TransformPivotPoint,
+};
 use crate::math::{screen_to_world, Transform};
 use crate::GizmoOrientation;
 use epaint::Mesh;
@@ -229,62 +231,89 @@ impl Gizmo {
         transforms
             .iter()
             .zip(start_transforms)
-            .map(|(transform, start_transform)| {
-                let mut new_transform = *transform;
-
-                match result {
-                    GizmoResult::Rotation {
-                        axis,
-                        delta,
-                        total: _,
-                        is_view_axis,
-                    } => {
-                        let axis = match self.config.orientation() {
-                            GizmoOrientation::Local if !is_view_axis => {
-                                DQuat::from(transform.rotation) * DVec3::from(axis)
-                            }
-                            _ => DVec3::from(axis),
-                        };
-
-                        let delta = DQuat::from_axis_angle(axis, delta);
-
-                        // Rotate around the target group origin
-                        let origin = self.config.translation;
-
-                        new_transform.translation =
-                            (origin + delta * (DVec3::from(transform.translation) - origin)).into();
-                        new_transform.rotation = (delta * DQuat::from(transform.rotation)).into();
-                    }
-                    GizmoResult::Translation { delta, total: _ } => {
-                        let delta = match self.config.orientation() {
-                            GizmoOrientation::Global => DVec3::from(delta),
-                            GizmoOrientation::Local => {
-                                DQuat::from(start_transform.rotation) * DVec3::from(delta)
-                            }
-                        };
-
-                        new_transform.translation =
-                            (delta + DVec3::from(new_transform.translation)).into();
-                    }
-                    GizmoResult::Scale { total } => {
-                        new_transform.scale =
-                            (DVec3::from(start_transform.scale) * DVec3::from(total)).into();
-                    }
-                    GizmoResult::Arcball { delta, total: _ } => {
-                        let delta = DQuat::from(delta);
-
-                        // Rotate around the target group origin
-                        let origin = self.config.translation;
-
-                        new_transform.translation =
-                            (origin + delta * (DVec3::from(transform.translation) - origin)).into();
-                        new_transform.rotation = (delta * DQuat::from(transform.rotation)).into();
-                    }
+            .map(|(transform, start_transform)| match result {
+                GizmoResult::Rotation {
+                    axis,
+                    delta,
+                    total: _,
+                    is_view_axis,
+                } => self.update_rotation(transform, axis, delta, is_view_axis),
+                GizmoResult::Translation { delta, total: _ } => {
+                    self.update_translation(delta, transform, start_transform)
                 }
-
-                new_transform
+                GizmoResult::Scale { total } => {
+                    self.update_scale(transform, start_transform, total)
+                }
+                GizmoResult::Arcball { delta, total: _ } => {
+                    self.update_rotation_quat(transform, delta.into())
+                }
             })
             .collect()
+    }
+
+    fn update_rotation(
+        &self,
+        transform: &Transform,
+        axis: mint::Vector3<f64>,
+        delta: f64,
+        is_view_axis: bool,
+    ) -> Transform {
+        let axis = match self.config.orientation() {
+            GizmoOrientation::Local if !is_view_axis => {
+                DQuat::from(transform.rotation) * DVec3::from(axis)
+            }
+            _ => DVec3::from(axis),
+        };
+
+        let delta = DQuat::from_axis_angle(axis, delta);
+
+        self.update_rotation_quat(transform, delta)
+    }
+
+    fn update_rotation_quat(&self, transform: &Transform, delta: DQuat) -> Transform {
+        let translation = match self.config.pivot_point {
+            TransformPivotPoint::MedianPoint => (self.config.translation
+                + delta * (DVec3::from(transform.translation) - self.config.translation))
+                .into(),
+            TransformPivotPoint::IndividualOrigins => transform.translation,
+        };
+
+        Transform {
+            scale: transform.scale,
+            rotation: (delta * DQuat::from(transform.rotation)).into(),
+            translation,
+        }
+    }
+
+    fn update_translation(
+        &self,
+        delta: mint::Vector3<f64>,
+        transform: &Transform,
+        start_transform: &Transform,
+    ) -> Transform {
+        let delta = match self.config.orientation() {
+            GizmoOrientation::Global => DVec3::from(delta),
+            GizmoOrientation::Local => DQuat::from(start_transform.rotation) * DVec3::from(delta),
+        };
+
+        Transform {
+            scale: start_transform.scale,
+            rotation: start_transform.rotation,
+            translation: (delta + DVec3::from(transform.translation)).into(),
+        }
+    }
+
+    fn update_scale(
+        &self,
+        transform: &Transform,
+        start_transform: &Transform,
+        scale: mint::Vector3<f64>,
+    ) -> Transform {
+        Transform {
+            scale: (DVec3::from(start_transform.scale) * DVec3::from(scale)).into(),
+            rotation: transform.rotation,
+            translation: transform.translation,
+        }
     }
 
     fn update_config_with_result(&mut self, result: GizmoResult) {

@@ -32,6 +32,8 @@ pub struct GizmoConfig {
     pub modes: EnumSet<GizmoMode>,
     /// Determines the gizmo's orientation relative to global or local axes.
     pub orientation: GizmoOrientation,
+    /// Pivot point for transformations
+    pub pivot_point: TransformPivotPoint,
     /// Toggles snapping to predefined increments during transformations for precision.
     pub snapping: bool,
     /// Angle increment for snapping rotations, in radians.
@@ -53,7 +55,8 @@ impl Default for GizmoConfig {
             projection_matrix: DMat4::IDENTITY.into(),
             viewport: Rect::NOTHING,
             modes: enum_set!(GizmoMode::Rotate),
-            orientation: GizmoOrientation::Global,
+            orientation: GizmoOrientation::default(),
+            pivot_point: TransformPivotPoint::default(),
             snapping: false,
             snap_angle: DEFAULT_SNAP_ANGLE,
             snap_distance: DEFAULT_SNAP_DISTANCE,
@@ -239,10 +242,21 @@ pub enum GizmoMode {
     Scale,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+/// The point in space around which all rotations are centered.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
+pub enum TransformPivotPoint {
+    /// Pivot around the median point of targets
+    #[default]
+    MedianPoint,
+    /// Pivot around each target's own origin
+    IndividualOrigins,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub enum GizmoOrientation {
     /// Transformation axes are aligned to world space. Rotation of the
     /// gizmo does not change.
+    #[default]
     Global,
     /// Transformation axes are aligned to local space. Rotation of the
     /// gizmo matches the rotation represented by the model matrix.

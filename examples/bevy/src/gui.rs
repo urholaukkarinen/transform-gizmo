@@ -4,7 +4,7 @@ use bevy_egui::{
     EguiContexts, EguiPlugin,
 };
 use transform_gizmo_bevy::{
-    config::{DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE},
+    config::{TransformPivotPoint, DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE},
     prelude::*,
 };
 
@@ -106,20 +106,16 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
     egui::Grid::new("options_grid")
         .num_columns(2)
         .show(ui, |ui| {
-            ui.label("Modes");
-            egui::ComboBox::from_id_source("mode_cb")
-                .selected_text(format!("{}", gizmo_options.gizmo_modes.len()))
-                .show_ui(ui, |ui| {
-                    for mode in [GizmoMode::Rotate, GizmoMode::Translate, GizmoMode::Scale] {
-                        let mut mode_selected = gizmo_options.gizmo_modes.contains(mode);
-                        ui.toggle_value(&mut mode_selected, format!("{:?}", mode));
-                        if mode_selected {
-                            gizmo_options.gizmo_modes.insert(mode);
-                        } else {
-                            gizmo_options.gizmo_modes.remove(mode);
-                        }
-                    }
-                });
+            ui.label("Allow rotation");
+            draw_mode_picker(ui, GizmoMode::Rotate, &mut gizmo_options.gizmo_modes);
+            ui.end_row();
+
+            ui.label("Allow translation");
+            draw_mode_picker(ui, GizmoMode::Translate, &mut gizmo_options.gizmo_modes);
+            ui.end_row();
+
+            ui.label("Allow scaling");
+            draw_mode_picker(ui, GizmoMode::Scale, &mut gizmo_options.gizmo_modes);
             ui.end_row();
 
             ui.label("Orientation");
@@ -131,6 +127,23 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
                             &mut gizmo_options.gizmo_orientation,
                             orientation,
                             format!("{:?}", orientation),
+                        );
+                    }
+                });
+            ui.end_row();
+
+            ui.label("Pivot point");
+            egui::ComboBox::from_id_source("pivot_cb")
+                .selected_text(format!("{:?}", gizmo_options.pivot_point))
+                .show_ui(ui, |ui| {
+                    for pivot_point in [
+                        TransformPivotPoint::MedianPoint,
+                        TransformPivotPoint::IndividualOrigins,
+                    ] {
+                        ui.selectable_value(
+                            &mut gizmo_options.pivot_point,
+                            pivot_point,
+                            format!("{:?}", pivot_point),
                         );
                     }
                 });
@@ -189,6 +202,18 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
         ui.label("Move and rotate the camera using the middle and right mouse buttons");
         ui.label("Toggle gizmo snapping with left ctrl & shift");
     });
+}
+
+fn draw_mode_picker(ui: &mut egui::Ui, mode: GizmoMode, modes: &mut EnumSet<GizmoMode>) {
+    let mut checked = modes.contains(mode);
+
+    egui::Checkbox::without_text(&mut checked).ui(ui);
+
+    if checked {
+        modes.insert(mode);
+    } else {
+        modes.remove(mode);
+    }
 }
 
 fn draw_color_picker(ui: &mut egui::Ui, color: &mut Color32) {
