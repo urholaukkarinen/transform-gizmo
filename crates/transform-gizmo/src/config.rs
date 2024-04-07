@@ -140,12 +140,6 @@ impl DerefMut for PreparedGizmoConfig {
 }
 
 impl PreparedGizmoConfig {
-    pub(crate) fn from_config(config: GizmoConfig) -> Self {
-        let mut prepared_config = Self::default();
-        prepared_config.update_for_config(config);
-        prepared_config
-    }
-
     pub(crate) fn update_for_config(&mut self, config: GizmoConfig) {
         let projection_matrix = DMat4::from(config.projection_matrix);
         let view_matrix = DMat4::from(config.view_matrix);

@@ -19,7 +19,7 @@ use crate::subgizmo::{
 };
 
 /// A 3D transformation gizmo.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Gizmo {
     /// Prepared configuration of the gizmo.
     /// Includes the original [`GizmoConfig`] as well as
@@ -35,24 +35,12 @@ pub struct Gizmo {
     gizmo_start_transform: Transform,
 }
 
-impl Default for Gizmo {
-    fn default() -> Self {
-        Self::new(Default::default())
-    }
-}
-
 impl Gizmo {
     /// Creates a new gizmo from given configuration
     pub fn new(config: GizmoConfig) -> Self {
-        Self {
-            config: PreparedGizmoConfig::from_config(config),
-            subgizmos: Default::default(),
-            active_subgizmo_id: None,
-
-            target_start_transforms: vec![],
-
-            gizmo_start_transform: Default::default(),
-        }
+        let mut gizmo = Self::default();
+        gizmo.update_config(config);
+        gizmo
     }
 
     /// Current configuration used by the gizmo.
