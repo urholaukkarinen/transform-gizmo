@@ -1,10 +1,12 @@
 use ecolor::Rgba;
 use emath::Pos2;
-use enumset::EnumSet;
 use std::ops::{Add, AddAssign, Sub};
 
-use crate::config::{GizmoConfig, GizmoDirection, GizmoMode, PreparedGizmoConfig};
+use crate::config::{
+    GizmoConfig, GizmoDirection, GizmoMode, PreparedGizmoConfig, TransformPivotPoint,
+};
 use crate::math::{screen_to_world, Transform};
+use crate::GizmoOrientation;
 use epaint::Mesh;
 use glam::{DQuat, DVec3};
 
@@ -24,14 +26,13 @@ pub struct Gizmo {
     /// various other values calculated from it, used for
     /// interaction and drawing the gizmo.
     config: PreparedGizmoConfig,
-    /// The last enabled modes of the gizmo.
-    /// The subgizmos are rebuilt when modes change.
-    last_modes: EnumSet<GizmoMode>,
     /// Subgizmos used in the gizmo.
     subgizmos: Vec<SubGizmo>,
     active_subgizmo_id: Option<u64>,
 
     target_start_transforms: Vec<Transform>,
+
+    gizmo_start_transform: Transform,
 }
 
 impl Default for Gizmo {
@@ -45,11 +46,12 @@ impl Gizmo {
     pub fn new(config: GizmoConfig) -> Self {
         Self {
             config: PreparedGizmoConfig::from_config(config),
-            last_modes: Default::default(),
             subgizmos: Default::default(),
             active_subgizmo_id: None,
 
             target_start_transforms: vec![],
+
+            gizmo_start_transform: Default::default(),
         }
     }
 
@@ -60,7 +62,28 @@ impl Gizmo {
 
     /// Updates the configuration used by the gizmo.
     pub fn update_config(&mut self, config: GizmoConfig) {
-        self.config = PreparedGizmoConfig::from_config(config);
+        if config.modes != self.config.modes {
+            self.subgizmos.clear();
+            self.active_subgizmo_id = None;
+        }
+
+        self.config.update_for_config(config);
+
+        if self.subgizmos.is_empty() {
+            for mode in self.config.modes {
+                match mode {
+                    GizmoMode::Rotate => {
+                        self.add_rotation();
+                    }
+                    GizmoMode::Translate => {
+                        self.add_translation();
+                    }
+                    GizmoMode::Scale => {
+                        self.add_scale();
+                    }
+                };
+            }
+        }
     }
 
     /// Was this gizmo focused after the latest [`Gizmo::update`] call.
@@ -105,40 +128,20 @@ impl Gizmo {
         interaction: GizmoInteraction,
         targets: &[Transform],
     ) -> Option<(GizmoResult, Vec<Transform>)> {
-        // Mode was changed. Update all subgizmos accordingly.
-        if self.config.modes != self.last_modes {
-            self.last_modes = self.config.modes;
-
-            self.active_subgizmo_id = None;
-            self.subgizmos.clear();
-
-            // Choose subgizmos based on the gizmo mode
-            for mode in self.config.modes {
-                match mode {
-                    GizmoMode::Rotate => {
-                        self.add_rotation();
-                    }
-                    GizmoMode::Translate => {
-                        self.add_translation();
-                    }
-                    GizmoMode::Scale => {
-                        self.add_scale();
-                    }
-                };
-            }
-        }
-
         if !self.config.viewport.is_finite() {
             return None;
         }
 
-        // Update the gizmo based on the given targets.
-        self.config.update_for_targets(targets);
+        // Update the gizmo based on the given target transforms,
+        // unless the gizmo is currently being interacted with.
+        if self.active_subgizmo_id.is_none() {
+            self.config.update_for_targets(targets);
+        }
 
         for subgizmo in &mut self.subgizmos {
             // Update current configuration to each subgizmo.
             subgizmo.update_config(self.config);
-            // All subgizmoes are initially considered unfocused.
+            // All subgizmos are initially considered unfocused.
             subgizmo.set_focused(false);
         }
 
@@ -154,19 +157,14 @@ impl Gizmo {
                 if interaction.drag_started {
                     self.active_subgizmo_id = Some(subgizmo.id());
                     self.target_start_transforms = targets.to_vec();
+                    self.gizmo_start_transform = self.config.as_transform();
                 }
             }
         }
 
-        let mut active_subgizmo = self.active_subgizmo_id.and_then(|id| {
-            self.subgizmos
-                .iter_mut()
-                .find(|subgizmo| subgizmo.id() == id)
-        });
-
         let mut result = None;
 
-        if let Some(subgizmo) = active_subgizmo.as_mut() {
+        if let Some(subgizmo) = self.active_subgizmo_mut() {
             if interaction.dragging {
                 subgizmo.set_active(true);
                 subgizmo.set_focused(true);
@@ -180,40 +178,20 @@ impl Gizmo {
 
         let Some(result) = result else {
             // No interaction, no result.
+
+            self.config.update_for_targets(targets);
+
+            for subgizmo in &mut self.subgizmos {
+                subgizmo.update_config(self.config);
+            }
+
             return None;
         };
 
-        let mut updated_targets = Vec::<Transform>::new();
+        self.update_config_with_result(result);
 
-        for (target_start_transform, target_transform) in
-            self.target_start_transforms.iter().zip(targets)
-        {
-            let mut new_target_transform = *target_transform;
-
-            match result {
-                GizmoResult::Rotation { delta, total: _ } => {
-                    // Rotate around the target group origin
-                    let rotation_delta = DQuat::from(delta);
-                    let origin = self.config.translation;
-
-                    new_target_transform.translation = (origin
-                        + rotation_delta * (DVec3::from(target_transform.translation) - origin))
-                        .into();
-                    new_target_transform.rotation =
-                        (rotation_delta * DQuat::from(target_transform.rotation)).into();
-                }
-                GizmoResult::Translation { delta, total: _ } => {
-                    new_target_transform.translation =
-                        (DVec3::from(delta) + DVec3::from(new_target_transform.translation)).into();
-                }
-                GizmoResult::Scale { total } => {
-                    new_target_transform.scale =
-                        (DVec3::from(target_start_transform.scale) * DVec3::from(total)).into();
-                }
-            }
-
-            updated_targets.push(new_target_transform);
-        }
+        let updated_targets =
+            self.update_transforms_with_result(result, targets, &self.target_start_transforms);
 
         Some((result, updated_targets))
     }
@@ -234,6 +212,117 @@ impl Gizmo {
         }
 
         draw_data
+    }
+
+    fn active_subgizmo_mut(&mut self) -> Option<&mut SubGizmo> {
+        self.active_subgizmo_id.and_then(|id| {
+            self.subgizmos
+                .iter_mut()
+                .find(|subgizmo| subgizmo.id() == id)
+        })
+    }
+
+    fn update_transforms_with_result(
+        &self,
+        result: GizmoResult,
+        transforms: &[Transform],
+        start_transforms: &[Transform],
+    ) -> Vec<Transform> {
+        transforms
+            .iter()
+            .zip(start_transforms)
+            .map(|(transform, start_transform)| match result {
+                GizmoResult::Rotation {
+                    axis,
+                    delta,
+                    total: _,
+                    is_view_axis,
+                } => self.update_rotation(transform, axis, delta, is_view_axis),
+                GizmoResult::Translation { delta, total: _ } => {
+                    self.update_translation(delta, transform, start_transform)
+                }
+                GizmoResult::Scale { total } => {
+                    Self::update_scale(transform, start_transform, total)
+                }
+                GizmoResult::Arcball { delta, total: _ } => {
+                    self.update_rotation_quat(transform, delta.into())
+                }
+            })
+            .collect()
+    }
+
+    fn update_rotation(
+        &self,
+        transform: &Transform,
+        axis: mint::Vector3<f64>,
+        delta: f64,
+        is_view_axis: bool,
+    ) -> Transform {
+        let axis = match self.config.orientation() {
+            GizmoOrientation::Local if !is_view_axis => {
+                DQuat::from(transform.rotation) * DVec3::from(axis)
+            }
+            _ => DVec3::from(axis),
+        };
+
+        let delta = DQuat::from_axis_angle(axis, delta);
+
+        self.update_rotation_quat(transform, delta)
+    }
+
+    fn update_rotation_quat(&self, transform: &Transform, delta: DQuat) -> Transform {
+        let translation = match self.config.pivot_point {
+            TransformPivotPoint::MedianPoint => (self.config.translation
+                + delta * (DVec3::from(transform.translation) - self.config.translation))
+                .into(),
+            TransformPivotPoint::IndividualOrigins => transform.translation,
+        };
+
+        Transform {
+            scale: transform.scale,
+            rotation: (delta * DQuat::from(transform.rotation)).into(),
+            translation,
+        }
+    }
+
+    fn update_translation(
+        &self,
+        delta: mint::Vector3<f64>,
+        transform: &Transform,
+        start_transform: &Transform,
+    ) -> Transform {
+        let delta = match self.config.orientation() {
+            GizmoOrientation::Global => DVec3::from(delta),
+            GizmoOrientation::Local => DQuat::from(start_transform.rotation) * DVec3::from(delta),
+        };
+
+        Transform {
+            scale: start_transform.scale,
+            rotation: start_transform.rotation,
+            translation: (delta + DVec3::from(transform.translation)).into(),
+        }
+    }
+
+    fn update_scale(
+        transform: &Transform,
+        start_transform: &Transform,
+        scale: mint::Vector3<f64>,
+    ) -> Transform {
+        Transform {
+            scale: (DVec3::from(start_transform.scale) * DVec3::from(scale)).into(),
+            rotation: transform.rotation,
+            translation: transform.translation,
+        }
+    }
+
+    fn update_config_with_result(&mut self, result: GizmoResult) {
+        let new_config_transform = self.update_transforms_with_result(
+            result,
+            &[self.config.as_transform()],
+            &[self.gizmo_start_transform],
+        )[0];
+
+        self.config.update_transform(new_config_transform);
     }
 
     /// Picks the subgizmo that is closest to the given world space ray.
@@ -464,10 +553,14 @@ pub struct GizmoInteraction {
 #[derive(Debug, Copy, Clone)]
 pub enum GizmoResult {
     Rotation {
-        /// The latest rotation delta
-        delta: mint::Quaternion<f64>,
-        /// Total rotation of the gizmo interaction
-        total: mint::Quaternion<f64>,
+        /// The rotation axis,
+        axis: mint::Vector3<f64>,
+        /// The latest rotation angle delta
+        delta: f64,
+        /// Total rotation angle of the gizmo interaction
+        total: f64,
+        /// Whether we are rotating along the view axis
+        is_view_axis: bool,
     },
     Translation {
         /// The latest translation delta
@@ -478,6 +571,12 @@ pub enum GizmoResult {
     Scale {
         /// Total scale of the gizmo interaction
         total: mint::Vector3<f64>,
+    },
+    Arcball {
+        /// The latest rotation delta
+        delta: mint::Quaternion<f64>,
+        /// Total rotation of the gizmo interaction
+        total: mint::Quaternion<f64>,
     },
 }
 

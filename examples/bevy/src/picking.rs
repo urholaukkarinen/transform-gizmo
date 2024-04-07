@@ -29,7 +29,7 @@ fn toggle_picking_enabled(
 
     picking_settings.is_enabled = gizmo_targets
         .iter()
-        .all(|target| !target.is_focused && !target.is_active);
+        .all(|target| !target.is_focused() && !target.is_active());
 }
 
 fn update_picking(

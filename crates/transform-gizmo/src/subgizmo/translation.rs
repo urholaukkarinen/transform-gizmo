@@ -5,7 +5,7 @@ use crate::subgizmo::common::{
     pick_arrow, pick_circle, pick_plane, plane_bitangent, plane_global_origin, plane_tangent,
 };
 use crate::subgizmo::{common::TransformKind, SubGizmoConfig, SubGizmoKind};
-use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult};
+use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoOrientation, GizmoResult};
 
 pub(crate) type TranslationSubGizmo = SubGizmoConfig<Translation>;
 
@@ -81,8 +81,14 @@ impl SubGizmoKind for Translation {
             new_point = subgizmo.state.start_point + new_delta;
         }
 
-        let translation_delta = new_point - subgizmo.state.last_point;
-        let total_translation = new_point - subgizmo.state.start_point;
+        let mut translation_delta = new_point - subgizmo.state.last_point;
+        let mut total_translation = new_point - subgizmo.state.start_point;
+
+        if subgizmo.config.orientation() == GizmoOrientation::Local {
+            let inverse_rotation = subgizmo.config.rotation.inverse();
+            translation_delta = inverse_rotation * translation_delta;
+            total_translation = inverse_rotation * total_translation;
+        }
 
         subgizmo.state.last_point = new_point;
         subgizmo.state.current_delta = new_delta;

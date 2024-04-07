@@ -16,7 +16,7 @@ pub const DEFAULT_SNAP_DISTANCE: f32 = 0.1;
 /// The default snapping distance for scale
 pub const DEFAULT_SNAP_SCALE: f32 = 0.1;
 
-/// Configuration of a [`Gizmo`].
+/// Configuration of a gizmo.
 ///
 /// Defines how the gizmo is drawn to the screen and
 /// how it can be interacted with.
@@ -32,6 +32,8 @@ pub struct GizmoConfig {
     pub modes: EnumSet<GizmoMode>,
     /// Determines the gizmo's orientation relative to global or local axes.
     pub orientation: GizmoOrientation,
+    /// Pivot point for transformations
+    pub pivot_point: TransformPivotPoint,
     /// Toggles snapping to predefined increments during transformations for precision.
     pub snapping: bool,
     /// Angle increment for snapping rotations, in radians.
@@ -53,7 +55,8 @@ impl Default for GizmoConfig {
             projection_matrix: DMat4::IDENTITY.into(),
             viewport: Rect::NOTHING,
             modes: enum_set!(GizmoMode::Rotate),
-            orientation: GizmoOrientation::Global,
+            orientation: GizmoOrientation::default(),
+            pivot_point: TransformPivotPoint::default(),
             snapping: false,
             snap_angle: DEFAULT_SNAP_ANGLE,
             snap_distance: DEFAULT_SNAP_DISTANCE,
@@ -82,12 +85,22 @@ impl GizmoConfig {
 
     /// Whether local orientation is used
     pub(crate) fn local_space(&self) -> bool {
-        // Scale mode only works in local space
-        self.orientation == GizmoOrientation::Local || self.modes.contains(GizmoMode::Scale)
+        self.orientation() == GizmoOrientation::Local
+    }
+
+    /// Transform orientation of the gizmo
+    pub(crate) fn orientation(&self) -> GizmoOrientation {
+        if self.modes.contains(GizmoMode::Scale) {
+            // Scaling currently only works in local orientation,
+            // so the configured orientation is ignored.
+            GizmoOrientation::Local
+        } else {
+            self.orientation
+        }
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub(crate) struct PreparedGizmoConfig {
     config: GizmoConfig,
     /// Rotation of the gizmo
@@ -98,6 +111,8 @@ pub(crate) struct PreparedGizmoConfig {
     pub(crate) scale: DVec3,
     /// Combined view-projection matrix
     pub(crate) view_projection: DMat4,
+    /// Model matrix from targets
+    pub(crate) model_matrix: DMat4,
     /// Combined model-view-projection matrix
     pub(crate) mvp: DMat4,
     /// Scale factor for the gizmo rendering
@@ -126,6 +141,12 @@ impl DerefMut for PreparedGizmoConfig {
 
 impl PreparedGizmoConfig {
     pub(crate) fn from_config(config: GizmoConfig) -> Self {
+        let mut prepared_config = Self::default();
+        prepared_config.update_for_config(config);
+        prepared_config
+    }
+
+    pub(crate) fn update_for_config(&mut self, config: GizmoConfig) {
         let projection_matrix = DMat4::from(config.projection_matrix);
         let view_matrix = DMat4::from(config.view_matrix);
 
@@ -137,18 +158,15 @@ impl PreparedGizmoConfig {
             projection_matrix.z_axis.w > 0.0
         };
 
-        Self {
-            config,
-            rotation: DQuat::IDENTITY,
-            translation: DVec3::ZERO,
-            scale: DVec3::ONE,
-            view_projection,
-            mvp: view_projection,
-            eye_to_model_dir: DVec3::ZERO,
-            scale_factor: 1.0,
-            focus_distance: 1.0,
-            left_handed,
-        }
+        self.config = config;
+        self.view_projection = view_projection;
+        self.left_handed = left_handed;
+
+        self.update_transform(Transform {
+            scale: self.scale.into(),
+            rotation: self.rotation.into(),
+            translation: self.translation.into(),
+        });
     }
 
     pub(crate) fn update_for_targets(&mut self, targets: &[Transform]) {
@@ -172,12 +190,28 @@ impl PreparedGizmoConfig {
             scale /= target_count as f64;
         }
 
-        let model_matrix = DMat4::from_scale_rotation_translation(scale, rotation, translation);
+        self.update_transform(Transform {
+            scale: scale.into(),
+            rotation: rotation.into(),
+            translation: translation.into(),
+        });
+    }
 
-        self.mvp = self.view_projection * model_matrix;
+    pub(crate) fn update_transform(&mut self, transform: Transform) {
+        self.translation = transform.translation.into();
+        self.rotation = transform.rotation.into();
+        self.scale = transform.scale.into();
+        self.model_matrix =
+            DMat4::from_scale_rotation_translation(self.scale, self.rotation, self.translation);
+        self.mvp = self.view_projection * self.model_matrix;
+
+        self.scale_factor = self.mvp.as_ref()[15] as f32
+            / self.projection_matrix.x.x as f32
+            / self.config.viewport.width()
+            * 2.0;
 
         let gizmo_screen_pos =
-            world_to_screen(self.config.viewport, self.mvp, translation).unwrap_or_default();
+            world_to_screen(self.config.viewport, self.mvp, self.translation).unwrap_or_default();
 
         let gizmo_view_near = screen_to_world(
             self.config.viewport,
@@ -186,17 +220,17 @@ impl PreparedGizmoConfig {
             -1.0,
         );
 
-        self.scale_factor = self.mvp.as_ref()[15] as f32
-            / self.projection_matrix.x.x as f32
-            / self.config.viewport.width()
-            * 2.0;
-
         self.focus_distance = self.scale_factor * (self.config.visuals.stroke_width / 2.0 + 5.0);
 
-        self.rotation = rotation;
-        self.translation = translation;
-        self.scale = scale;
-        self.eye_to_model_dir = (gizmo_view_near - translation).normalize_or_zero();
+        self.eye_to_model_dir = (gizmo_view_near - self.translation).normalize_or_zero();
+    }
+
+    pub(crate) fn as_transform(&self) -> Transform {
+        Transform {
+            scale: self.scale.into(),
+            rotation: self.rotation.into(),
+            translation: self.translation.into(),
+        }
     }
 }
 
@@ -208,13 +242,23 @@ pub enum GizmoMode {
     Scale,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+/// The point in space around which all rotations are centered.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
+pub enum TransformPivotPoint {
+    /// Pivot around the median point of targets
+    #[default]
+    MedianPoint,
+    /// Pivot around each target's own origin
+    IndividualOrigins,
+}
+
+/// Orientation of a gizmo.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub enum GizmoOrientation {
-    /// Transformation axes are aligned to world space. Rotation of the
-    /// gizmo does not change.
+    /// Transformation axes are aligned to world space.
+    #[default]
     Global,
-    /// Transformation axes are aligned to local space. Rotation of the
-    /// gizmo matches the rotation represented by the model matrix.
+    /// Transformation axes are aligned to the last target's orientation.
     Local,
 }
 

@@ -97,13 +97,13 @@ impl SubGizmoKind for Rotation {
         subgizmo.state.last_rotation_angle = rotation_angle;
         subgizmo.state.current_delta += angle_delta;
 
-        let normal = gizmo_normal(&subgizmo.config, subgizmo.direction);
-        let rotation_delta = DQuat::from_axis_angle(normal, -angle_delta);
-        let total_rotation = DQuat::from_axis_angle(normal, subgizmo.state.current_delta);
+        let normal = gizmo_local_normal(&subgizmo.config, subgizmo.direction);
 
         Some(GizmoResult::Rotation {
-            delta: rotation_delta.into(),
-            total: total_rotation.into(),
+            axis: normal.into(),
+            delta: -angle_delta,
+            total: subgizmo.state.current_delta,
+            is_view_axis: subgizmo.direction == GizmoDirection::View,
         })
     }
 

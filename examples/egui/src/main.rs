@@ -68,30 +68,43 @@ impl ExampleApp {
             self.rotation = transform.rotation.into();
             self.translation = transform.translation.into();
 
-            match result {
-                GizmoResult::Rotation { delta: _, total } => {
+            let text = match result {
+                GizmoResult::Rotation {
+                    axis,
+                    delta: _,
+                    total,
+                    is_view_axis: _,
+                } => {
+                    format!(
+                        "Rotation axis: ({:.2}, {:.2}, {:.2}), Angle: {:.2} deg",
+                        axis.x,
+                        axis.y,
+                        axis.z,
+                        total.to_degrees()
+                    )
+                }
+                GizmoResult::Translation { delta: _, total } => {
+                    format!(
+                        "Translation: ({:.2}, {:.2}, {:.2})",
+                        total.x, total.y, total.z,
+                    )
+                }
+                GizmoResult::Scale { total } => {
+                    format!("Scale: ({:.2}, {:.2}, {:.2})", total.x, total.y, total.z,)
+                }
+                GizmoResult::Arcball { delta: _, total } => {
                     let (axis, angle) = DQuat::from(total).to_axis_angle();
-                    ui.label(format!(
+                    format!(
                         "Rotation axis: ({:.2}, {:.2}, {:.2}), Angle: {:.2} deg",
                         axis.x,
                         axis.y,
                         axis.z,
                         angle.to_degrees()
-                    ));
+                    )
                 }
-                GizmoResult::Translation { delta: _, total } => {
-                    ui.label(format!(
-                        "Translation: ({:.2}, {:.2}, {:.2})",
-                        total.x, total.y, total.z,
-                    ));
-                }
-                GizmoResult::Scale { total } => {
-                    ui.label(format!(
-                        "Scale: ({:.2}, {:.2}, {:.2})",
-                        total.x, total.y, total.z,
-                    ));
-                }
-            }
+            };
+
+            ui.label(text);
         }
     }
 

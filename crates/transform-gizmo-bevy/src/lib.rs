@@ -33,7 +33,9 @@ use bevy::utils::{HashMap, Uuid};
 use bevy::window::PrimaryWindow;
 use bevy_math::{DQuat, DVec3};
 use render::{DrawDataHandles, TransformGizmoRenderPlugin};
-use transform_gizmo::config::{DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE};
+use transform_gizmo::config::{
+    TransformPivotPoint, DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE,
+};
 
 pub use transform_gizmo::{
     math::{Pos2, Rect},
@@ -70,6 +72,8 @@ pub struct GizmoOptions {
     pub gizmo_modes: EnumSet<GizmoMode>,
     /// Orientation of the gizmo. This affects the behaviour of transformations.
     pub gizmo_orientation: GizmoOrientation,
+    /// Orientation of the gizmo. This affects the behaviour of transformations.
+    pub pivot_point: TransformPivotPoint,
     /// Look and feel of the gizmo.
     pub visuals: GizmoVisuals,
     /// Whether snapping is enabled in the gizmo transformations.
@@ -90,7 +94,8 @@ impl Default for GizmoOptions {
     fn default() -> Self {
         Self {
             gizmo_modes: EnumSet::only(GizmoMode::Rotate),
-            gizmo_orientation: GizmoOrientation::Global,
+            gizmo_orientation: GizmoOrientation::default(),
+            pivot_point: TransformPivotPoint::default(),
             visuals: Default::default(),
             snapping: false,
             snap_angle: DEFAULT_SNAP_ANGLE,
@@ -113,14 +118,32 @@ impl Default for GizmoOptions {
 #[derive(Component, Copy, Clone, Debug, Default)]
 pub struct GizmoTarget {
     /// Whether any part of the gizmo is currently focused.
-    pub is_focused: bool,
+    pub(crate) is_focused: bool,
 
     /// Whether the gizmo is currently being interacted with.
-    pub is_active: bool,
+    pub(crate) is_active: bool,
 
     /// This gets replaced with the result of the most recent
     /// gizmo interaction that affected this entity.
-    pub latest_result: Option<GizmoResult>,
+    pub(crate) latest_result: Option<GizmoResult>,
+}
+
+impl GizmoTarget {
+    /// Whether any part of the gizmo is currently focused.
+    pub fn is_focused(&self) -> bool {
+        self.is_focused
+    }
+
+    /// Whether the gizmo is currently being interacted with.
+    pub fn is_active(&self) -> bool {
+        self.is_active
+    }
+
+    /// This gets replaced with the result of the most recent
+    /// gizmo interaction that affected this entity.
+    pub fn latest_result(&self) -> Option<GizmoResult> {
+        self.latest_result
+    }
 }
 
 /// Marker used to specify which camera to use for gizmos.
@@ -178,6 +201,7 @@ fn update_gizmos(
         viewport,
         modes: gizmo_options.gizmo_modes,
         orientation: gizmo_options.gizmo_orientation,
+        pivot_point: gizmo_options.pivot_point,
         visuals: gizmo_options.visuals,
         snapping: gizmo_options.snapping,
         snap_angle: gizmo_options.snap_angle,
