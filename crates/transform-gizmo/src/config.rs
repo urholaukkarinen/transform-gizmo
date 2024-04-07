@@ -254,12 +254,10 @@ pub enum TransformPivotPoint {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub enum GizmoOrientation {
-    /// Transformation axes are aligned to world space. Rotation of the
-    /// gizmo does not change.
+    /// Transformation axes are aligned to world space.
     #[default]
     Global,
-    /// Transformation axes are aligned to local space. Rotation of the
-    /// gizmo matches the rotation represented by the model matrix.
+    /// Transformation axes are aligned to the last target's orientation.
     Local,
 }
 
