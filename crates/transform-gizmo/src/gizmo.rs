@@ -242,7 +242,7 @@ impl Gizmo {
                     self.update_translation(delta, transform, start_transform)
                 }
                 GizmoResult::Scale { total } => {
-                    self.update_scale(transform, start_transform, total)
+                    Self::update_scale(transform, start_transform, total)
                 }
                 GizmoResult::Arcball { delta, total: _ } => {
                     self.update_rotation_quat(transform, delta.into())
@@ -304,7 +304,6 @@ impl Gizmo {
     }
 
     fn update_scale(
-        &self,
         transform: &Transform,
         start_transform: &Transform,
         scale: mint::Vector3<f64>,
