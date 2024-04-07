@@ -16,7 +16,7 @@ pub const DEFAULT_SNAP_DISTANCE: f32 = 0.1;
 /// The default snapping distance for scale
 pub const DEFAULT_SNAP_SCALE: f32 = 0.1;
 
-/// Configuration of a [`Gizmo`].
+/// Configuration of a gizmo.
 ///
 /// Defines how the gizmo is drawn to the screen and
 /// how it can be interacted with.
@@ -252,6 +252,7 @@ pub enum TransformPivotPoint {
     IndividualOrigins,
 }
 
+/// Orientation of a gizmo.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub enum GizmoOrientation {
     /// Transformation axes are aligned to world space.

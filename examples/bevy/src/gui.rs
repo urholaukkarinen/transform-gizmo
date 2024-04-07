@@ -47,7 +47,9 @@ fn update_ui(
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
         .show(contexts.ctx_mut(), |ui| {
-            let latest_gizmo_result = gizmo_targets.iter().find_map(|target| target.latest_result);
+            let latest_gizmo_result = gizmo_targets
+                .iter()
+                .find_map(|target| target.latest_result());
 
             draw_gizmo_result(ui, latest_gizmo_result);
         });

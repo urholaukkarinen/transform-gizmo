@@ -118,14 +118,32 @@ impl Default for GizmoOptions {
 #[derive(Component, Copy, Clone, Debug, Default)]
 pub struct GizmoTarget {
     /// Whether any part of the gizmo is currently focused.
-    pub is_focused: bool,
+    pub(crate) is_focused: bool,
 
     /// Whether the gizmo is currently being interacted with.
-    pub is_active: bool,
+    pub(crate) is_active: bool,
 
     /// This gets replaced with the result of the most recent
     /// gizmo interaction that affected this entity.
-    pub latest_result: Option<GizmoResult>,
+    pub(crate) latest_result: Option<GizmoResult>,
+}
+
+impl GizmoTarget {
+    /// Whether any part of the gizmo is currently focused.
+    pub fn is_focused(&self) -> bool {
+        self.is_focused
+    }
+
+    /// Whether the gizmo is currently being interacted with.
+    pub fn is_active(&self) -> bool {
+        self.is_active
+    }
+
+    /// This gets replaced with the result of the most recent
+    /// gizmo interaction that affected this entity.
+    pub fn latest_result(&self) -> Option<GizmoResult> {
+        self.latest_result
+    }
 }
 
 /// Marker used to specify which camera to use for gizmos.
