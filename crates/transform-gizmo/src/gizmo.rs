@@ -523,10 +523,7 @@ impl Gizmo {
             );
         }
 
-        if modes.contains(GizmoMode::ScaleUniform)
-            && !modes.contains(GizmoMode::RotateView)
-            && !modes.contains(GizmoMode::TranslateView)
-        {
+        if modes.contains(GizmoMode::ScaleUniform) && !modes.contains(GizmoMode::RotateView) {
             self.subgizmos.push(
                 ScaleSubGizmo::new(
                     self.config,
