@@ -11,6 +11,7 @@ pub(crate) type TranslationSubGizmo = SubGizmoConfig<Translation>;
 
 #[derive(Debug, Copy, Clone, Hash)]
 pub(crate) struct TranslationParams {
+    pub mode: GizmoMode,
     pub direction: GizmoDirection,
     pub transform_kind: TransformKind,
 }
@@ -38,12 +39,9 @@ impl SubGizmoKind for Translation {
                 true,
             ),
             (TransformKind::Plane, _) => pick_plane(&subgizmo.config, ray, subgizmo.direction),
-            (TransformKind::Axis, _) => pick_arrow(
-                &subgizmo.config,
-                ray,
-                subgizmo.direction,
-                GizmoMode::Translate,
-            ),
+            (TransformKind::Axis, _) => {
+                pick_arrow(&subgizmo.config, ray, subgizmo.direction, subgizmo.mode)
+            }
         };
 
         subgizmo.opacity = pick_result.visibility as _;
@@ -106,7 +104,7 @@ impl SubGizmoKind for Translation {
                 subgizmo.opacity,
                 subgizmo.focused,
                 subgizmo.direction,
-                GizmoMode::Translate,
+                subgizmo.mode,
             ),
             (TransformKind::Plane, GizmoDirection::View) => draw_circle(
                 &subgizmo.config,

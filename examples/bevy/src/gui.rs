@@ -1,6 +1,6 @@
 use bevy::{math::DQuat, prelude::*};
 use bevy_egui::{
-    egui::{self, Layout, Widget},
+    egui::{self, Layout, RichText, Widget},
     EguiContexts, EguiPlugin,
 };
 use transform_gizmo_bevy::{
@@ -105,21 +105,74 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
     ui.heading("Options");
     ui.separator();
 
+    egui::Grid::new("modes_grid").num_columns(7).show(ui, |ui| {
+        ui.label(RichText::new("Mode").strong());
+        ui.label(RichText::new("View").strong());
+        ui.label(RichText::new("X").strong());
+        ui.label(RichText::new("Y").strong());
+        ui.label(RichText::new("Z").strong());
+        ui.label(RichText::new("XZ").strong());
+        ui.label(RichText::new("XY").strong());
+        ui.label(RichText::new("YZ").strong());
+        ui.end_row();
+
+        ui.label("Rotation");
+        draw_mode_picker(ui, GizmoMode::RotateView, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::RotateX, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::RotateY, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::RotateZ, &mut gizmo_options.gizmo_modes);
+        ui.end_row();
+
+        ui.label("Translation");
+        draw_mode_picker(ui, GizmoMode::TranslateView, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::TranslateX, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::TranslateY, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::TranslateZ, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::TranslateXZ, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::TranslateXY, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::TranslateYZ, &mut gizmo_options.gizmo_modes);
+        ui.end_row();
+
+        ui.label("Scale");
+        ui.add_enabled_ui(
+            !gizmo_options.gizmo_modes.contains(GizmoMode::RotateView),
+            |ui| {
+                draw_mode_picker(ui, GizmoMode::ScaleUniform, &mut gizmo_options.gizmo_modes);
+            },
+        );
+        draw_mode_picker(ui, GizmoMode::ScaleX, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::ScaleY, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::ScaleZ, &mut gizmo_options.gizmo_modes);
+        ui.add_enabled_ui(
+            !gizmo_options.gizmo_modes.contains(GizmoMode::TranslateXZ),
+            |ui| {
+                draw_mode_picker(ui, GizmoMode::ScaleXZ, &mut gizmo_options.gizmo_modes);
+            },
+        );
+        ui.add_enabled_ui(
+            !gizmo_options.gizmo_modes.contains(GizmoMode::TranslateXY),
+            |ui| {
+                draw_mode_picker(ui, GizmoMode::ScaleXY, &mut gizmo_options.gizmo_modes);
+            },
+        );
+        ui.add_enabled_ui(
+            !gizmo_options.gizmo_modes.contains(GizmoMode::TranslateYZ),
+            |ui| {
+                draw_mode_picker(ui, GizmoMode::ScaleYZ, &mut gizmo_options.gizmo_modes);
+            },
+        );
+        ui.end_row();
+
+        ui.label("Arcball");
+        draw_mode_picker(ui, GizmoMode::Arcball, &mut gizmo_options.gizmo_modes);
+        ui.end_row();
+    });
+
+    ui.separator();
+
     egui::Grid::new("options_grid")
         .num_columns(2)
         .show(ui, |ui| {
-            ui.label("Allow rotation");
-            draw_mode_picker(ui, GizmoMode::Rotate, &mut gizmo_options.gizmo_modes);
-            ui.end_row();
-
-            ui.label("Allow translation");
-            draw_mode_picker(ui, GizmoMode::Translate, &mut gizmo_options.gizmo_modes);
-            ui.end_row();
-
-            ui.label("Allow scaling");
-            draw_mode_picker(ui, GizmoMode::Scale, &mut gizmo_options.gizmo_modes);
-            ui.end_row();
-
             ui.label("Orientation");
             egui::ComboBox::from_id_source("orientation_cb")
                 .selected_text(format!("{:?}", gizmo_options.gizmo_orientation))
@@ -206,15 +259,15 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
     });
 }
 
-fn draw_mode_picker(ui: &mut egui::Ui, mode: GizmoMode, modes: &mut EnumSet<GizmoMode>) {
-    let mut checked = modes.contains(mode);
+fn draw_mode_picker(ui: &mut egui::Ui, mode: GizmoMode, all_modes: &mut EnumSet<GizmoMode>) {
+    let mut checked = all_modes.contains(mode);
 
     egui::Checkbox::without_text(&mut checked).ui(ui);
 
     if checked {
-        modes.insert(mode);
+        all_modes.insert(mode);
     } else {
-        modes.remove(mode);
+        all_modes.remove(mode);
     }
 }
 

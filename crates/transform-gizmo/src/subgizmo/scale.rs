@@ -13,6 +13,7 @@ pub(crate) type ScaleSubGizmo = SubGizmoConfig<Scale>;
 
 #[derive(Debug, Copy, Clone, Hash)]
 pub(crate) struct ScaleParams {
+    pub mode: GizmoMode,
     pub direction: GizmoDirection,
     pub transform_kind: TransformKind,
 }
@@ -50,7 +51,7 @@ impl SubGizmoKind for Scale {
             }
             (TransformKind::Plane, _) => pick_plane(&subgizmo.config, ray, subgizmo.direction),
             (TransformKind::Axis, _) => {
-                pick_arrow(&subgizmo.config, ray, subgizmo.direction, GizmoMode::Scale)
+                pick_arrow(&subgizmo.config, ray, subgizmo.direction, subgizmo.mode)
             }
         };
 
@@ -98,7 +99,7 @@ impl SubGizmoKind for Scale {
                 subgizmo.opacity,
                 subgizmo.focused,
                 subgizmo.direction,
-                GizmoMode::Scale,
+                subgizmo.mode,
             ),
             (TransformKind::Plane, GizmoDirection::View) => {
                 draw_circle(

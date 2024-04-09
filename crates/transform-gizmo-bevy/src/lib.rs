@@ -96,7 +96,7 @@ pub struct GizmoOptions {
 impl Default for GizmoOptions {
     fn default() -> Self {
         Self {
-            gizmo_modes: EnumSet::only(GizmoMode::Rotate),
+            gizmo_modes: GizmoMode::all(),
             gizmo_orientation: GizmoOrientation::default(),
             pivot_point: TransformPivotPoint::default(),
             visuals: Default::default(),

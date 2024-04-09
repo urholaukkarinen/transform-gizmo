@@ -54,7 +54,7 @@ impl Default for GizmoConfig {
             view_matrix: DMat4::IDENTITY.into(),
             projection_matrix: DMat4::IDENTITY.into(),
             viewport: Rect::NOTHING,
-            modes: enum_set!(GizmoMode::Rotate),
+            modes: GizmoMode::all(),
             orientation: GizmoOrientation::default(),
             pivot_point: TransformPivotPoint::default(),
             snapping: false,
@@ -90,7 +90,7 @@ impl GizmoConfig {
 
     /// Transform orientation of the gizmo
     pub(crate) fn orientation(&self) -> GizmoOrientation {
-        if self.modes.contains(GizmoMode::Scale) {
+        if !self.modes.is_disjoint(GizmoMode::all_scale()) {
             // Scaling currently only works in local orientation,
             // so the configured orientation is ignored.
             GizmoOrientation::Local
@@ -229,11 +229,73 @@ impl PreparedGizmoConfig {
 }
 
 /// Operation mode of a gizmo.
-#[derive(Debug, EnumSetType)]
+#[derive(Debug, EnumSetType, Hash)]
 pub enum GizmoMode {
-    Rotate,
-    Translate,
-    Scale,
+    RotateX,
+    RotateY,
+    RotateZ,
+    RotateView,
+    TranslateX,
+    TranslateY,
+    TranslateZ,
+    TranslateXY,
+    TranslateXZ,
+    TranslateYZ,
+    TranslateView,
+    ScaleX,
+    ScaleY,
+    ScaleZ,
+    ScaleXY,
+    ScaleXZ,
+    ScaleYZ,
+    ScaleUniform,
+    Arcball,
+}
+
+impl GizmoMode {
+    pub fn all() -> EnumSet<GizmoMode> {
+        EnumSet::all()
+    }
+
+    pub const fn all_rotate() -> EnumSet<GizmoMode> {
+        enum_set!(Self::RotateX | Self::RotateY | Self::RotateZ | Self::RotateView)
+    }
+
+    pub const fn all_translate() -> EnumSet<GizmoMode> {
+        enum_set!(
+            Self::TranslateX
+                | Self::TranslateY
+                | Self::TranslateZ
+                | Self::TranslateXY
+                | Self::TranslateXZ
+                | Self::TranslateYZ
+                | Self::TranslateView
+        )
+    }
+
+    pub const fn all_scale() -> EnumSet<GizmoMode> {
+        enum_set!(
+            Self::ScaleX
+                | Self::ScaleY
+                | Self::ScaleZ
+                | Self::ScaleXY
+                | Self::ScaleXZ
+                | Self::ScaleYZ
+                | Self::ScaleUniform
+        )
+    }
+
+    pub fn is_rotate(&self) -> bool {
+        Self::all_rotate().contains(*self)
+    }
+
+    pub fn is_translate(&self) -> bool {
+        Self::all_translate().contains(*self)
+    }
+
+    pub fn is_scale(&self) -> bool {
+        Self::all_scale().contains(*self)
+    }
 }
 
 /// The point in space around which all rotations are centered.
