@@ -231,36 +231,58 @@ impl PreparedGizmoConfig {
 /// Operation mode of a gizmo.
 #[derive(Debug, EnumSetType, Hash)]
 pub enum GizmoMode {
+    /// Rotate around the X axis
     RotateX,
+    /// Rotate around the Y axis
     RotateY,
+    /// Rotate around the Z axis
     RotateZ,
+    /// Rotate around the view forward axis
     RotateView,
+    /// Translate along the X axis
     TranslateX,
+    /// Translate along the Y axis
     TranslateY,
+    /// Translate along the Z axis
     TranslateZ,
+    /// Translate along the XY plane
     TranslateXY,
+    /// Translate along the XZ plane
     TranslateXZ,
+    /// Translate along the YZ plane
     TranslateYZ,
+    /// Translate along the view forward axis
     TranslateView,
+    /// Scale along the X axis
     ScaleX,
+    /// Scale along the Y axis
     ScaleY,
+    /// Scale along the Z axis
     ScaleZ,
+    /// Scale along the XY plane
     ScaleXY,
+    /// Scale along the XZ plane
     ScaleXZ,
+    /// Scale along the YZ plane
     ScaleYZ,
+    /// Scale uniformly in all directions
     ScaleUniform,
+    /// Rotate using an arcball (trackball)
     Arcball,
 }
 
 impl GizmoMode {
+    /// All modes
     pub fn all() -> EnumSet<GizmoMode> {
         EnumSet::all()
     }
 
+    /// All rotation modes
     pub const fn all_rotate() -> EnumSet<GizmoMode> {
         enum_set!(Self::RotateX | Self::RotateY | Self::RotateZ | Self::RotateView)
     }
 
+    /// All translation modes
     pub const fn all_translate() -> EnumSet<GizmoMode> {
         enum_set!(
             Self::TranslateX
@@ -273,6 +295,7 @@ impl GizmoMode {
         )
     }
 
+    /// All scaling modes
     pub const fn all_scale() -> EnumSet<GizmoMode> {
         enum_set!(
             Self::ScaleX
@@ -285,14 +308,17 @@ impl GizmoMode {
         )
     }
 
+    /// Is this mode for rotation
     pub fn is_rotate(&self) -> bool {
         Self::all_rotate().contains(*self)
     }
 
+    /// Is this mode for translation
     pub fn is_translate(&self) -> bool {
         Self::all_translate().contains(*self)
     }
 
+    /// Is this mode for scaling
     pub fn is_scale(&self) -> bool {
         Self::all_scale().contains(*self)
     }
