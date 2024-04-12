@@ -160,7 +160,7 @@ struct GizmoStorage {
 #[allow(clippy::too_many_arguments)]
 fn update_gizmos(
     q_window: Query<&Window, With<PrimaryWindow>>,
-    q_gizmo_camera: Query<(&Camera, &Transform), With<GizmoCamera>>,
+    q_gizmo_camera: Query<(&Camera, &GlobalTransform), With<GizmoCamera>>,
     mut q_targets: Query<(Entity, &mut Transform, &mut GizmoTarget), Without<GizmoCamera>>,
     mouse: Res<ButtonInput<MouseButton>>,
     gizmo_options: Res<GizmoOptions>,
