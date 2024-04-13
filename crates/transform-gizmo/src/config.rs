@@ -30,6 +30,8 @@ pub struct GizmoConfig {
     pub viewport: Rect,
     /// The gizmo's operation modes.
     pub modes: EnumSet<GizmoMode>,
+    /// If set, this mode is forced active and other modes are disabled
+    pub mode_override: Option<GizmoMode>,
     /// Determines the gizmo's orientation relative to global or local axes.
     pub orientation: GizmoOrientation,
     /// Pivot point for transformations
@@ -55,6 +57,7 @@ impl Default for GizmoConfig {
             projection_matrix: DMat4::IDENTITY.into(),
             viewport: Rect::NOTHING,
             modes: GizmoMode::all(),
+            mode_override: None,
             orientation: GizmoOrientation::default(),
             pivot_point: TransformPivotPoint::default(),
             snapping: false,
@@ -90,13 +93,25 @@ impl GizmoConfig {
 
     /// Transform orientation of the gizmo
     pub(crate) fn orientation(&self) -> GizmoOrientation {
-        if !self.modes.is_disjoint(GizmoMode::all_scale()) {
+        if self.is_scaling() {
             // Scaling currently only works in local orientation,
             // so the configured orientation is ignored.
             GizmoOrientation::Local
         } else {
             self.orientation
         }
+    }
+
+    /// Whether the config includes any scaling modes
+    fn is_scaling(&self) -> bool {
+        (self.mode_override.is_none() && !self.modes.is_disjoint(GizmoMode::all_scale()))
+            || self.mode_override.filter(GizmoMode::is_scale).is_some()
+    }
+
+    /// Whether the modes have changed, compared to given other config
+    pub(crate) fn modes_changed(&self, other: &GizmoConfig) -> bool {
+        (self.modes != other.modes && self.mode_override.is_none())
+            || (self.mode_override != other.mode_override)
     }
 }
 
@@ -310,18 +325,88 @@ impl GizmoMode {
 
     /// Is this mode for rotation
     pub fn is_rotate(&self) -> bool {
-        Self::all_rotate().contains(*self)
+        self.kind() == GizmoModeKind::Rotate
     }
 
     /// Is this mode for translation
     pub fn is_translate(&self) -> bool {
-        Self::all_translate().contains(*self)
+        self.kind() == GizmoModeKind::Translate
     }
 
     /// Is this mode for scaling
     pub fn is_scale(&self) -> bool {
-        Self::all_scale().contains(*self)
+        self.kind() == GizmoModeKind::Scale
     }
+
+    /// Axes this mode acts on
+    pub fn axes(&self) -> EnumSet<GizmoDirection> {
+        match self {
+            GizmoMode::RotateX | GizmoMode::TranslateX | GizmoMode::ScaleX => {
+                enum_set!(GizmoDirection::X)
+            }
+            GizmoMode::RotateY | GizmoMode::TranslateY | GizmoMode::ScaleY => {
+                enum_set!(GizmoDirection::Y)
+            }
+            GizmoMode::RotateZ | GizmoMode::TranslateZ | GizmoMode::ScaleZ => {
+                enum_set!(GizmoDirection::Z)
+            }
+            GizmoMode::RotateView | GizmoMode::TranslateView => {
+                enum_set!(GizmoDirection::View)
+            }
+            GizmoMode::ScaleUniform | GizmoMode::Arcball => {
+                enum_set!(GizmoDirection::X | GizmoDirection::Y | GizmoDirection::Z)
+            }
+            GizmoMode::TranslateXY | GizmoMode::ScaleXY => {
+                enum_set!(GizmoDirection::X | GizmoDirection::Y)
+            }
+            GizmoMode::TranslateXZ | GizmoMode::ScaleXZ => {
+                enum_set!(GizmoDirection::X | GizmoDirection::Z)
+            }
+            GizmoMode::TranslateYZ | GizmoMode::ScaleYZ => {
+                enum_set!(GizmoDirection::Y | GizmoDirection::Z)
+            }
+        }
+    }
+
+    /// Returns the modes that match to given axes exactly
+    pub fn all_from_axes(axes: EnumSet<GizmoDirection>) -> EnumSet<GizmoMode> {
+        EnumSet::<GizmoMode>::all()
+            .iter()
+            .filter(|mode| mode.axes() == axes)
+            .collect()
+    }
+
+    pub fn kind(&self) -> GizmoModeKind {
+        match self {
+            GizmoMode::RotateX
+            | GizmoMode::RotateY
+            | GizmoMode::RotateZ
+            | GizmoMode::RotateView => GizmoModeKind::Rotate,
+            GizmoMode::TranslateX
+            | GizmoMode::TranslateY
+            | GizmoMode::TranslateZ
+            | GizmoMode::TranslateXY
+            | GizmoMode::TranslateXZ
+            | GizmoMode::TranslateYZ
+            | GizmoMode::TranslateView => GizmoModeKind::Translate,
+            GizmoMode::ScaleX
+            | GizmoMode::ScaleY
+            | GizmoMode::ScaleZ
+            | GizmoMode::ScaleXY
+            | GizmoMode::ScaleXZ
+            | GizmoMode::ScaleYZ
+            | GizmoMode::ScaleUniform => GizmoModeKind::Scale,
+            GizmoMode::Arcball => GizmoModeKind::Arcball,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
+pub enum GizmoModeKind {
+    Rotate,
+    Translate,
+    Scale,
+    Arcball,
 }
 
 /// The point in space around which all rotations are centered.
@@ -344,7 +429,7 @@ pub enum GizmoOrientation {
     Local,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, EnumSetType, Hash)]
 pub enum GizmoDirection {
     /// Gizmo points in the X-direction
     X,

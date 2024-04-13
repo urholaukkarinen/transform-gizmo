@@ -26,11 +26,12 @@ impl SubGizmoKind for Arcball {
             arcball_radius(&subgizmo.config),
             true,
         );
+
+        subgizmo.state.last_pos = ray.screen_pos;
+
         if !pick_result.picked {
             return None;
         }
-
-        subgizmo.state.last_pos = ray.screen_pos;
 
         Some(f64::MAX)
     }

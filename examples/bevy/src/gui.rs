@@ -3,10 +3,7 @@ use bevy_egui::{
     egui::{self, Layout, RichText, Widget},
     EguiContexts, EguiPlugin,
 };
-use transform_gizmo_bevy::{
-    config::{TransformPivotPoint, DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE},
-    prelude::*,
-};
+use transform_gizmo_bevy::{config::TransformPivotPoint, prelude::*};
 
 pub struct GuiPlugin;
 
@@ -19,27 +16,8 @@ impl Plugin for GuiPlugin {
 fn update_ui(
     mut contexts: EguiContexts,
     mut gizmo_options: ResMut<GizmoOptions>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-
     gizmo_targets: Query<&GizmoTarget>,
 ) {
-    // Snapping is enabled when CTRL is pressed.
-    let snapping = keyboard_input.pressed(KeyCode::ControlLeft);
-    // Accurate snapping is enabled when both CTRL and SHIFT are pressed
-    let accurate_snapping = snapping && keyboard_input.pressed(KeyCode::ShiftLeft);
-
-    gizmo_options.snapping = snapping;
-
-    gizmo_options.snap_angle = DEFAULT_SNAP_ANGLE;
-    gizmo_options.snap_distance = DEFAULT_SNAP_DISTANCE;
-    gizmo_options.snap_scale = DEFAULT_SNAP_SCALE;
-
-    if accurate_snapping {
-        gizmo_options.snap_angle /= 2.0;
-        gizmo_options.snap_distance /= 2.0;
-        gizmo_options.snap_scale /= 2.0;
-    }
-
     egui::SidePanel::left("options").show(contexts.ctx_mut(), |ui| {
         draw_options(ui, &mut gizmo_options);
     });

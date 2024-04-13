@@ -18,6 +18,7 @@ pub(crate) struct TranslationParams {
 
 #[derive(Default, Debug, Copy, Clone)]
 pub(crate) struct TranslationState {
+    start_view_dir: DVec3,
     start_point: DVec3,
     last_point: DVec3,
     current_delta: DVec3,
@@ -46,6 +47,7 @@ impl SubGizmoKind for Translation {
 
         subgizmo.opacity = pick_result.visibility as _;
 
+        subgizmo.state.start_view_dir = subgizmo.config.view_forward();
         subgizmo.state.start_point = pick_result.subgizmo_point;
         subgizmo.state.last_point = pick_result.subgizmo_point;
         subgizmo.state.current_delta = DVec3::ZERO;
@@ -58,6 +60,14 @@ impl SubGizmoKind for Translation {
     }
 
     fn update(subgizmo: &mut TranslationSubGizmo, ray: Ray) -> Option<GizmoResult> {
+        if subgizmo.config.view_forward() != subgizmo.state.start_view_dir {
+            // If the view_forward direction has changed, i.e. camera has rotated,
+            // refresh the subgizmo state by calling pick. Feels a bit hacky, but
+            // fixes the issue where the target starts flying away if camera is rotated
+            // while view plane translation is active.
+            Self::pick(subgizmo, ray);
+        }
+
         let mut new_point = if subgizmo.transform_kind == TransformKind::Axis {
             point_on_axis(subgizmo, ray)
         } else {

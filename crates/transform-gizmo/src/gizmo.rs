@@ -1,5 +1,6 @@
 use ecolor::Rgba;
 use emath::Pos2;
+use enumset::EnumSet;
 use std::ops::{Add, AddAssign, Sub};
 
 use crate::config::{
@@ -50,7 +51,7 @@ impl Gizmo {
 
     /// Updates the configuration used by the gizmo.
     pub fn update_config(&mut self, config: GizmoConfig) {
-        if config.modes != self.config.modes {
+        if config.modes_changed(&self.config) {
             self.subgizmos.clear();
             self.active_subgizmo_id = None;
         }
@@ -123,6 +124,8 @@ impl Gizmo {
             subgizmo.set_focused(false);
         }
 
+        let force_active = self.config.mode_override.is_some();
+
         let pointer_ray = self.pointer_ray(Pos2::from(interaction.cursor_pos));
 
         // If there is no active subgizmo, find which one of them
@@ -132,7 +135,7 @@ impl Gizmo {
                 subgizmo.set_focused(true);
 
                 // If we started dragging from one of the subgizmos, mark it as active.
-                if interaction.drag_started {
+                if interaction.drag_started || force_active {
                     self.active_subgizmo_id = Some(subgizmo.id());
                     self.target_start_transforms = targets.to_vec();
                     self.gizmo_start_transform = self.config.as_transform();
@@ -143,7 +146,7 @@ impl Gizmo {
         let mut result = None;
 
         if let Some(subgizmo) = self.active_subgizmo_mut() {
-            if interaction.dragging {
+            if interaction.dragging || force_active {
                 subgizmo.set_active(true);
                 subgizmo.set_focused(true);
                 result = subgizmo.update(pointer_ray);
@@ -305,6 +308,15 @@ impl Gizmo {
 
     /// Picks the subgizmo that is closest to the given world space ray.
     fn pick_subgizmo(&mut self, ray: Ray) -> Option<&mut SubGizmo> {
+        // If mode is overridden, assume we only have that mode, and choose it.
+        if self.config.mode_override.is_some() {
+            return self.subgizmos.first_mut().and_then(|subgizmo| {
+                subgizmo.pick(ray);
+
+                Some(subgizmo)
+            });
+        }
+
         self.subgizmos
             .iter_mut()
             .filter_map(|subgizmo| subgizmo.pick(ray).map(|t| (t, subgizmo)))
@@ -316,9 +328,17 @@ impl Gizmo {
             .map(|(_, subgizmo)| subgizmo)
     }
 
+    /// Get all modes that are currently enabled
+    fn enabled_modes(&self) -> EnumSet<GizmoMode> {
+        self.config
+            .mode_override
+            .map(EnumSet::only)
+            .unwrap_or(self.config.modes)
+    }
+
     /// Adds rotation subgizmos
     fn add_rotation(&mut self) {
-        let modes = self.config.modes;
+        let modes = self.enabled_modes();
 
         if modes.contains(GizmoMode::RotateX) {
             self.subgizmos.push(
@@ -376,7 +396,7 @@ impl Gizmo {
 
     /// Adds translation subgizmos
     fn add_translation(&mut self) {
-        let modes = self.config.modes;
+        let modes = self.enabled_modes();
 
         if modes.contains(GizmoMode::TranslateX) {
             self.subgizmos.push(
@@ -479,7 +499,7 @@ impl Gizmo {
 
     /// Adds scale subgizmos
     fn add_scale(&mut self) {
-        let modes = self.config.modes;
+        let modes = self.enabled_modes();
 
         if modes.contains(GizmoMode::ScaleX) {
             self.subgizmos.push(

@@ -34,7 +34,8 @@ use bevy::window::PrimaryWindow;
 use bevy_math::{DQuat, DVec3};
 use render::{DrawDataHandles, TransformGizmoRenderPlugin};
 use transform_gizmo::config::{
-    TransformPivotPoint, DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE,
+    GizmoModeKind, TransformPivotPoint, DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE,
+    DEFAULT_SNAP_SCALE,
 };
 
 pub use transform_gizmo::{
@@ -60,7 +61,10 @@ impl Plugin for TransformGizmoPlugin {
             .init_resource::<GizmoOptions>()
             .init_resource::<GizmoStorage>()
             .add_plugins(TransformGizmoRenderPlugin)
-            .add_systems(Last, (update_gizmos, draw_gizmos, cleanup_old_data).chain());
+            .add_systems(
+                Last,
+                (handle_hotkeys, update_gizmos, draw_gizmos, cleanup_old_data).chain(),
+            );
     }
 }
 
@@ -87,6 +91,9 @@ pub struct GizmoOptions {
     /// using a single gizmo. If `false`, each target
     /// has its own gizmo.
     pub group_targets: bool,
+
+    /// If set, this mode is forced active and other modes are disabled
+    pub mode_override: Option<GizmoMode>,
     /// Allows you to provide a custom viewport rect, which will be used to
     /// scale the cursor position. By default, this is set to `None` which means
     /// the full window size is used as the viewport.
@@ -105,6 +112,7 @@ impl Default for GizmoOptions {
             snap_distance: DEFAULT_SNAP_DISTANCE,
             snap_scale: DEFAULT_SNAP_SCALE,
             group_targets: true,
+            mode_override: None,
             viewport_rect: None,
         }
     }
@@ -159,6 +167,112 @@ struct GizmoStorage {
     target_entities: Vec<Entity>,
     entity_gizmo_map: HashMap<Entity, Uuid>,
     gizmos: HashMap<Uuid, Gizmo>,
+}
+
+fn handle_hotkeys(
+    mut gizmo_options: ResMut<GizmoOptions>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut axes: Local<EnumSet<GizmoDirection>>,
+) {
+    // Snapping is enabled when CTRL is pressed.
+    let snapping = keyboard_input.pressed(KeyCode::ControlLeft);
+    // Accurate snapping is enabled when both CTRL and SHIFT are pressed
+    let accurate_snapping = snapping && keyboard_input.pressed(KeyCode::ShiftLeft);
+
+    gizmo_options.snapping = snapping;
+
+    gizmo_options.snap_angle = DEFAULT_SNAP_ANGLE;
+    gizmo_options.snap_distance = DEFAULT_SNAP_DISTANCE;
+    gizmo_options.snap_scale = DEFAULT_SNAP_SCALE;
+
+    if accurate_snapping {
+        gizmo_options.snap_angle /= 2.0;
+        gizmo_options.snap_distance /= 2.0;
+        gizmo_options.snap_scale /= 2.0;
+    }
+
+    // Modifier for inverting the mode axis selection.
+    // For example, X would force X axis, but Shift-X would force Y and Z axes.
+    let invert_modifier = keyboard_input.pressed(KeyCode::ShiftLeft);
+
+    let mode_override = &mut gizmo_options.mode_override;
+
+    let mut new_axes = EnumSet::empty();
+    if keyboard_input.just_pressed(KeyCode::KeyX) {
+        new_axes = if invert_modifier {
+            enum_set!(GizmoDirection::Y | GizmoDirection::Z)
+        } else {
+            enum_set!(GizmoDirection::X)
+        };
+    };
+
+    if keyboard_input.just_pressed(KeyCode::KeyY) {
+        new_axes = if !invert_modifier {
+            enum_set!(GizmoDirection::Y)
+        } else {
+            enum_set!(GizmoDirection::X | GizmoDirection::Z)
+        };
+    };
+
+    if keyboard_input.just_pressed(KeyCode::KeyZ) {
+        new_axes = if !invert_modifier {
+            enum_set!(GizmoDirection::Z)
+        } else {
+            enum_set!(GizmoDirection::X | GizmoDirection::Y)
+        };
+    };
+
+    // Replace the previously chosen axes, if any
+    if !new_axes.is_empty() {
+        if *axes == new_axes {
+            axes.clear();
+        } else {
+            *axes = new_axes;
+        }
+    }
+
+    // If we do not have any mode overridden at this point, do not force the axes either.
+    // This means you will have to first choose the mode and only then choose the axes.
+    if mode_override.is_none() {
+        axes.clear();
+    }
+
+    let rotate_hotkey_pressed = keyboard_input.just_pressed(KeyCode::KeyR);
+    let translate_hotkey_pressed = keyboard_input.just_pressed(KeyCode::KeyT);
+    let scale_hotkey_pressed = keyboard_input.just_pressed(KeyCode::KeyS);
+
+    // Determine which mode we should switch to based on what is currently chosen
+    // and which hotkey we just pressed, if any.
+    let mode_kind = if rotate_hotkey_pressed {
+        // Rotation hotkey toggles between arcball and normal rotation
+        if mode_override.filter(GizmoMode::is_rotate).is_some() {
+            Some(GizmoModeKind::Arcball)
+        } else {
+            Some(GizmoModeKind::Rotate)
+        }
+    } else if translate_hotkey_pressed {
+        Some(GizmoModeKind::Translate)
+    } else if scale_hotkey_pressed {
+        Some(GizmoModeKind::Scale)
+    } else {
+        mode_override.map(|mode| mode.kind())
+    };
+
+    *mode_override = mode_kind.and_then(|kind| {
+        // Find a mode that matches chosen axes and mode kind.
+        GizmoMode::all_from_axes(*axes)
+            .iter()
+            .find(|mode| mode.kind() == kind)
+            .or_else(|| {
+                // If nothing matches, choose the default mode.
+                Some(match kind {
+                    GizmoModeKind::Rotate => GizmoMode::RotateView,
+                    GizmoModeKind::Translate => GizmoMode::TranslateView,
+                    GizmoModeKind::Scale => GizmoMode::ScaleUniform,
+                    GizmoModeKind::Arcball => GizmoMode::Arcball,
+                })
+            })
+    });
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -232,6 +346,7 @@ fn update_gizmos(
         projection_matrix: projection_matrix.as_dmat4().into(),
         viewport,
         modes: gizmo_options.gizmo_modes,
+        mode_override: gizmo_options.mode_override,
         orientation: gizmo_options.gizmo_orientation,
         pivot_point: gizmo_options.pivot_point,
         visuals: gizmo_options.visuals,
