@@ -172,6 +172,7 @@ struct GizmoStorage {
 fn handle_hotkeys(
     mut gizmo_options: ResMut<GizmoOptions>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    mouse_input: Res<ButtonInput<MouseButton>>,
     mut axes: Local<EnumSet<GizmoDirection>>,
 ) {
     // Snapping is enabled when CTRL is pressed.
@@ -273,6 +274,12 @@ fn handle_hotkeys(
                 })
             })
     });
+
+    if mouse_input.any_just_pressed([MouseButton::Left, MouseButton::Right])
+        || keyboard_input.just_pressed(KeyCode::Escape)
+    {
+        *mode_override = None;
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
