@@ -80,7 +80,11 @@ pub struct GizmoOptions {
     /// Look and feel of the gizmo.
     pub visuals: GizmoVisuals,
     /// Whether snapping is enabled in the gizmo transformations.
+    /// This may be overwritten with hotkeys ([`GizmoHotkeys::enable_snapping`]).
     pub snapping: bool,
+    /// When snapping is enabled, snap twice as often.
+    /// This may be overwritten with hotkeys ([`GizmoHotkeys::enable_accurate_mode`]).
+    pub accurate_mode: bool,
     /// Angle increment for snapping rotations, in radians.
     pub snap_angle: f32,
     /// Distance increment for snapping translations.
@@ -91,9 +95,11 @@ pub struct GizmoOptions {
     /// using a single gizmo. If `false`, each target
     /// has its own gizmo.
     pub group_targets: bool,
-
-    /// If set, this mode is forced active and other modes are disabled
+    /// If set, this mode is forced active and other modes are disabled.
+    /// This may be overwritten with hotkeys.
     pub mode_override: Option<GizmoMode>,
+    /// Hotkeys for easier interaction with the gizmo.
+    pub hotkeys: Option<GizmoHotkeys>,
     /// Allows you to provide a custom viewport rect, which will be used to
     /// scale the cursor position. By default, this is set to `None` which means
     /// the full window size is used as the viewport.
@@ -108,11 +114,58 @@ impl Default for GizmoOptions {
             pivot_point: TransformPivotPoint::default(),
             visuals: Default::default(),
             snapping: false,
+            accurate_mode: false,
             snap_angle: DEFAULT_SNAP_ANGLE,
             snap_distance: DEFAULT_SNAP_DISTANCE,
             snap_scale: DEFAULT_SNAP_SCALE,
             group_targets: true,
             mode_override: None,
+            hotkeys: Some(GizmoHotkeys::default()),
+        }
+    }
+}
+
+/// Hotkeys for easier interaction with the gizmo.
+#[derive(Debug, Copy, Clone)]
+pub struct GizmoHotkeys {
+    /// When pressed, transformations snap to according to snap values
+    /// specified in [`GizmoOptions`].
+    pub enable_snapping: Option<KeyCode>,
+    /// When pressed, snapping is twice as accurate.
+    pub enable_accurate_mode: Option<KeyCode>,
+    /// Toggles gizmo to rotate-only mode.
+    pub toggle_rotate: Option<KeyCode>,
+    /// Toggles gizmo to translate-only mode.
+    pub toggle_translate: Option<KeyCode>,
+    /// Toggles gizmo to scale-only mode.
+    pub toggle_scale: Option<KeyCode>,
+    /// Limits overridden gizmo mode to X axis only.
+    pub toggle_x: Option<KeyCode>,
+    /// Limits overridden gizmo mode to Y axis only.
+    pub toggle_y: Option<KeyCode>,
+    /// Limits overridden gizmo mode to Z axis only.
+    pub toggle_z: Option<KeyCode>,
+    /// When pressed, deactivates the gizmo if it
+    /// was active.
+    pub deactivate_gizmo: Option<KeyCode>,
+    /// If true, a mouse click deactivates the gizmo if it
+    /// was active.
+    pub mouse_click_deactivates: bool,
+}
+
+impl Default for GizmoHotkeys {
+    fn default() -> Self {
+        Self {
+            enable_snapping: Some(KeyCode::ControlLeft),
+            enable_accurate_mode: Some(KeyCode::ShiftLeft),
+            toggle_rotate: Some(KeyCode::KeyR),
+            toggle_translate: Some(KeyCode::KeyG),
+            toggle_scale: Some(KeyCode::KeyS),
+            toggle_x: Some(KeyCode::KeyX),
+            toggle_y: Some(KeyCode::KeyY),
+            toggle_z: Some(KeyCode::KeyZ),
+            deactivate_gizmo: Some(KeyCode::Escape),
+            mouse_click_deactivates: true,
             viewport_rect: None,
         }
     }
@@ -175,21 +228,17 @@ fn handle_hotkeys(
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut axes: Local<EnumSet<GizmoDirection>>,
 ) {
-    // Snapping is enabled when CTRL is pressed.
-    let snapping = keyboard_input.pressed(KeyCode::ControlLeft);
-    // Accurate snapping is enabled when both CTRL and SHIFT are pressed
-    let accurate_snapping = snapping && keyboard_input.pressed(KeyCode::ShiftLeft);
+    let Some(hotkeys) = gizmo_options.hotkeys else {
+        // Hotkeys are disabled.
+        return;
+    };
 
-    gizmo_options.snapping = snapping;
+    if let Some(snapping_key) = hotkeys.enable_snapping {
+        gizmo_options.snapping = keyboard_input.pressed(snapping_key);
+    }
 
-    gizmo_options.snap_angle = DEFAULT_SNAP_ANGLE;
-    gizmo_options.snap_distance = DEFAULT_SNAP_DISTANCE;
-    gizmo_options.snap_scale = DEFAULT_SNAP_SCALE;
-
-    if accurate_snapping {
-        gizmo_options.snap_angle /= 2.0;
-        gizmo_options.snap_distance /= 2.0;
-        gizmo_options.snap_scale /= 2.0;
+    if let Some(accurate_mode_key) = hotkeys.enable_accurate_mode {
+        gizmo_options.accurate_mode = keyboard_input.pressed(accurate_mode_key);
     }
 
     // Modifier for inverting the mode axis selection.
@@ -198,8 +247,21 @@ fn handle_hotkeys(
 
     let mode_override = &mut gizmo_options.mode_override;
 
+    let x_hotkey_pressed = hotkeys
+        .toggle_x
+        .is_some_and(|key| keyboard_input.just_pressed(key));
+
+    let y_hotkey_pressed = hotkeys
+        .toggle_y
+        .is_some_and(|key| keyboard_input.just_pressed(key));
+
+    let z_hotkey_pressed = hotkeys
+        .toggle_z
+        .is_some_and(|key| keyboard_input.just_pressed(key));
+
     let mut new_axes = EnumSet::empty();
-    if keyboard_input.just_pressed(KeyCode::KeyX) {
+
+    if x_hotkey_pressed {
         new_axes = if invert_modifier {
             enum_set!(GizmoDirection::Y | GizmoDirection::Z)
         } else {
@@ -207,7 +269,7 @@ fn handle_hotkeys(
         };
     };
 
-    if keyboard_input.just_pressed(KeyCode::KeyY) {
+    if y_hotkey_pressed {
         new_axes = if !invert_modifier {
             enum_set!(GizmoDirection::Y)
         } else {
@@ -215,7 +277,7 @@ fn handle_hotkeys(
         };
     };
 
-    if keyboard_input.just_pressed(KeyCode::KeyZ) {
+    if z_hotkey_pressed {
         new_axes = if !invert_modifier {
             enum_set!(GizmoDirection::Z)
         } else {
@@ -238,9 +300,15 @@ fn handle_hotkeys(
         axes.clear();
     }
 
-    let rotate_hotkey_pressed = keyboard_input.just_pressed(KeyCode::KeyR);
-    let translate_hotkey_pressed = keyboard_input.just_pressed(KeyCode::KeyT);
-    let scale_hotkey_pressed = keyboard_input.just_pressed(KeyCode::KeyS);
+    let rotate_hotkey_pressed = hotkeys
+        .toggle_rotate
+        .is_some_and(|key| keyboard_input.just_pressed(key));
+    let translate_hotkey_pressed = hotkeys
+        .toggle_translate
+        .is_some_and(|key| keyboard_input.just_pressed(key));
+    let scale_hotkey_pressed = hotkeys
+        .toggle_scale
+        .is_some_and(|key| keyboard_input.just_pressed(key));
 
     // Determine which mode we should switch to based on what is currently chosen
     // and which hotkey we just pressed, if any.
@@ -275,8 +343,12 @@ fn handle_hotkeys(
             })
     });
 
-    if mouse_input.any_just_pressed([MouseButton::Left, MouseButton::Right])
-        || keyboard_input.just_pressed(KeyCode::Escape)
+    // Check if gizmo should be deactivated
+    if (hotkeys.mouse_click_deactivates
+        && mouse_input.any_just_pressed([MouseButton::Left, MouseButton::Right]))
+        || hotkeys
+            .deactivate_gizmo
+            .is_some_and(|key| keyboard_input.just_pressed(key))
     {
         *mode_override = None;
     }
@@ -348,6 +420,16 @@ fn update_gizmos(
 
     let view_matrix = camera_transform.compute_matrix().inverse();
 
+    let mut snap_angle = gizmo_options.snap_angle;
+    let mut snap_distance = gizmo_options.snap_distance;
+    let mut snap_scale = gizmo_options.snap_scale;
+
+    if gizmo_options.accurate_mode {
+        snap_angle /= 2.0;
+        snap_distance /= 2.0;
+        snap_scale /= 2.0;
+    }
+
     let gizmo_config = GizmoConfig {
         view_matrix: view_matrix.as_dmat4().into(),
         projection_matrix: projection_matrix.as_dmat4().into(),
@@ -358,9 +440,9 @@ fn update_gizmos(
         pivot_point: gizmo_options.pivot_point,
         visuals: gizmo_options.visuals,
         snapping: gizmo_options.snapping,
-        snap_angle: gizmo_options.snap_angle,
-        snap_distance: gizmo_options.snap_distance,
-        snap_scale: gizmo_options.snap_scale,
+        snap_angle,
+        snap_distance,
+        snap_scale,
         pixels_per_point: scale_factor,
     };
 
