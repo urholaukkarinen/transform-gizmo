@@ -177,9 +177,25 @@ fn update_gizmos(
 
     let scale_factor = window.scale_factor();
 
-    let Ok((camera, camera_transform)) = q_gizmo_camera.get_single() else {
-        bevy::log::warn!("Only one camera with a GizmoCamera component is supported.");
-        return;
+    let (camera, camera_transform) = {
+        let mut active_camera = None;
+
+        for camera in q_gizmo_camera.iter() {
+            if !camera.0.is_active {
+                continue;
+            }
+            if active_camera.is_some() {
+                // multiple active cameras found, warn and skip
+                bevy::log::warn!("Only one camera with a GizmoCamera component is supported.");
+                return;
+            }
+            active_camera = Some(camera);
+        }
+
+        match active_camera {
+            Some(camera) => camera,
+            None => return, // no active cameras in the scene
+        }
     };
 
     let Some(viewport) = camera.logical_viewport_rect() else {
