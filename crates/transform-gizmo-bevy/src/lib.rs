@@ -65,10 +65,9 @@ impl Plugin for TransformGizmoPlugin {
 }
 
 /// Various options for configuring the transform gizmos.
-/// Many of these options are
 #[derive(Resource, Copy, Clone, Debug)]
 pub struct GizmoOptions {
-    /// Modes to use in the gizmos
+    /// Modes to use in the gizmos.
     pub gizmo_modes: EnumSet<GizmoMode>,
     /// Orientation of the gizmo. This affects the behaviour of transformations.
     pub gizmo_orientation: GizmoOrientation,
@@ -88,6 +87,10 @@ pub struct GizmoOptions {
     /// using a single gizmo. If `false`, each target
     /// has its own gizmo.
     pub group_targets: bool,
+    /// Allows you to provide a custom viewport rect, which will be used to
+    /// scale the cursor position. By default, this is set to `None` which means
+    /// the full window size is used as the viewport.
+    pub viewport_rect: Option<bevy_math::Rect>,
 }
 
 impl Default for GizmoOptions {
@@ -102,6 +105,7 @@ impl Default for GizmoOptions {
             snap_distance: DEFAULT_SNAP_DISTANCE,
             snap_scale: DEFAULT_SNAP_SCALE,
             group_targets: true,
+            viewport_rect: None,
         }
     }
 }
@@ -166,13 +170,14 @@ fn update_gizmos(
     gizmo_options: Res<GizmoOptions>,
     mut gizmo_storage: ResMut<GizmoStorage>,
     mut last_cursor_pos: Local<Vec2>,
+    mut last_scaled_cursor_pos: Local<Vec2>,
 ) {
     let Ok(window) = q_window.get_single() else {
         // No primary window found.
         return;
     };
 
-    let cursor_pos = window.cursor_position().unwrap_or_else(|| *last_cursor_pos);
+    let mut cursor_pos = window.cursor_position().unwrap_or_else(|| *last_cursor_pos);
     *last_cursor_pos = cursor_pos;
 
     let scale_factor = window.scale_factor();
@@ -200,6 +205,17 @@ fn update_gizmos(
 
     let Some(viewport) = camera.logical_viewport_rect() else {
         return;
+    };
+
+    // scale up the cursor pos from the custom viewport rect, if provided
+    if let Some(custom_viewport) = gizmo_options.viewport_rect {
+        let vp_ratio = viewport.size() / custom_viewport.size();
+        let mut scaled_cursor_pos = (cursor_pos - (custom_viewport.min - viewport.min)) * vp_ratio;
+        if !viewport.contains(scaled_cursor_pos) {
+            scaled_cursor_pos = *last_scaled_cursor_pos;
+        }
+        *last_scaled_cursor_pos = scaled_cursor_pos;
+        cursor_pos = scaled_cursor_pos;
     };
 
     let viewport = Rect::from_min_max(
