@@ -75,6 +75,8 @@ pub struct GizmoOptions {
     pub pivot_point: TransformPivotPoint,
     /// Look and feel of the gizmo.
     pub visuals: GizmoVisuals,
+    /// Controls the visibility of the sub gizmos
+    pub gizmo_visibility: GizmoVisibility,
     /// Whether snapping is enabled in the gizmo transformations.
     pub snapping: bool,
     /// Angle increment for snapping rotations, in radians.
@@ -100,6 +102,7 @@ impl Default for GizmoOptions {
             gizmo_orientation: GizmoOrientation::default(),
             pivot_point: TransformPivotPoint::default(),
             visuals: Default::default(),
+            gizmo_visibility: GizmoVisibility::default(),
             snapping: false,
             snap_angle: DEFAULT_SNAP_ANGLE,
             snap_distance: DEFAULT_SNAP_DISTANCE,
@@ -235,6 +238,7 @@ fn update_gizmos(
         orientation: gizmo_options.gizmo_orientation,
         pivot_point: gizmo_options.pivot_point,
         visuals: gizmo_options.visuals,
+        gizmo_visibility: gizmo_options.gizmo_visibility,
         snapping: gizmo_options.snapping,
         snap_angle: gizmo_options.snap_angle,
         snap_distance: gizmo_options.snap_distance,

@@ -50,7 +50,9 @@ impl Gizmo {
 
     /// Updates the configuration used by the gizmo.
     pub fn update_config(&mut self, config: GizmoConfig) {
-        if config.modes != self.config.modes {
+        if config.modes != self.config.modes
+            || config.gizmo_visibility != self.config.gizmo_visibility
+        {
             self.subgizmos.clear();
             self.active_subgizmo_id = None;
         }
@@ -328,141 +330,188 @@ impl Gizmo {
 
     /// Adds rotation subgizmos
     fn add_rotation(&mut self) {
-        self.subgizmos.extend([
-            RotationSubGizmo::new(
-                self.config,
-                RotationParams {
-                    direction: GizmoDirection::X,
-                },
-            )
-            .into(),
-            RotationSubGizmo::new(
-                self.config,
-                RotationParams {
-                    direction: GizmoDirection::Y,
-                },
-            )
-            .into(),
-            RotationSubGizmo::new(
-                self.config,
-                RotationParams {
-                    direction: GizmoDirection::Z,
-                },
-            )
-            .into(),
-            RotationSubGizmo::new(
-                self.config,
-                RotationParams {
-                    direction: GizmoDirection::View,
-                },
-            )
-            .into(),
-        ]);
-
-        self.subgizmos
-            .push(ArcballSubGizmo::new(self.config, ()).into());
+        self.subgizmos.extend(
+            [
+                (
+                    GizmoDirection::X,
+                    RotationParams {
+                        direction: GizmoDirection::X,
+                    },
+                ),
+                (
+                    GizmoDirection::Y,
+                    RotationParams {
+                        direction: GizmoDirection::Y,
+                    },
+                ),
+                (
+                    GizmoDirection::Z,
+                    RotationParams {
+                        direction: GizmoDirection::Z,
+                    },
+                ),
+                (
+                    GizmoDirection::View,
+                    RotationParams {
+                        direction: GizmoDirection::View,
+                    },
+                ),
+            ]
+            .iter()
+            .filter_map(|&(direction, params)| {
+                if self
+                    .config
+                    .gizmo_visibility
+                    .rotation_arc
+                    .is_active(direction)
+                {
+                    Some(RotationSubGizmo::new(self.config, params).into())
+                } else {
+                    None
+                }
+            }),
+        );
+        if self.config.gizmo_visibility.rotation_arc_ball {
+            self.subgizmos
+                .push(ArcballSubGizmo::new(self.config, ()).into());
+        }
     }
 
     /// Adds translation subgizmos
     fn add_translation(&mut self) {
-        self.subgizmos.extend([
-            TranslationSubGizmo::new(
-                self.config,
-                TranslationParams {
-                    direction: GizmoDirection::X,
-                    transform_kind: TransformKind::Axis,
-                },
-            )
-            .into(),
-            TranslationSubGizmo::new(
-                self.config,
-                TranslationParams {
-                    direction: GizmoDirection::Y,
-                    transform_kind: TransformKind::Axis,
-                },
-            )
-            .into(),
-            TranslationSubGizmo::new(
-                self.config,
-                TranslationParams {
-                    direction: GizmoDirection::Z,
-                    transform_kind: TransformKind::Axis,
-                },
-            )
-            .into(),
-            TranslationSubGizmo::new(
-                self.config,
-                TranslationParams {
-                    direction: GizmoDirection::View,
-                    transform_kind: TransformKind::Plane,
-                },
-            )
-            .into(),
-        ]);
+        self.subgizmos.extend(
+            [
+                (
+                    GizmoDirection::X,
+                    TranslationParams {
+                        direction: GizmoDirection::X,
+                        transform_kind: TransformKind::Axis,
+                    },
+                ),
+                (
+                    GizmoDirection::Y,
+                    TranslationParams {
+                        direction: GizmoDirection::Y,
+                        transform_kind: TransformKind::Axis,
+                    },
+                ),
+                (
+                    GizmoDirection::Z,
+                    TranslationParams {
+                        direction: GizmoDirection::Z,
+                        transform_kind: TransformKind::Axis,
+                    },
+                ),
+                (
+                    GizmoDirection::View,
+                    TranslationParams {
+                        direction: GizmoDirection::View,
+                        transform_kind: TransformKind::Plane,
+                    },
+                ),
+            ]
+            .iter()
+            .filter_map(|&(direction, params)| {
+                if self
+                    .config
+                    .gizmo_visibility
+                    .translation_arrow
+                    .is_active(direction)
+                {
+                    Some(TranslationSubGizmo::new(self.config, params).into())
+                } else {
+                    None
+                }
+            }),
+        );
 
         // Plane subgizmos are not added when both translation and scaling are enabled.
         if !self.config.modes.contains(GizmoMode::Scale) {
-            self.subgizmos.extend([
-                TranslationSubGizmo::new(
-                    self.config,
-                    TranslationParams {
-                        direction: GizmoDirection::X,
-                        transform_kind: TransformKind::Plane,
-                    },
-                )
-                .into(),
-                TranslationSubGizmo::new(
-                    self.config,
-                    TranslationParams {
-                        direction: GizmoDirection::Y,
-                        transform_kind: TransformKind::Plane,
-                    },
-                )
-                .into(),
-                TranslationSubGizmo::new(
-                    self.config,
-                    TranslationParams {
-                        direction: GizmoDirection::Z,
-                        transform_kind: TransformKind::Plane,
-                    },
-                )
-                .into(),
-            ]);
+            self.subgizmos.extend(
+                [
+                    (
+                        GizmoDirection::X,
+                        TranslationParams {
+                            direction: GizmoDirection::X,
+                            transform_kind: TransformKind::Plane,
+                        },
+                    ),
+                    (
+                        GizmoDirection::Y,
+                        TranslationParams {
+                            direction: GizmoDirection::Y,
+                            transform_kind: TransformKind::Plane,
+                        },
+                    ),
+                    (
+                        GizmoDirection::Z,
+                        TranslationParams {
+                            direction: GizmoDirection::Z,
+                            transform_kind: TransformKind::Plane,
+                        },
+                    ),
+                ]
+                .iter()
+                .filter_map(|&(direction, params)| {
+                    if self
+                        .config
+                        .gizmo_visibility
+                        .translation_plane
+                        .is_active(direction)
+                    {
+                        Some(TranslationSubGizmo::new(self.config, params).into())
+                    } else {
+                        None
+                    }
+                }),
+            );
         }
     }
 
     /// Adds scale subgizmos
     fn add_scale(&mut self) {
-        self.subgizmos.extend([
-            ScaleSubGizmo::new(
-                self.config,
-                ScaleParams {
-                    direction: GizmoDirection::X,
-                    transform_kind: TransformKind::Axis,
-                },
-            )
-            .into(),
-            ScaleSubGizmo::new(
-                self.config,
-                ScaleParams {
-                    direction: GizmoDirection::Y,
-                    transform_kind: TransformKind::Axis,
-                },
-            )
-            .into(),
-            ScaleSubGizmo::new(
-                self.config,
-                ScaleParams {
-                    direction: GizmoDirection::Z,
-                    transform_kind: TransformKind::Axis,
-                },
-            )
-            .into(),
-        ]);
+        self.subgizmos.extend(
+            [
+                (
+                    GizmoDirection::X,
+                    ScaleParams {
+                        direction: GizmoDirection::X,
+                        transform_kind: TransformKind::Axis,
+                    },
+                ),
+                (
+                    GizmoDirection::Y,
+                    ScaleParams {
+                        direction: GizmoDirection::Y,
+                        transform_kind: TransformKind::Axis,
+                    },
+                ),
+                (
+                    GizmoDirection::Z,
+                    ScaleParams {
+                        direction: GizmoDirection::Z,
+                        transform_kind: TransformKind::Axis,
+                    },
+                ),
+            ]
+            .iter()
+            .filter_map(|&(direction, params)| {
+                if self
+                    .config
+                    .gizmo_visibility
+                    .scaling_arrow
+                    .is_active(direction)
+                {
+                    Some(ScaleSubGizmo::new(self.config, params).into())
+                } else {
+                    None
+                }
+            }),
+        );
 
         // Uniform scaling subgizmo is added when only scaling is enabled.
         // Otherwise it would overlap with rotation or translation subgizmos.
-        if self.config.modes.len() == 1 {
+        if self.config.modes.len() == 1 && self.config.gizmo_visibility.scaling_plane.view {
             self.subgizmos.push(
                 ScaleSubGizmo::new(
                     self.config,
@@ -477,32 +526,44 @@ impl Gizmo {
 
         // Plane subgizmos are not added when both translation and scaling are enabled.
         if !self.config.modes.contains(GizmoMode::Translate) {
-            self.subgizmos.extend([
-                ScaleSubGizmo::new(
-                    self.config,
-                    ScaleParams {
-                        direction: GizmoDirection::X,
-                        transform_kind: TransformKind::Plane,
-                    },
-                )
-                .into(),
-                ScaleSubGizmo::new(
-                    self.config,
-                    ScaleParams {
-                        direction: GizmoDirection::Y,
-                        transform_kind: TransformKind::Plane,
-                    },
-                )
-                .into(),
-                ScaleSubGizmo::new(
-                    self.config,
-                    ScaleParams {
-                        direction: GizmoDirection::Z,
-                        transform_kind: TransformKind::Plane,
-                    },
-                )
-                .into(),
-            ]);
+            self.subgizmos.extend(
+                [
+                    (
+                        GizmoDirection::X,
+                        ScaleParams {
+                            direction: GizmoDirection::X,
+                            transform_kind: TransformKind::Plane,
+                        },
+                    ),
+                    (
+                        GizmoDirection::Y,
+                        ScaleParams {
+                            direction: GizmoDirection::Y,
+                            transform_kind: TransformKind::Plane,
+                        },
+                    ),
+                    (
+                        GizmoDirection::Z,
+                        ScaleParams {
+                            direction: GizmoDirection::Z,
+                            transform_kind: TransformKind::Plane,
+                        },
+                    ),
+                ]
+                .iter()
+                .filter_map(|&(direction, params)| {
+                    if self
+                        .config
+                        .gizmo_visibility
+                        .translation_plane
+                        .is_active(direction)
+                    {
+                        Some(ScaleSubGizmo::new(self.config, params).into())
+                    } else {
+                        None
+                    }
+                }),
+            )
         }
     }
 

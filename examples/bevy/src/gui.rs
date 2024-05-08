@@ -197,6 +197,68 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
         });
 
     ui.separator();
+    ui.heading("Helper Visibility");
+    ui.separator();
+
+    egui::Grid::new("visibility_grid")
+        .num_columns(5)
+        .show(ui, |ui| {
+            ui.label("Rotation");
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.rotation_arc.x, "X").ui(ui);
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.rotation_arc.y, "Y").ui(ui);
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.rotation_arc.z, "Z").ui(ui);
+            egui::Checkbox::new(
+                &mut gizmo_options.gizmo_visibility.rotation_arc.view,
+                "View",
+            )
+            .ui(ui);
+            ui.end_row();
+
+            ui.label("Arc Ball");
+            egui::Checkbox::without_text(&mut gizmo_options.gizmo_visibility.rotation_arc_ball)
+                .ui(ui);
+            ui.end_row();
+
+            ui.label("Translation Arrow");
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.translation_arrow.x, "X")
+                .ui(ui);
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.translation_arrow.y, "Y")
+                .ui(ui);
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.translation_arrow.z, "Z")
+                .ui(ui);
+            egui::Checkbox::new(
+                &mut gizmo_options.gizmo_visibility.translation_arrow.view,
+                "View",
+            )
+            .ui(ui);
+            ui.end_row();
+
+            ui.label("Translation Plane");
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.translation_plane.x, "X")
+                .ui(ui);
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.translation_plane.y, "Y")
+                .ui(ui);
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.translation_plane.z, "Z")
+                .ui(ui);
+            ui.end_row();
+
+            ui.label("Scaling Arrow");
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.scaling_arrow.x, "X").ui(ui);
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.scaling_arrow.y, "Y").ui(ui);
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.scaling_arrow.z, "Z").ui(ui);
+            egui::Checkbox::new(
+                &mut gizmo_options.gizmo_visibility.scaling_arrow.view,
+                "View",
+            )
+            .ui(ui);
+            ui.end_row();
+
+            ui.label("Scaling Plane");
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.scaling_plane.x, "X").ui(ui);
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.scaling_plane.y, "Y").ui(ui);
+            egui::Checkbox::new(&mut gizmo_options.gizmo_visibility.scaling_plane.z, "Z").ui(ui);
+            ui.end_row();
+        });
 
     ui.with_layout(Layout::bottom_up(egui::Align::Center), |ui| {
         egui::Hyperlink::from_label_and_url("(source code)", "https://github.com/urholaukkarinen/transform-gizmo/blob/main/examples/bevy/src/main.rs").ui(ui);

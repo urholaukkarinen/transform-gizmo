@@ -16,6 +16,36 @@ pub const DEFAULT_SNAP_DISTANCE: f32 = 0.1;
 /// The default snapping distance for scale
 pub const DEFAULT_SNAP_SCALE: f32 = 0.1;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AxisConfig {
+    pub x: bool,
+    pub y: bool,
+    pub z: bool,
+    pub view: bool,
+}
+
+impl Default for AxisConfig {
+    fn default() -> AxisConfig {
+        AxisConfig {
+            x: true,
+            y: true,
+            z: true,
+            view: true,
+        }
+    }
+}
+
+impl AxisConfig {
+    pub fn is_active(&self, direction: GizmoDirection) -> bool {
+        match direction {
+            GizmoDirection::X => self.x,
+            GizmoDirection::Y => self.y,
+            GizmoDirection::Z => self.z,
+            GizmoDirection::View => self.view,
+        }
+    }
+}
+
 /// Configuration of a gizmo.
 ///
 /// Defines how the gizmo is drawn to the screen and
@@ -44,6 +74,8 @@ pub struct GizmoConfig {
     pub snap_scale: f32,
     /// Visual settings for the gizmo, affecting appearance and visibility.
     pub visuals: GizmoVisuals,
+    /// Visibility of sub gizmo primitives
+    pub gizmo_visibility: GizmoVisibility,
     /// Ratio of window's physical size to logical size.
     pub pixels_per_point: f32,
 }
@@ -62,6 +94,7 @@ impl Default for GizmoConfig {
             snap_distance: DEFAULT_SNAP_DISTANCE,
             snap_scale: DEFAULT_SNAP_SCALE,
             visuals: GizmoVisuals::default(),
+            gizmo_visibility: GizmoVisibility::default(),
             pixels_per_point: 1.0,
         }
     }
@@ -303,6 +336,32 @@ impl Default for GizmoVisuals {
             highlight_color: None,
             stroke_width: 4.0,
             gizmo_size: 75.0,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct GizmoVisibility {
+    // translation helper
+    pub translation_arrow: AxisConfig,
+    pub translation_plane: AxisConfig,
+    // scaling helper
+    pub scaling_arrow: AxisConfig,
+    pub scaling_plane: AxisConfig,
+    // Rotation helper
+    pub rotation_arc: AxisConfig,
+    pub rotation_arc_ball: bool,
+}
+
+impl Default for GizmoVisibility {
+    fn default() -> Self {
+        Self {
+            translation_arrow: AxisConfig::default(),
+            translation_plane: AxisConfig::default(),
+            scaling_arrow: AxisConfig::default(),
+            scaling_plane: AxisConfig::default(),
+            rotation_arc: AxisConfig::default(),
+            rotation_arc_ball: true,
         }
     }
 }

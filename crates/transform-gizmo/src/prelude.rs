@@ -1,4 +1,6 @@
-pub use crate::config::{GizmoConfig, GizmoDirection, GizmoMode, GizmoOrientation, GizmoVisuals};
+pub use crate::config::{
+    GizmoDirection, GizmoMode, GizmoOrientation, GizmoConfig, GizmoVisuals, GizmoVisibility,
+};
 pub use crate::gizmo::{Gizmo, GizmoDrawData, GizmoInteraction, GizmoResult};
 
 pub use enumset::{enum_set, EnumSet};
