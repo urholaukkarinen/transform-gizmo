@@ -346,7 +346,7 @@ impl Gizmo {
                 },
             ]
             .iter()
-            .filter_map(|&params| 
+            .filter_map(|&params| {
                 if self
                     .config
                     .gizmo_visibility
@@ -357,7 +357,7 @@ impl Gizmo {
                 } else {
                     None
                 }
-            ),
+            }),
         );
         if self.config.gizmo_visibility.rotation_arc_ball {
             self.subgizmos
@@ -387,7 +387,7 @@ impl Gizmo {
                 },
             ]
             .iter()
-            .filter_map(|&params| 
+            .filter_map(|&params| {
                 if self
                     .config
                     .gizmo_visibility
@@ -398,7 +398,7 @@ impl Gizmo {
                 } else {
                     None
                 }
-            ),
+            }),
         );
 
         // Plane subgizmos are not added when both translation and scaling are enabled.
@@ -419,7 +419,7 @@ impl Gizmo {
                     },
                 ]
                 .iter()
-                .filter_map(|&params| 
+                .filter_map(|&params| {
                     if self
                         .config
                         .gizmo_visibility
@@ -430,7 +430,7 @@ impl Gizmo {
                     } else {
                         None
                     }
-                ),
+                }),
             );
         }
     }
@@ -453,7 +453,7 @@ impl Gizmo {
                 },
             ]
             .iter()
-            .filter_map(|& params| 
+            .filter_map(|&params| {
                 if self
                     .config
                     .gizmo_visibility
@@ -464,7 +464,7 @@ impl Gizmo {
                 } else {
                     None
                 }
-            ),
+            }),
         );
 
         // Uniform scaling subgizmo is added when only scaling is enabled.
@@ -500,7 +500,7 @@ impl Gizmo {
                     },
                 ]
                 .iter()
-                .filter_map(|&params| 
+                .filter_map(|&params| {
                     if self
                         .config
                         .gizmo_visibility
@@ -511,7 +511,7 @@ impl Gizmo {
                     } else {
                         None
                     }
-                ),
+                }),
             );
         }
     }

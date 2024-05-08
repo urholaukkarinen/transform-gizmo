@@ -1,5 +1,5 @@
 pub use crate::config::{
-    GizmoDirection, GizmoMode, GizmoOrientation, GizmoConfig, GizmoVisuals, GizmoVisibility,
+    GizmoConfig, GizmoDirection, GizmoMode, GizmoOrientation, GizmoVisibility, GizmoVisuals,
 };
 pub use crate::gizmo::{Gizmo, GizmoDrawData, GizmoInteraction, GizmoResult};
 
