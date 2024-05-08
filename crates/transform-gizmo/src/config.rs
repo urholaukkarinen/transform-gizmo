@@ -25,8 +25,8 @@ pub struct AxisConfig {
 }
 
 impl Default for AxisConfig {
-    fn default() -> AxisConfig {
-        AxisConfig {
+    fn default() -> Self {
+        Self {
             x: true,
             y: true,
             z: true,
