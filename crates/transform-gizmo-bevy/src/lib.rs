@@ -121,6 +121,7 @@ impl Default for GizmoOptions {
             group_targets: true,
             mode_override: None,
             hotkeys: Some(GizmoHotkeys::default()),
+            viewport_rect: None,
         }
     }
 }
@@ -166,7 +167,6 @@ impl Default for GizmoHotkeys {
             toggle_z: Some(KeyCode::KeyZ),
             deactivate_gizmo: Some(KeyCode::Escape),
             mouse_click_deactivates: true,
-            viewport_rect: None,
         }
     }
 }
