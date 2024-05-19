@@ -57,7 +57,7 @@ fn draw_gizmo_result(ui: &mut egui::Ui, gizmo_result: Option<GizmoResult>) {
                 )
             }
             GizmoResult::Scale { total } => {
-                format!("Scale: ({:.2}, {:.2}, {:.2})", total.x, total.y, total.z,)
+                format!("Scale: ({:.2}, {:.2}, {:.2})", total.x, total.y, total.z, )
             }
             GizmoResult::Arcball { delta: _, total } => {
                 let (axis, angle) = DQuat::from(total).to_axis_angle();
@@ -229,11 +229,13 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
 
     ui.separator();
 
-    ui.with_layout(Layout::bottom_up(egui::Align::Center), |ui| {
+    ui.with_layout(Layout::bottom_up(egui::Align::Min), |ui| {
         egui::Hyperlink::from_label_and_url("(source code)", "https://github.com/urholaukkarinen/transform-gizmo/blob/main/examples/bevy/src/main.rs").ui(ui);
 
-        ui.label("Move and rotate the camera using the middle and right mouse buttons");
-        ui.label("Toggle gizmo snapping with left ctrl & shift");
+        ui.label(r#"Move and rotate the camera using the middle and right mouse buttons.
+Toggle gizmo snapping with left ctrl & shift.
+You can enter transform mode for translation, rotation and scale with by pressing G, R or S respectively.
+Transform mode can be exited with Esc or by pressing any mouse button."#);
     });
 }
 
