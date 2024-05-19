@@ -3,6 +3,7 @@ use camera::PanOrbitCameraPlugin;
 use gui::GuiPlugin;
 use picking::PickingPlugin;
 use scene::ScenePlugin;
+use transform_gizmo_bevy::GizmoHotkeys;
 
 use transform_gizmo_bevy::prelude::*;
 
@@ -28,8 +29,7 @@ fn main() {
         .add_plugins(TransformGizmoPlugin)
         .add_plugins(PickingPlugin)
         .insert_resource(GizmoOptions {
-            gizmo_modes: GizmoMode::all(),
-            gizmo_orientation: GizmoOrientation::Global,
+            hotkeys: Some(GizmoHotkeys::default()),
             ..default()
         })
         .run();

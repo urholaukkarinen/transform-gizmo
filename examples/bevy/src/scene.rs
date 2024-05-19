@@ -9,7 +9,7 @@ use crate::camera::PanOrbitCamera;
 pub struct ScenePlugin;
 
 impl Plugin for ScenePlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
+    fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_scene);
     }
 }

@@ -120,7 +120,7 @@ impl Default for GizmoOptions {
             snap_scale: DEFAULT_SNAP_SCALE,
             group_targets: true,
             mode_override: None,
-            hotkeys: Some(GizmoHotkeys::default()),
+            hotkeys: None,
             viewport_rect: None,
         }
     }
@@ -347,8 +347,8 @@ fn handle_hotkeys(
     if (hotkeys.mouse_click_deactivates
         && mouse_input.any_just_pressed([MouseButton::Left, MouseButton::Right]))
         || hotkeys
-            .deactivate_gizmo
-            .is_some_and(|key| keyboard_input.just_pressed(key))
+        .deactivate_gizmo
+        .is_some_and(|key| keyboard_input.just_pressed(key))
     {
         *mode_override = None;
     }
