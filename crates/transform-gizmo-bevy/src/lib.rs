@@ -332,7 +332,7 @@ fn handle_hotkeys(
         GizmoMode::all_from_axes(*axes)
             .iter()
             .find(|mode| mode.kind() == kind)
-            .or_else(|| {
+            .or({
                 // If nothing matches, choose the default mode.
                 Some(match kind {
                     GizmoModeKind::Rotate => GizmoMode::RotateView,
@@ -347,8 +347,8 @@ fn handle_hotkeys(
     if (hotkeys.mouse_click_deactivates
         && mouse_input.any_just_pressed([MouseButton::Left, MouseButton::Right]))
         || hotkeys
-        .deactivate_gizmo
-        .is_some_and(|key| keyboard_input.just_pressed(key))
+            .deactivate_gizmo
+            .is_some_and(|key| keyboard_input.just_pressed(key))
     {
         *mode_override = None;
     }

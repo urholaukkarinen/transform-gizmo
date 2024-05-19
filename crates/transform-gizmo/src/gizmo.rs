@@ -310,10 +310,10 @@ impl Gizmo {
     fn pick_subgizmo(&mut self, ray: Ray) -> Option<&mut SubGizmo> {
         // If mode is overridden, assume we only have that mode, and choose it.
         if self.config.mode_override.is_some() {
-            return self.subgizmos.first_mut().and_then(|subgizmo| {
+            return self.subgizmos.first_mut().map(|subgizmo| {
                 subgizmo.pick(ray);
 
-                Some(subgizmo)
+                subgizmo
             });
         }
 
@@ -332,8 +332,7 @@ impl Gizmo {
     fn enabled_modes(&self) -> EnumSet<GizmoMode> {
         self.config
             .mode_override
-            .map(EnumSet::only)
-            .unwrap_or(self.config.modes)
+            .map_or(self.config.modes, EnumSet::only)
     }
 
     /// Adds rotation subgizmos
