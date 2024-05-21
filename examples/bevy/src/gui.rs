@@ -57,7 +57,7 @@ fn draw_gizmo_result(ui: &mut egui::Ui, gizmo_result: Option<GizmoResult>) {
                 )
             }
             GizmoResult::Scale { total } => {
-                format!("Scale: ({:.2}, {:.2}, {:.2})", total.x, total.y, total.z, )
+                format!("Scale: ({:.2}, {:.2}, {:.2})", total.x, total.y, total.z,)
             }
             GizmoResult::Arcball { delta: _, total } => {
                 let (axis, angle) = DQuat::from(total).to_axis_angle();

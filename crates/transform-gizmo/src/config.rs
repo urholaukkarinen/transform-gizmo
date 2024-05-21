@@ -378,10 +378,9 @@ impl GizmoMode {
 
     pub fn kind(&self) -> GizmoModeKind {
         match self {
-            Self::RotateX
-            | Self::RotateY
-            | Self::RotateZ
-            | Self::RotateView => GizmoModeKind::Rotate,
+            Self::RotateX | Self::RotateY | Self::RotateZ | Self::RotateView => {
+                GizmoModeKind::Rotate
+            }
             Self::TranslateX
             | Self::TranslateY
             | Self::TranslateZ
