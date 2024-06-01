@@ -1,5 +1,6 @@
 use ecolor::Rgba;
 use emath::Pos2;
+use enumset::EnumSet;
 use std::ops::{Add, AddAssign, Sub};
 
 use crate::config::{
@@ -50,7 +51,7 @@ impl Gizmo {
 
     /// Updates the configuration used by the gizmo.
     pub fn update_config(&mut self, config: GizmoConfig) {
-        if config.modes != self.config.modes {
+        if config.modes_changed(&self.config) {
             self.subgizmos.clear();
             self.active_subgizmo_id = None;
         }
@@ -58,19 +59,9 @@ impl Gizmo {
         self.config.update_for_config(config);
 
         if self.subgizmos.is_empty() {
-            for mode in self.config.modes {
-                match mode {
-                    GizmoMode::Rotate => {
-                        self.add_rotation();
-                    }
-                    GizmoMode::Translate => {
-                        self.add_translation();
-                    }
-                    GizmoMode::Scale => {
-                        self.add_scale();
-                    }
-                };
-            }
+            self.add_rotation();
+            self.add_translation();
+            self.add_scale();
         }
     }
 
@@ -133,6 +124,8 @@ impl Gizmo {
             subgizmo.set_focused(false);
         }
 
+        let force_active = self.config.mode_override.is_some();
+
         let pointer_ray = self.pointer_ray(Pos2::from(interaction.cursor_pos));
 
         // If there is no active subgizmo, find which one of them
@@ -142,7 +135,7 @@ impl Gizmo {
                 subgizmo.set_focused(true);
 
                 // If we started dragging from one of the subgizmos, mark it as active.
-                if interaction.drag_started {
+                if interaction.drag_started || force_active {
                     self.active_subgizmo_id = Some(subgizmo.id());
                     self.target_start_transforms = targets.to_vec();
                     self.gizmo_start_transform = self.config.as_transform();
@@ -153,7 +146,7 @@ impl Gizmo {
         let mut result = None;
 
         if let Some(subgizmo) = self.active_subgizmo_mut() {
-            if interaction.dragging {
+            if interaction.dragging || force_active {
                 subgizmo.set_active(true);
                 subgizmo.set_focused(true);
                 result = subgizmo.update(pointer_ray);
@@ -315,6 +308,15 @@ impl Gizmo {
 
     /// Picks the subgizmo that is closest to the given world space ray.
     fn pick_subgizmo(&mut self, ray: Ray) -> Option<&mut SubGizmo> {
+        // If mode is overridden, assume we only have that mode, and choose it.
+        if self.config.mode_override.is_some() {
+            return self.subgizmos.first_mut().map(|subgizmo| {
+                subgizmo.pick(ray);
+
+                subgizmo
+            });
+        }
+
         self.subgizmos
             .iter_mut()
             .filter_map(|subgizmo| subgizmo.pick(ray).map(|t| (t, subgizmo)))
@@ -326,147 +328,123 @@ impl Gizmo {
             .map(|(_, subgizmo)| subgizmo)
     }
 
+    /// Get all modes that are currently enabled
+    fn enabled_modes(&self) -> EnumSet<GizmoMode> {
+        self.config
+            .mode_override
+            .map_or(self.config.modes, EnumSet::only)
+    }
+
     /// Adds rotation subgizmos
     fn add_rotation(&mut self) {
-        self.subgizmos.extend([
-            RotationSubGizmo::new(
-                self.config,
-                RotationParams {
-                    direction: GizmoDirection::X,
-                },
-            )
-            .into(),
-            RotationSubGizmo::new(
-                self.config,
-                RotationParams {
-                    direction: GizmoDirection::Y,
-                },
-            )
-            .into(),
-            RotationSubGizmo::new(
-                self.config,
-                RotationParams {
-                    direction: GizmoDirection::Z,
-                },
-            )
-            .into(),
-            RotationSubGizmo::new(
-                self.config,
-                RotationParams {
-                    direction: GizmoDirection::View,
-                },
-            )
-            .into(),
-        ]);
+        let modes = self.enabled_modes();
 
-        self.subgizmos
-            .push(ArcballSubGizmo::new(self.config, ()).into());
+        if modes.contains(GizmoMode::RotateX) {
+            self.subgizmos.push(
+                RotationSubGizmo::new(
+                    self.config,
+                    RotationParams {
+                        direction: GizmoDirection::X,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::RotateY) {
+            self.subgizmos.push(
+                RotationSubGizmo::new(
+                    self.config,
+                    RotationParams {
+                        direction: GizmoDirection::Y,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::RotateZ) {
+            self.subgizmos.push(
+                RotationSubGizmo::new(
+                    self.config,
+                    RotationParams {
+                        direction: GizmoDirection::Z,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::RotateView) {
+            self.subgizmos.push(
+                RotationSubGizmo::new(
+                    self.config,
+                    RotationParams {
+                        direction: GizmoDirection::View,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::Arcball) {
+            self.subgizmos
+                .push(ArcballSubGizmo::new(self.config, ()).into());
+        }
     }
 
     /// Adds translation subgizmos
     fn add_translation(&mut self) {
-        self.subgizmos.extend([
-            TranslationSubGizmo::new(
-                self.config,
-                TranslationParams {
-                    direction: GizmoDirection::X,
-                    transform_kind: TransformKind::Axis,
-                },
-            )
-            .into(),
-            TranslationSubGizmo::new(
-                self.config,
-                TranslationParams {
-                    direction: GizmoDirection::Y,
-                    transform_kind: TransformKind::Axis,
-                },
-            )
-            .into(),
-            TranslationSubGizmo::new(
-                self.config,
-                TranslationParams {
-                    direction: GizmoDirection::Z,
-                    transform_kind: TransformKind::Axis,
-                },
-            )
-            .into(),
-            TranslationSubGizmo::new(
-                self.config,
-                TranslationParams {
-                    direction: GizmoDirection::View,
-                    transform_kind: TransformKind::Plane,
-                },
-            )
-            .into(),
-        ]);
+        let modes = self.enabled_modes();
 
-        // Plane subgizmos are not added when both translation and scaling are enabled.
-        if !self.config.modes.contains(GizmoMode::Scale) {
-            self.subgizmos.extend([
-                TranslationSubGizmo::new(
-                    self.config,
-                    TranslationParams {
-                        direction: GizmoDirection::X,
-                        transform_kind: TransformKind::Plane,
-                    },
-                )
-                .into(),
-                TranslationSubGizmo::new(
-                    self.config,
-                    TranslationParams {
-                        direction: GizmoDirection::Y,
-                        transform_kind: TransformKind::Plane,
-                    },
-                )
-                .into(),
-                TranslationSubGizmo::new(
-                    self.config,
-                    TranslationParams {
-                        direction: GizmoDirection::Z,
-                        transform_kind: TransformKind::Plane,
-                    },
-                )
-                .into(),
-            ]);
-        }
-    }
-
-    /// Adds scale subgizmos
-    fn add_scale(&mut self) {
-        self.subgizmos.extend([
-            ScaleSubGizmo::new(
-                self.config,
-                ScaleParams {
-                    direction: GizmoDirection::X,
-                    transform_kind: TransformKind::Axis,
-                },
-            )
-            .into(),
-            ScaleSubGizmo::new(
-                self.config,
-                ScaleParams {
-                    direction: GizmoDirection::Y,
-                    transform_kind: TransformKind::Axis,
-                },
-            )
-            .into(),
-            ScaleSubGizmo::new(
-                self.config,
-                ScaleParams {
-                    direction: GizmoDirection::Z,
-                    transform_kind: TransformKind::Axis,
-                },
-            )
-            .into(),
-        ]);
-
-        // Uniform scaling subgizmo is added when only scaling is enabled.
-        // Otherwise it would overlap with rotation or translation subgizmos.
-        if self.config.modes.len() == 1 {
+        if modes.contains(GizmoMode::TranslateX) {
             self.subgizmos.push(
-                ScaleSubGizmo::new(
+                TranslationSubGizmo::new(
                     self.config,
-                    ScaleParams {
+                    TranslationParams {
+                        mode: GizmoMode::TranslateX,
+                        direction: GizmoDirection::X,
+                        transform_kind: TransformKind::Axis,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::TranslateY) {
+            self.subgizmos.push(
+                TranslationSubGizmo::new(
+                    self.config,
+                    TranslationParams {
+                        mode: GizmoMode::TranslateY,
+                        direction: GizmoDirection::Y,
+                        transform_kind: TransformKind::Axis,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::TranslateZ) {
+            self.subgizmos.push(
+                TranslationSubGizmo::new(
+                    self.config,
+                    TranslationParams {
+                        mode: GizmoMode::TranslateZ,
+                        direction: GizmoDirection::Z,
+                        transform_kind: TransformKind::Axis,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::TranslateView) {
+            self.subgizmos.push(
+                TranslationSubGizmo::new(
+                    self.config,
+                    TranslationParams {
+                        mode: GizmoMode::TranslateView,
                         direction: GizmoDirection::View,
                         transform_kind: TransformKind::Plane,
                     },
@@ -475,34 +453,149 @@ impl Gizmo {
             );
         }
 
-        // Plane subgizmos are not added when both translation and scaling are enabled.
-        if !self.config.modes.contains(GizmoMode::Translate) {
-            self.subgizmos.extend([
-                ScaleSubGizmo::new(
+        if modes.contains(GizmoMode::TranslateXY) {
+            self.subgizmos.push(
+                TranslationSubGizmo::new(
                     self.config,
-                    ScaleParams {
+                    TranslationParams {
+                        mode: GizmoMode::TranslateXY,
                         direction: GizmoDirection::X,
                         transform_kind: TransformKind::Plane,
                     },
                 )
                 .into(),
-                ScaleSubGizmo::new(
+            );
+        }
+
+        if modes.contains(GizmoMode::TranslateXZ) {
+            self.subgizmos.push(
+                TranslationSubGizmo::new(
                     self.config,
-                    ScaleParams {
+                    TranslationParams {
+                        mode: GizmoMode::TranslateXZ,
                         direction: GizmoDirection::Y,
                         transform_kind: TransformKind::Plane,
                     },
                 )
                 .into(),
-                ScaleSubGizmo::new(
+            );
+        }
+
+        if modes.contains(GizmoMode::TranslateYZ) {
+            self.subgizmos.push(
+                TranslationSubGizmo::new(
                     self.config,
-                    ScaleParams {
+                    TranslationParams {
+                        mode: GizmoMode::TranslateYZ,
                         direction: GizmoDirection::Z,
                         transform_kind: TransformKind::Plane,
                     },
                 )
                 .into(),
-            ]);
+            );
+        }
+    }
+
+    /// Adds scale subgizmos
+    fn add_scale(&mut self) {
+        let modes = self.enabled_modes();
+
+        if modes.contains(GizmoMode::ScaleX) {
+            self.subgizmos.push(
+                ScaleSubGizmo::new(
+                    self.config,
+                    ScaleParams {
+                        mode: GizmoMode::ScaleX,
+                        direction: GizmoDirection::X,
+                        transform_kind: TransformKind::Axis,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::ScaleY) {
+            self.subgizmos.push(
+                ScaleSubGizmo::new(
+                    self.config,
+                    ScaleParams {
+                        mode: GizmoMode::ScaleY,
+                        direction: GizmoDirection::Y,
+                        transform_kind: TransformKind::Axis,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::ScaleZ) {
+            self.subgizmos.push(
+                ScaleSubGizmo::new(
+                    self.config,
+                    ScaleParams {
+                        mode: GizmoMode::ScaleZ,
+                        direction: GizmoDirection::Z,
+                        transform_kind: TransformKind::Axis,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::ScaleUniform) && !modes.contains(GizmoMode::RotateView) {
+            self.subgizmos.push(
+                ScaleSubGizmo::new(
+                    self.config,
+                    ScaleParams {
+                        mode: GizmoMode::ScaleUniform,
+                        direction: GizmoDirection::View,
+                        transform_kind: TransformKind::Plane,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::ScaleXY) && !modes.contains(GizmoMode::TranslateXY) {
+            self.subgizmos.push(
+                ScaleSubGizmo::new(
+                    self.config,
+                    ScaleParams {
+                        mode: GizmoMode::ScaleXY,
+                        direction: GizmoDirection::X,
+                        transform_kind: TransformKind::Plane,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::ScaleXZ) && !modes.contains(GizmoMode::TranslateXZ) {
+            self.subgizmos.push(
+                ScaleSubGizmo::new(
+                    self.config,
+                    ScaleParams {
+                        mode: GizmoMode::ScaleXZ,
+                        direction: GizmoDirection::Y,
+                        transform_kind: TransformKind::Plane,
+                    },
+                )
+                .into(),
+            );
+        }
+
+        if modes.contains(GizmoMode::ScaleYZ) && !modes.contains(GizmoMode::TranslateYZ) {
+            self.subgizmos.push(
+                ScaleSubGizmo::new(
+                    self.config,
+                    ScaleParams {
+                        mode: GizmoMode::ScaleYZ,
+                        direction: GizmoDirection::Z,
+                        transform_kind: TransformKind::Plane,
+                    },
+                )
+                .into(),
+            );
         }
     }
 

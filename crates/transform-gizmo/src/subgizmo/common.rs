@@ -1,6 +1,7 @@
 use crate::math::{ray_to_plane_origin, segment_to_segment};
 use crate::GizmoMode;
 use ecolor::Color32;
+use enumset::EnumSet;
 use std::ops::{Add, RangeInclusive};
 
 use crate::shape::ShapeBuidler;
@@ -31,11 +32,19 @@ struct ArrowParams {
     length: f64,
 }
 
+fn arrow_modes_overlapping(mode: GizmoMode, other_modes: EnumSet<GizmoMode>) -> bool {
+    (mode == GizmoMode::TranslateX && other_modes.contains(GizmoMode::ScaleX))
+        || (mode == GizmoMode::TranslateY && other_modes.contains(GizmoMode::ScaleY))
+        || (mode == GizmoMode::TranslateZ && other_modes.contains(GizmoMode::ScaleZ))
+        || (mode == GizmoMode::ScaleX && other_modes.contains(GizmoMode::TranslateX))
+        || (mode == GizmoMode::ScaleY && other_modes.contains(GizmoMode::TranslateY))
+        || (mode == GizmoMode::ScaleZ && other_modes.contains(GizmoMode::TranslateZ))
+}
+
 fn arrow_params(config: &PreparedGizmoConfig, direction: DVec3, mode: GizmoMode) -> ArrowParams {
     let width = (config.scale_factor * config.visuals.stroke_width) as f64;
 
-    let (start, length) = if mode == GizmoMode::Translate && config.modes.contains(GizmoMode::Scale)
-    {
+    let (start, length) = if mode.is_translate() && arrow_modes_overlapping(mode, config.modes) {
         // Modes contain both translate and scale. Use a bit different translate arrow, so the modes do not overlap.
         let length = (config.scale_factor * config.visuals.gizmo_size) as f64;
         let start = direction * (length + (width * 3.0));
@@ -207,22 +216,18 @@ pub(crate) fn draw_arrow(
             .into(),
     );
 
-    match mode {
-        GizmoMode::Scale => {
-            draw_data = draw_data.add(
-                shape_builder
-                    .line_segment(tip_start, arrow_params.end, (tip_stroke_width, color))
-                    .into(),
-            );
-        }
-        GizmoMode::Translate => {
-            draw_data = draw_data.add(
-                shape_builder
-                    .arrow(tip_start, arrow_params.end, (tip_stroke_width, color))
-                    .into(),
-            );
-        }
-        GizmoMode::Rotate => {}
+    if mode.is_scale() {
+        draw_data = draw_data.add(
+            shape_builder
+                .line_segment(tip_start, arrow_params.end, (tip_stroke_width, color))
+                .into(),
+        );
+    } else if mode.is_translate() {
+        draw_data = draw_data.add(
+            shape_builder
+                .arrow(tip_start, arrow_params.end, (tip_stroke_width, color))
+                .into(),
+        );
     }
 
     draw_data

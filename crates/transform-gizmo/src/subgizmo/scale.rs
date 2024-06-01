@@ -3,8 +3,8 @@ use glam::DVec3;
 use crate::math::{round_to_interval, world_to_screen, Pos2};
 
 use crate::subgizmo::common::{
-    draw_arrow, draw_circle, draw_plane, gizmo_color, gizmo_local_normal, inner_circle_radius,
-    outer_circle_radius, pick_arrow, pick_circle, pick_plane, plane_bitangent, plane_tangent,
+    draw_arrow, draw_circle, draw_plane, gizmo_color, gizmo_local_normal, outer_circle_radius,
+    pick_arrow, pick_circle, pick_plane, plane_bitangent, plane_tangent,
 };
 use crate::subgizmo::{common::TransformKind, SubGizmoConfig, SubGizmoKind};
 use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult};
@@ -13,6 +13,7 @@ pub(crate) type ScaleSubGizmo = SubGizmoConfig<Scale>;
 
 #[derive(Debug, Copy, Clone, Hash)]
 pub(crate) struct ScaleParams {
+    pub mode: GizmoMode,
     pub direction: GizmoDirection,
     pub transform_kind: TransformKind,
 }
@@ -31,26 +32,15 @@ impl SubGizmoKind for Scale {
 
     fn pick(subgizmo: &mut ScaleSubGizmo, ray: Ray) -> Option<f64> {
         let pick_result = match (subgizmo.transform_kind, subgizmo.direction) {
-            (TransformKind::Plane, GizmoDirection::View) => {
-                let mut result = pick_circle(
-                    &subgizmo.config,
-                    ray,
-                    inner_circle_radius(&subgizmo.config),
-                    true,
-                );
-                if !result.picked {
-                    result = pick_circle(
-                        &subgizmo.config,
-                        ray,
-                        outer_circle_radius(&subgizmo.config),
-                        false,
-                    );
-                }
-                result
-            }
+            (TransformKind::Plane, GizmoDirection::View) => pick_circle(
+                &subgizmo.config,
+                ray,
+                outer_circle_radius(&subgizmo.config),
+                false,
+            ),
             (TransformKind::Plane, _) => pick_plane(&subgizmo.config, ray, subgizmo.direction),
             (TransformKind::Axis, _) => {
-                pick_arrow(&subgizmo.config, ray, subgizmo.direction, GizmoMode::Scale)
+                pick_arrow(&subgizmo.config, ray, subgizmo.direction, subgizmo.mode)
             }
         };
 
@@ -98,21 +88,14 @@ impl SubGizmoKind for Scale {
                 subgizmo.opacity,
                 subgizmo.focused,
                 subgizmo.direction,
-                GizmoMode::Scale,
+                subgizmo.mode,
             ),
-            (TransformKind::Plane, GizmoDirection::View) => {
-                draw_circle(
-                    &subgizmo.config,
-                    gizmo_color(&subgizmo.config, subgizmo.focused, subgizmo.direction),
-                    inner_circle_radius(&subgizmo.config),
-                    false,
-                ) + draw_circle(
-                    &subgizmo.config,
-                    gizmo_color(&subgizmo.config, subgizmo.focused, subgizmo.direction),
-                    outer_circle_radius(&subgizmo.config),
-                    false,
-                )
-            }
+            (TransformKind::Plane, GizmoDirection::View) => draw_circle(
+                &subgizmo.config,
+                gizmo_color(&subgizmo.config, subgizmo.focused, subgizmo.direction),
+                outer_circle_radius(&subgizmo.config),
+                false,
+            ),
             (TransformKind::Plane, _) => draw_plane(
                 &subgizmo.config,
                 subgizmo.opacity,

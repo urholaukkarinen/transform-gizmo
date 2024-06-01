@@ -20,7 +20,7 @@ impl ExampleApp {
     fn new() -> Self {
         Self {
             gizmo: Gizmo::default(),
-            gizmo_modes: enum_set!(GizmoMode::Rotate | GizmoMode::Translate),
+            gizmo_modes: GizmoMode::all(),
             gizmo_orientation: GizmoOrientation::Local,
             scale: DVec3::ONE,
             rotation: DQuat::IDENTITY,
@@ -119,7 +119,7 @@ impl ExampleApp {
                 egui::ComboBox::from_id_source("mode_cb")
                     .selected_text(format!("{}", self.gizmo_modes.len()))
                     .show_ui(ui, |ui| {
-                        for mode in [GizmoMode::Rotate, GizmoMode::Translate, GizmoMode::Scale] {
+                        for mode in GizmoMode::all() {
                             let mut mode_selected = self.gizmo_modes.contains(mode);
                             ui.toggle_value(&mut mode_selected, format!("{:?}", mode));
                             if mode_selected {

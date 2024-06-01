@@ -19,7 +19,7 @@
 //! gizmo.update_config(GizmoConfig {
 //!     view_matrix: view_matrix.into(),
 //!     projection_matrix: projection_matrix.into(),
-//!     modes: enum_set!(GizmoMode::Rotate | GizmoMode::Translate | GizmoMode::Scale),
+//!     modes: GizmoMode::all(),
 //!     orientation: GizmoOrientation::Local,
 //!     ..Default::default()
 //! });

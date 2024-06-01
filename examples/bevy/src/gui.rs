@@ -1,12 +1,9 @@
 use bevy::{math::DQuat, prelude::*};
 use bevy_egui::{
-    egui::{self, Layout, Widget},
+    egui::{self, Layout, RichText, Widget},
     EguiContexts, EguiPlugin,
 };
-use transform_gizmo_bevy::{
-    config::{TransformPivotPoint, DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE},
-    prelude::*,
-};
+use transform_gizmo_bevy::{config::TransformPivotPoint, prelude::*};
 
 pub struct GuiPlugin;
 
@@ -19,27 +16,8 @@ impl Plugin for GuiPlugin {
 fn update_ui(
     mut contexts: EguiContexts,
     mut gizmo_options: ResMut<GizmoOptions>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-
     gizmo_targets: Query<&GizmoTarget>,
 ) {
-    // Snapping is enabled when CTRL is pressed.
-    let snapping = keyboard_input.pressed(KeyCode::ControlLeft);
-    // Accurate snapping is enabled when both CTRL and SHIFT are pressed
-    let accurate_snapping = snapping && keyboard_input.pressed(KeyCode::ShiftLeft);
-
-    gizmo_options.snapping = snapping;
-
-    gizmo_options.snap_angle = DEFAULT_SNAP_ANGLE;
-    gizmo_options.snap_distance = DEFAULT_SNAP_DISTANCE;
-    gizmo_options.snap_scale = DEFAULT_SNAP_SCALE;
-
-    if accurate_snapping {
-        gizmo_options.snap_angle /= 2.0;
-        gizmo_options.snap_distance /= 2.0;
-        gizmo_options.snap_scale /= 2.0;
-    }
-
     egui::SidePanel::left("options").show(contexts.ctx_mut(), |ui| {
         draw_options(ui, &mut gizmo_options);
     });
@@ -105,21 +83,74 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
     ui.heading("Options");
     ui.separator();
 
+    egui::Grid::new("modes_grid").num_columns(7).show(ui, |ui| {
+        ui.label(RichText::new("Mode").strong());
+        ui.label(RichText::new("View").strong());
+        ui.label(RichText::new("X").strong());
+        ui.label(RichText::new("Y").strong());
+        ui.label(RichText::new("Z").strong());
+        ui.label(RichText::new("XZ").strong());
+        ui.label(RichText::new("XY").strong());
+        ui.label(RichText::new("YZ").strong());
+        ui.end_row();
+
+        ui.label("Rotation");
+        draw_mode_picker(ui, GizmoMode::RotateView, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::RotateX, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::RotateY, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::RotateZ, &mut gizmo_options.gizmo_modes);
+        ui.end_row();
+
+        ui.label("Translation");
+        draw_mode_picker(ui, GizmoMode::TranslateView, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::TranslateX, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::TranslateY, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::TranslateZ, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::TranslateXZ, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::TranslateXY, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::TranslateYZ, &mut gizmo_options.gizmo_modes);
+        ui.end_row();
+
+        ui.label("Scale");
+        ui.add_enabled_ui(
+            !gizmo_options.gizmo_modes.contains(GizmoMode::RotateView),
+            |ui| {
+                draw_mode_picker(ui, GizmoMode::ScaleUniform, &mut gizmo_options.gizmo_modes);
+            },
+        );
+        draw_mode_picker(ui, GizmoMode::ScaleX, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::ScaleY, &mut gizmo_options.gizmo_modes);
+        draw_mode_picker(ui, GizmoMode::ScaleZ, &mut gizmo_options.gizmo_modes);
+        ui.add_enabled_ui(
+            !gizmo_options.gizmo_modes.contains(GizmoMode::TranslateXZ),
+            |ui| {
+                draw_mode_picker(ui, GizmoMode::ScaleXZ, &mut gizmo_options.gizmo_modes);
+            },
+        );
+        ui.add_enabled_ui(
+            !gizmo_options.gizmo_modes.contains(GizmoMode::TranslateXY),
+            |ui| {
+                draw_mode_picker(ui, GizmoMode::ScaleXY, &mut gizmo_options.gizmo_modes);
+            },
+        );
+        ui.add_enabled_ui(
+            !gizmo_options.gizmo_modes.contains(GizmoMode::TranslateYZ),
+            |ui| {
+                draw_mode_picker(ui, GizmoMode::ScaleYZ, &mut gizmo_options.gizmo_modes);
+            },
+        );
+        ui.end_row();
+
+        ui.label("Arcball");
+        draw_mode_picker(ui, GizmoMode::Arcball, &mut gizmo_options.gizmo_modes);
+        ui.end_row();
+    });
+
+    ui.separator();
+
     egui::Grid::new("options_grid")
         .num_columns(2)
         .show(ui, |ui| {
-            ui.label("Allow rotation");
-            draw_mode_picker(ui, GizmoMode::Rotate, &mut gizmo_options.gizmo_modes);
-            ui.end_row();
-
-            ui.label("Allow translation");
-            draw_mode_picker(ui, GizmoMode::Translate, &mut gizmo_options.gizmo_modes);
-            ui.end_row();
-
-            ui.label("Allow scaling");
-            draw_mode_picker(ui, GizmoMode::Scale, &mut gizmo_options.gizmo_modes);
-            ui.end_row();
-
             ui.label("Orientation");
             egui::ComboBox::from_id_source("orientation_cb")
                 .selected_text(format!("{:?}", gizmo_options.gizmo_orientation))
@@ -198,23 +229,25 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
 
     ui.separator();
 
-    ui.with_layout(Layout::bottom_up(egui::Align::Center), |ui| {
+    ui.with_layout(Layout::bottom_up(egui::Align::Min), |ui| {
         egui::Hyperlink::from_label_and_url("(source code)", "https://github.com/urholaukkarinen/transform-gizmo/blob/main/examples/bevy/src/main.rs").ui(ui);
 
-        ui.label("Move and rotate the camera using the middle and right mouse buttons");
-        ui.label("Toggle gizmo snapping with left ctrl & shift");
+        ui.label(r#"Move and rotate the camera using the middle and right mouse buttons.
+Toggle gizmo snapping with left ctrl & shift.
+You can enter transform mode for translation, rotation and scale with by pressing G, R or S respectively.
+Transform mode can be exited with Esc or by pressing any mouse button."#);
     });
 }
 
-fn draw_mode_picker(ui: &mut egui::Ui, mode: GizmoMode, modes: &mut EnumSet<GizmoMode>) {
-    let mut checked = modes.contains(mode);
+fn draw_mode_picker(ui: &mut egui::Ui, mode: GizmoMode, all_modes: &mut EnumSet<GizmoMode>) {
+    let mut checked = all_modes.contains(mode);
 
     egui::Checkbox::without_text(&mut checked).ui(ui);
 
     if checked {
-        modes.insert(mode);
+        all_modes.insert(mode);
     } else {
-        modes.remove(mode);
+        all_modes.remove(mode);
     }
 }
 
