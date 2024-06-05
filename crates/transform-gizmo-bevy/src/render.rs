@@ -1,35 +1,38 @@
-use bevy::asset::load_internal_asset;
-use bevy::core::cast_slice;
-use bevy::core_pipeline::core_3d::{Transparent3d, CORE_3D_DEPTH_FORMAT};
-use bevy::core_pipeline::prepass::{
+use bevy_app::{App, Plugin};
+use bevy_asset::{load_internal_asset, Asset, Handle};
+use bevy_core::cast_slice;
+use bevy_core_pipeline::core_3d::{Transparent3d, CORE_3D_DEPTH_FORMAT};
+use bevy_core_pipeline::prepass::{
     DeferredPrepass, DepthPrepass, MotionVectorPrepass, NormalPrepass,
 };
-use bevy::ecs::query::ROQueryItem;
-use bevy::ecs::system::lifetimeless::{Read, SRes};
-use bevy::ecs::system::SystemParamItem;
-use bevy::pbr::{MeshPipeline, MeshPipelineKey, SetMeshViewBindGroup};
-use bevy::prelude::*;
-use bevy::render::mesh::PrimitiveTopology;
-use bevy::render::render_asset::{
+use bevy_ecs::prelude::*;
+use bevy_ecs::query::ROQueryItem;
+use bevy_ecs::system::lifetimeless::{Read, SRes};
+use bevy_ecs::system::SystemParamItem;
+use bevy_pbr::{MeshPipeline, MeshPipelineKey, SetMeshViewBindGroup};
+use bevy_reflect::TypePath;
+use bevy_render::mesh::PrimitiveTopology;
+use bevy_render::prelude::*;
+use bevy_render::render_asset::{
     prepare_assets, PrepareAssetError, RenderAsset, RenderAssetPlugin, RenderAssetUsages,
     RenderAssets,
 };
-use bevy::render::render_phase::{
+use bevy_render::render_phase::{
     AddRenderCommand, DrawFunctions, PhaseItem, RenderCommand, RenderCommandResult, RenderPhase,
     SetItemPipeline, TrackedRenderPass,
 };
-use bevy::render::render_resource::{
+use bevy_render::render_resource::{
     BlendState, Buffer, BufferInitDescriptor, BufferUsages, ColorTargetState, ColorWrites,
     CompareFunction, DepthBiasState, DepthStencilState, FragmentState, IndexFormat,
     MultisampleState, PipelineCache, PrimitiveState, RenderPipelineDescriptor,
     SpecializedRenderPipeline, SpecializedRenderPipelines, StencilState, TextureFormat,
     VertexAttribute, VertexBufferLayout, VertexFormat, VertexState, VertexStepMode,
 };
-use bevy::render::renderer::RenderDevice;
-use bevy::render::texture::BevyDefault;
-use bevy::render::view::{ExtractedView, RenderLayers, ViewTarget};
-use bevy::render::{Extract, Render, RenderApp, RenderSet};
-use bevy::utils::{HashMap, HashSet, Uuid};
+use bevy_render::renderer::RenderDevice;
+use bevy_render::texture::BevyDefault;
+use bevy_render::view::{ExtractedView, RenderLayers, ViewTarget};
+use bevy_render::{Extract, Render, RenderApp, RenderSet};
+use bevy_utils::{HashMap, HashSet, Uuid};
 
 const GIZMO_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(7414812681337026784);
 
@@ -139,6 +142,7 @@ impl RenderAsset for GizmoDrawData {
 }
 
 struct DrawTransformGizmo;
+
 impl<P: PhaseItem> RenderCommand<P> for DrawTransformGizmo {
     type ViewQuery = ();
     type ItemQuery = Read<Handle<GizmoDrawData>>;

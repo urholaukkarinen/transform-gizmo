@@ -28,16 +28,21 @@
 //!
 //! You can either set it up with [`App::insert_resource`] when creating your App, or at any point in a system with [`ResMut<GizmoOptions>`].
 
-use bevy::prelude::*;
-use bevy::utils::{HashMap, Uuid};
-use bevy::window::PrimaryWindow;
-use bevy_math::{DQuat, DVec3};
+use bevy_app::prelude::*;
+use bevy_asset::{AssetApp, Assets};
+use bevy_ecs::prelude::*;
+use bevy_input::prelude::*;
+use bevy_math::{DQuat, DVec3, Vec2};
+use bevy_render::prelude::*;
+use bevy_transform::prelude::*;
+use bevy_utils::{HashMap, Uuid};
+use bevy_window::{PrimaryWindow, Window};
+
 use render::{DrawDataHandles, TransformGizmoRenderPlugin};
 use transform_gizmo::config::{
     GizmoModeKind, TransformPivotPoint, DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE,
     DEFAULT_SNAP_SCALE,
 };
-
 pub use transform_gizmo::{
     math::{Pos2, Rect},
     GizmoConfig, *,
@@ -384,7 +389,7 @@ fn update_gizmos(
             }
             if active_camera.is_some() {
                 // multiple active cameras found, warn and skip
-                bevy::log::warn!("Only one camera with a GizmoCamera component is supported.");
+                bevy_log::warn!("Only one camera with a GizmoCamera component is supported.");
                 return;
             }
             active_camera = Some(camera);
@@ -482,7 +487,7 @@ fn update_gizmos(
 
         let gizmo_result = gizmo.update(
             gizmo_interaction,
-            &[transform_gizmo::math::Transform {
+            &[math::Transform {
                 translation: target_transform.translation.as_dvec3().into(),
                 rotation: target_transform.rotation.as_dquat().into(),
                 scale: target_transform.scale.as_dvec3().into(),
@@ -496,7 +501,7 @@ fn update_gizmos(
 
         if let Some((_, updated_targets)) = &gizmo_result {
             let Some(result_transform) = updated_targets.first() else {
-                bevy::log::warn!("No transform found in GizmoResult!");
+                bevy_log::warn!("No transform found in GizmoResult!");
                 continue;
             };
 
@@ -533,7 +538,7 @@ fn update_gizmos(
 
             if let Some((_, updated_targets)) = &gizmo_result {
                 let Some(result_transform) = updated_targets.get(i) else {
-                    bevy::log::warn!("No transform {i} found in GizmoResult!");
+                    bevy_log::warn!("No transform {i} found in GizmoResult!");
                     continue;
                 };
 
