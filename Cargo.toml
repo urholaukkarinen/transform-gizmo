@@ -11,6 +11,10 @@ homepage = "https://github.com/urholaukkarinen/transform-gizmo"
 repository = "https://github.com/urholaukkarinen/transform-gizmo"
 authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 
+[workspace.metadata.scripts]
+cranky = "cargo cranky --all-targets --all-features --release -- -D warnings"
+fmt = "cargo fmt --all -- --check"
+
 [workspace.dependencies]
 transform-gizmo = { version = "0.1.0", path = "crates/transform-gizmo" }
 transform-gizmo-egui = { version = "0.1.0", path = "crates/transform-gizmo-egui" }
