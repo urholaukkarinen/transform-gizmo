@@ -1,3 +1,6 @@
+//! A very simple example
+//! See the project root's `examples` directory for more examples
+
 use bevy::prelude::*;
 use transform_gizmo_bevy::*;
 
