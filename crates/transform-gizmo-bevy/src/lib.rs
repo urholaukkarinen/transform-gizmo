@@ -18,7 +18,7 @@
 //!     .run();
 //! ```
 //!
-//! Add [`GizmoCamera`] component to your Camera entity.
+//! Add [`GizmoCamera`] component to your Camera entity (currently only one supported).
 //!
 //! Add [`GizmoTarget`] component to any of your entities that you would like to manipulate the [`Transform`] of.
 //!
@@ -217,6 +217,8 @@ impl GizmoTarget {
 }
 
 /// Marker used to specify which camera to use for gizmos.
+/// Currently only allows one camera to have this component, else will
+/// generate a warning and skip.
 #[derive(Component)]
 pub struct GizmoCamera;
 
