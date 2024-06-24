@@ -17,7 +17,8 @@ use bevy_render::render_asset::{
     RenderAssets,
 };
 use bevy_render::render_phase::{
-    AddRenderCommand, DrawFunctions, PhaseItem, PhaseItemExtraIndex, RenderCommand, RenderCommandResult, RenderPhase, SetItemPipeline, TrackedRenderPass
+    AddRenderCommand, DrawFunctions, PhaseItem, PhaseItemExtraIndex, RenderCommand,
+    RenderCommandResult, SetItemPipeline, TrackedRenderPass, ViewSortedRenderPhases,
 };
 use bevy_render::render_resource::{
     BlendState, Buffer, BufferInitDescriptor, BufferUsages, ColorTargetState, ColorWrites,
@@ -289,8 +290,8 @@ fn queue_transform_gizmos(
     transform_gizmos: Query<(Entity, &Handle<GizmoDrawData>)>,
     transform_gizmo_assets: Res<RenderAssets<GizmoBuffers>>,
     mut views: Query<(
+        Entity,
         &ExtractedView,
-        &mut RenderPhase<Transparent3d>,
         Option<&RenderLayers>,
         (
             Has<NormalPrepass>,
@@ -299,16 +300,21 @@ fn queue_transform_gizmos(
             Has<DeferredPrepass>,
         ),
     )>,
+    mut transparent_render_phases: ResMut<ViewSortedRenderPhases<Transparent3d>>,
 ) {
     let draw_function = draw_functions.read().get_id::<DrawGizmo>().unwrap();
 
     for (
+        view_entity,
         view,
-        mut transparent_phase,
         _render_layers,
         (normal_prepass, depth_prepass, motion_vector_prepass, deferred_prepass),
     ) in &mut views
     {
+        let Some(transparent_phase) = transparent_render_phases.get_mut(&view_entity) else {
+            continue;
+        };
+
         let mut view_key = MeshPipelineKey::from_msaa_samples(msaa.samples())
             | MeshPipelineKey::from_hdr(view.hdr);
 
