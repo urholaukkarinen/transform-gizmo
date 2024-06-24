@@ -422,7 +422,7 @@ fn update_gizmos(
         Pos2::new(viewport.max.x, viewport.max.y),
     );
 
-    let projection_matrix = camera.projection_matrix();
+    let projection_matrix = camera.clip_from_view();
 
     let view_matrix = camera_transform.compute_matrix().inverse();
 
