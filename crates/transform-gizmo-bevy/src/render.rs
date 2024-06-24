@@ -17,8 +17,7 @@ use bevy_render::render_asset::{
     RenderAssets,
 };
 use bevy_render::render_phase::{
-    AddRenderCommand, DrawFunctions, PhaseItem, RenderCommand, RenderCommandResult, RenderPhase,
-    SetItemPipeline, TrackedRenderPass,
+    AddRenderCommand, DrawFunctions, PhaseItem, PhaseItemExtraIndex, RenderCommand, RenderCommandResult, RenderPhase, SetItemPipeline, TrackedRenderPass
 };
 use bevy_render::render_resource::{
     BlendState, Buffer, BufferInitDescriptor, BufferUsages, ColorTargetState, ColorWrites,
@@ -349,7 +348,7 @@ fn queue_transform_gizmos(
                 pipeline,
                 distance: 0.,
                 batch_range: 0..1,
-                dynamic_offset: None,
+                extra_index: PhaseItemExtraIndex::NONE,
             });
         }
     }
