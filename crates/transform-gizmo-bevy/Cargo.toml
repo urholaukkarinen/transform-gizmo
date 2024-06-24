@@ -38,7 +38,7 @@ bevy_window.workspace = true
 bevy_transform.workspace = true
 
 [dev-dependencies]
-bevy = "0.13"
+bevy = "0.14.0-rc"
 
 [lints]
 workspace = true

@@ -26,22 +26,22 @@ mint = "0.5"
 enum_dispatch = "0.3.12"
 ahash = "0.8.7"
 enumset = "1.1.3"
-bevy = "0.13"
+bevy = "0.14.0-rc"
 
-bevy_app = { version = "0.13", default-features = false }
-bevy_core = { version = "0.13", default-features = false }
-bevy_core_pipeline = { version = "0.13", default-features = false }
-bevy_reflect = { version = "0.13", default-features = false }
-bevy_math = { version = "0.13", features = ["mint"], default-features = false }
-bevy_render = { version = "0.13", default-features = false }
-bevy_input = { version = "0.13", default-features = false }
-bevy_asset = { version = "0.13", default-features = false }
-bevy_utils = { version = "0.13", default-features = false }
-bevy_pbr = { version = "0.13", default-features = false }
-bevy_ecs = { version = "0.13", default-features = false }
-bevy_log = { version = "0.13", default-features = false }
-bevy_window = { version = "0.13", default-features = false }
-bevy_transform = { version = "0.13", default-features = false }
+bevy_app = { version = "0.14.0-rc", default-features = false }
+bevy_core = { version = "0.14.0-rc", default-features = false }
+bevy_core_pipeline = { version = "0.14.0-rc", default-features = false }
+bevy_reflect = { version = "0.14.0-rc", default-features = false }
+bevy_math = { version = "0.14.0-rc", features = ["mint"], default-features = false }
+bevy_render = { version = "0.14.0-rc", default-features = false }
+bevy_input = { version = "0.14.0-rc", default-features = false }
+bevy_asset = { version = "0.14.0-rc", default-features = false }
+bevy_utils = { version = "0.14.0-rc", default-features = false }
+bevy_pbr = { version = "0.14.0-rc", default-features = false }
+bevy_ecs = { version = "0.14.0-rc", default-features = false }
+bevy_log = { version = "0.14.0-rc", default-features = false }
+bevy_window = { version = "0.14.0-rc", default-features = false }
+bevy_transform = { version = "0.14.0-rc", default-features = false }
 
 [profile.release]
 opt-level = "s"
