@@ -44,7 +44,7 @@ impl Plugin for TransformGizmoRenderPlugin {
         load_internal_asset!(app, GIZMO_SHADER_HANDLE, "gizmo.wgsl", Shader::from_wgsl);
 
         app.init_resource::<DrawDataHandles>()
-            .add_plugins(RenderAssetPlugin::<GizmoDrawData>::default());
+            .add_plugins(RenderAssetPlugin::<GizmoBuffers>::default());
 
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
@@ -57,7 +57,7 @@ impl Plugin for TransformGizmoRenderPlugin {
                 Render,
                 queue_transform_gizmos
                     .in_set(RenderSet::Queue)
-                    .after(prepare_assets::<GizmoDrawData>),
+                    .after(prepare_assets::<GizmoBuffers>),
             );
     }
 
@@ -100,33 +100,33 @@ pub(crate) struct GizmoBuffers {
     index_count: u32,
 }
 
-impl RenderAsset for GizmoDrawData {
-    type PreparedAsset = GizmoBuffers;
+impl RenderAsset for GizmoBuffers {
+    type SourceAsset = GizmoDrawData;
     type Param = SRes<RenderDevice>;
 
-    fn asset_usage(&self) -> RenderAssetUsages {
+    fn asset_usage(_source_asset: &Self::SourceAsset) -> RenderAssetUsages {
         RenderAssetUsages::all()
     }
 
     fn prepare_asset(
-        self,
+        source_asset: Self::SourceAsset,
         render_device: &mut SystemParamItem<Self::Param>,
-    ) -> Result<Self::PreparedAsset, PrepareAssetError<Self>> {
-        let position_buffer_data = cast_slice(&self.0.vertices);
+    ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
+        let position_buffer_data = cast_slice(&source_asset.0.vertices);
         let position_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             usage: BufferUsages::VERTEX,
             label: Some("TransformGizmo Position Buffer"),
             contents: position_buffer_data,
         });
 
-        let index_buffer_data = cast_slice(&self.0.indices);
+        let index_buffer_data = cast_slice(&source_asset.0.indices);
         let index_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             usage: BufferUsages::INDEX,
             label: Some("TransformGizmo Index Buffer"),
             contents: index_buffer_data,
         });
 
-        let color_buffer_data = cast_slice(&self.0.colors);
+        let color_buffer_data = cast_slice(&source_asset.0.colors);
         let color_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             usage: BufferUsages::VERTEX,
             label: Some("TransformGizmo Color Buffer"),
@@ -137,7 +137,7 @@ impl RenderAsset for GizmoDrawData {
             index_buffer,
             position_buffer,
             color_buffer,
-            index_count: self.0.indices.len() as u32,
+            index_count: source_asset.0.indices.len() as u32,
         })
     }
 }
@@ -147,7 +147,7 @@ struct DrawTransformGizmo;
 impl<P: PhaseItem> RenderCommand<P> for DrawTransformGizmo {
     type ViewQuery = ();
     type ItemQuery = Read<Handle<GizmoDrawData>>;
-    type Param = SRes<RenderAssets<GizmoDrawData>>;
+    type Param = SRes<RenderAssets<GizmoBuffers>>;
 
     #[inline]
     fn render<'w>(
@@ -288,7 +288,7 @@ fn queue_transform_gizmos(
     pipeline_cache: Res<PipelineCache>,
     msaa: Res<Msaa>,
     transform_gizmos: Query<(Entity, &Handle<GizmoDrawData>)>,
-    transform_gizmo_assets: Res<RenderAssets<GizmoDrawData>>,
+    transform_gizmo_assets: Res<RenderAssets<GizmoBuffers>>,
     mut views: Query<(
         &ExtractedView,
         &mut RenderPhase<Transparent3d>,
