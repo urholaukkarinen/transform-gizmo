@@ -36,6 +36,8 @@ bevy_ecs.workspace = true
 bevy_log.workspace = true
 bevy_window.workspace = true
 bevy_transform.workspace = true
+bytemuck.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
 bevy = "0.14.0-rc"

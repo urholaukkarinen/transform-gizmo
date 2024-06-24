@@ -1,6 +1,5 @@
 use bevy_app::{App, Plugin};
 use bevy_asset::{load_internal_asset, Asset, Handle};
-use bevy_core::cast_slice;
 use bevy_core_pipeline::core_3d::{Transparent3d, CORE_3D_DEPTH_FORMAT};
 use bevy_core_pipeline::prepass::{
     DeferredPrepass, DepthPrepass, MotionVectorPrepass, NormalPrepass,
@@ -32,7 +31,9 @@ use bevy_render::renderer::RenderDevice;
 use bevy_render::texture::BevyDefault;
 use bevy_render::view::{ExtractedView, RenderLayers, ViewTarget};
 use bevy_render::{Extract, Render, RenderApp, RenderSet};
-use bevy_utils::{HashMap, HashSet, Uuid};
+use bevy_utils::{HashMap, HashSet};
+use bytemuck::cast_slice;
+use uuid::Uuid;
 
 const GIZMO_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(7414812681337026784);
 
