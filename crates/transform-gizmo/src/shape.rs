@@ -3,7 +3,7 @@ use std::f64::consts::TAU;
 use crate::math::{Pos2, Rect};
 use ecolor::Color32;
 use epaint::{Mesh, TessellationOptions, Tessellator, TextureId};
-pub(crate) use epaint::{Shape, Stroke};
+pub(crate) use epaint::{PathStroke, Shape, Stroke};
 use glam::{DMat4, DVec3};
 
 use crate::math::world_to_screen;
@@ -69,7 +69,7 @@ impl ShapeBuidler {
         radius: f64,
         start_angle: f64,
         end_angle: f64,
-        stroke: impl Into<Stroke>,
+        stroke: impl Into<PathStroke>,
     ) -> Mesh {
         let mut points = self.arc_points(radius, start_angle, end_angle);
 
@@ -81,13 +81,13 @@ impl ShapeBuidler {
 
         self.tessellate_shape(if closed {
             points.pop();
-            Shape::closed_line(points, stroke)
+            Shape::closed_line(points, stroke.into())
         } else {
-            Shape::line(points, stroke)
+            Shape::line(points, stroke.into())
         })
     }
 
-    pub(crate) fn circle(&self, radius: f64, stroke: impl Into<Stroke>) -> Mesh {
+    pub(crate) fn circle(&self, radius: f64, stroke: impl Into<PathStroke>) -> Mesh {
         self.arc(radius, 0.0, TAU, stroke)
     }
 
@@ -95,7 +95,7 @@ impl ShapeBuidler {
         &self,
         radius: f64,
         color: Color32,
-        stroke: impl Into<Stroke>,
+        stroke: impl Into<PathStroke>,
     ) -> Mesh {
         let mut points = self.arc_points(radius, 0.0, TAU);
         points.pop();
@@ -103,7 +103,12 @@ impl ShapeBuidler {
         self.tessellate_shape(Shape::convex_polygon(points, color, stroke.into()))
     }
 
-    pub(crate) fn line_segment(&self, from: DVec3, to: DVec3, stroke: impl Into<Stroke>) -> Mesh {
+    pub(crate) fn line_segment(
+        &self,
+        from: DVec3,
+        to: DVec3,
+        stroke: impl Into<PathStroke>,
+    ) -> Mesh {
         let mut points: [Pos2; 2] = Default::default();
 
         for (i, point) in points.iter_mut().enumerate() {
@@ -131,7 +136,7 @@ impl ShapeBuidler {
             Shape::convex_polygon(
                 vec![start - cross, start + cross, end],
                 stroke.color,
-                Stroke::NONE,
+                PathStroke::NONE,
             )
         } else {
             Shape::Noop
@@ -142,7 +147,7 @@ impl ShapeBuidler {
         &self,
         points: &[DVec3],
         fill: impl Into<Color32>,
-        stroke: impl Into<Stroke>,
+        stroke: impl Into<PathStroke>,
     ) -> Mesh {
         let points = points
             .iter()
@@ -156,7 +161,7 @@ impl ShapeBuidler {
         })
     }
 
-    pub(crate) fn polyline(&self, points: &[DVec3], stroke: impl Into<Stroke>) -> Mesh {
+    pub(crate) fn polyline(&self, points: &[DVec3], stroke: impl Into<PathStroke>) -> Mesh {
         let points = points
             .iter()
             .filter_map(|pos| world_to_screen(self.viewport, self.mvp, *pos))
@@ -175,7 +180,7 @@ impl ShapeBuidler {
         start_angle: f64,
         end_angle: f64,
         fill: impl Into<Color32>,
-        stroke: impl Into<Stroke>,
+        stroke: impl Into<PathStroke>,
     ) -> Mesh {
         let angle_delta = end_angle - start_angle;
         let step_count = steps(angle_delta.abs());
