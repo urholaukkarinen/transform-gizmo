@@ -133,7 +133,7 @@ impl RenderAsset for GizmoBuffers {
             contents: color_buffer_data,
         });
 
-        Ok(GizmoBuffers {
+        Ok(Self {
             index_buffer,
             position_buffer,
             color_buffer,
