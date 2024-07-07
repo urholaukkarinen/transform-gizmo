@@ -1,6 +1,7 @@
 //! A very simple example
 //! See the project root's `examples` directory for more examples
 
+use bevy::color::palettes::css::LIME;
 use bevy::prelude::*;
 use transform_gizmo_bevy::*;
 
@@ -30,7 +31,7 @@ fn setup(
     commands.spawn((
         PbrBundle {
             mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
-            material: materials.add(Color::GREEN),
+            material: materials.add(Color::from(LIME)),
             transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
             ..default()
         },

@@ -1,3 +1,4 @@
+use bevy::color::palettes::css::{BLUE, LIME, RED};
 use bevy::prelude::*;
 use bevy_mod_outline::*;
 use bevy_mod_picking::prelude::*;
@@ -37,7 +38,7 @@ fn setup_scene(
 
     let cube_count: i32 = 3;
 
-    let colors = [Color::RED, Color::GREEN, Color::BLUE];
+    let colors: [Color; 3] = [RED.into(), LIME.into(), BLUE.into()];
 
     for i in 0..cube_count {
         commands

@@ -1,6 +1,5 @@
 use bevy_app::{App, Plugin};
 use bevy_asset::{load_internal_asset, Asset, Handle};
-use bevy_core::cast_slice;
 use bevy_core_pipeline::core_3d::{Transparent3d, CORE_3D_DEPTH_FORMAT};
 use bevy_core_pipeline::prepass::{
     DeferredPrepass, DepthPrepass, MotionVectorPrepass, NormalPrepass,
@@ -18,8 +17,8 @@ use bevy_render::render_asset::{
     RenderAssets,
 };
 use bevy_render::render_phase::{
-    AddRenderCommand, DrawFunctions, PhaseItem, RenderCommand, RenderCommandResult, RenderPhase,
-    SetItemPipeline, TrackedRenderPass,
+    AddRenderCommand, DrawFunctions, PhaseItem, PhaseItemExtraIndex, RenderCommand,
+    RenderCommandResult, SetItemPipeline, TrackedRenderPass, ViewSortedRenderPhases,
 };
 use bevy_render::render_resource::{
     BlendState, Buffer, BufferInitDescriptor, BufferUsages, ColorTargetState, ColorWrites,
@@ -32,7 +31,9 @@ use bevy_render::renderer::RenderDevice;
 use bevy_render::texture::BevyDefault;
 use bevy_render::view::{ExtractedView, RenderLayers, ViewTarget};
 use bevy_render::{Extract, Render, RenderApp, RenderSet};
-use bevy_utils::{HashMap, HashSet, Uuid};
+use bevy_utils::{HashMap, HashSet};
+use bytemuck::cast_slice;
+use uuid::Uuid;
 
 const GIZMO_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(7414812681337026784);
 
@@ -43,9 +44,9 @@ impl Plugin for TransformGizmoRenderPlugin {
         load_internal_asset!(app, GIZMO_SHADER_HANDLE, "gizmo.wgsl", Shader::from_wgsl);
 
         app.init_resource::<DrawDataHandles>()
-            .add_plugins(RenderAssetPlugin::<GizmoDrawData>::default());
+            .add_plugins(RenderAssetPlugin::<GizmoBuffers>::default());
 
-        let Ok(render_app) = app.get_sub_app_mut(RenderApp) else {
+        let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
         };
 
@@ -56,12 +57,12 @@ impl Plugin for TransformGizmoRenderPlugin {
                 Render,
                 queue_transform_gizmos
                     .in_set(RenderSet::Queue)
-                    .after(prepare_assets::<GizmoDrawData>),
+                    .after(prepare_assets::<GizmoBuffers>),
             );
     }
 
     fn finish(&self, app: &mut App) {
-        let Ok(render_app) = app.get_sub_app_mut(RenderApp) else {
+        let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
         };
 
@@ -99,44 +100,44 @@ pub(crate) struct GizmoBuffers {
     index_count: u32,
 }
 
-impl RenderAsset for GizmoDrawData {
-    type PreparedAsset = GizmoBuffers;
+impl RenderAsset for GizmoBuffers {
+    type SourceAsset = GizmoDrawData;
     type Param = SRes<RenderDevice>;
 
-    fn asset_usage(&self) -> RenderAssetUsages {
+    fn asset_usage(_source_asset: &Self::SourceAsset) -> RenderAssetUsages {
         RenderAssetUsages::all()
     }
 
     fn prepare_asset(
-        self,
+        source_asset: Self::SourceAsset,
         render_device: &mut SystemParamItem<Self::Param>,
-    ) -> Result<Self::PreparedAsset, PrepareAssetError<Self>> {
-        let position_buffer_data = cast_slice(&self.0.vertices);
+    ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
+        let position_buffer_data = cast_slice(&source_asset.0.vertices);
         let position_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             usage: BufferUsages::VERTEX,
             label: Some("TransformGizmo Position Buffer"),
             contents: position_buffer_data,
         });
 
-        let index_buffer_data = cast_slice(&self.0.indices);
+        let index_buffer_data = cast_slice(&source_asset.0.indices);
         let index_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             usage: BufferUsages::INDEX,
             label: Some("TransformGizmo Index Buffer"),
             contents: index_buffer_data,
         });
 
-        let color_buffer_data = cast_slice(&self.0.colors);
+        let color_buffer_data = cast_slice(&source_asset.0.colors);
         let color_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             usage: BufferUsages::VERTEX,
             label: Some("TransformGizmo Color Buffer"),
             contents: color_buffer_data,
         });
 
-        Ok(GizmoBuffers {
+        Ok(Self {
             index_buffer,
             position_buffer,
             color_buffer,
-            index_count: self.0.indices.len() as u32,
+            index_count: source_asset.0.indices.len() as u32,
         })
     }
 }
@@ -146,7 +147,7 @@ struct DrawTransformGizmo;
 impl<P: PhaseItem> RenderCommand<P> for DrawTransformGizmo {
     type ViewQuery = ();
     type ItemQuery = Read<Handle<GizmoDrawData>>;
-    type Param = SRes<RenderAssets<GizmoDrawData>>;
+    type Param = SRes<RenderAssets<GizmoBuffers>>;
 
     #[inline]
     fn render<'w>(
@@ -287,10 +288,10 @@ fn queue_transform_gizmos(
     pipeline_cache: Res<PipelineCache>,
     msaa: Res<Msaa>,
     transform_gizmos: Query<(Entity, &Handle<GizmoDrawData>)>,
-    transform_gizmo_assets: Res<RenderAssets<GizmoDrawData>>,
+    transform_gizmo_assets: Res<RenderAssets<GizmoBuffers>>,
     mut views: Query<(
+        Entity,
         &ExtractedView,
-        &mut RenderPhase<Transparent3d>,
         Option<&RenderLayers>,
         (
             Has<NormalPrepass>,
@@ -299,16 +300,21 @@ fn queue_transform_gizmos(
             Has<DeferredPrepass>,
         ),
     )>,
+    mut transparent_render_phases: ResMut<ViewSortedRenderPhases<Transparent3d>>,
 ) {
     let draw_function = draw_functions.read().get_id::<DrawGizmo>().unwrap();
 
     for (
+        view_entity,
         view,
-        mut transparent_phase,
         _render_layers,
         (normal_prepass, depth_prepass, motion_vector_prepass, deferred_prepass),
     ) in &mut views
     {
+        let Some(transparent_phase) = transparent_render_phases.get_mut(&view_entity) else {
+            continue;
+        };
+
         let mut view_key = MeshPipelineKey::from_msaa_samples(msaa.samples())
             | MeshPipelineKey::from_hdr(view.hdr);
 
@@ -348,7 +354,7 @@ fn queue_transform_gizmos(
                 pipeline,
                 distance: 0.,
                 batch_range: 0..1,
-                dynamic_offset: None,
+                extra_index: PhaseItemExtraIndex::NONE,
             });
         }
     }
