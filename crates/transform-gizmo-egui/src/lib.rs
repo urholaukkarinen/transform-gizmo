@@ -64,13 +64,6 @@ impl GizmoExt for Gizmo {
         ui: &Ui,
         targets: &[Transform],
     ) -> Option<(GizmoResult, Vec<Transform>)> {
-        let config = self.config();
-
-        let egui_viewport = egui::Rect {
-            min: Pos2::new(config.viewport.min.x, config.viewport.min.y),
-            max: Pos2::new(config.viewport.max.x, config.viewport.max.y),
-        };
-
         let cursor_pos = ui
             .input(|input| input.pointer.hover_pos())
             .unwrap_or_default();
@@ -79,6 +72,11 @@ impl GizmoExt for Gizmo {
         if !viewport.is_finite() {
             viewport = ui.clip_rect();
         }
+
+        let egui_viewport = Rect {
+            min: Pos2::new(viewport.min.x, viewport.min.y),
+            max: Pos2::new(viewport.max.x, viewport.max.y),
+        };
 
         self.update_config(GizmoConfig {
             viewport,
