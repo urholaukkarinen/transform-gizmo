@@ -116,7 +116,7 @@ impl ExampleApp {
             .num_columns(2)
             .show(ui, |ui| {
                 ui.label("Modes");
-                egui::ComboBox::from_id_source("mode_cb")
+                egui::ComboBox::from_id_salt("mode_cb")
                     .selected_text(format!("{}", self.gizmo_modes.len()))
                     .show_ui(ui, |ui| {
                         for mode in GizmoMode::all() {
@@ -132,7 +132,7 @@ impl ExampleApp {
                 ui.end_row();
 
                 ui.label("Orientation");
-                egui::ComboBox::from_id_source("orientation_cb")
+                egui::ComboBox::from_id_salt("orientation_cb")
                     .selected_text(format!("{:?}", self.gizmo_orientation))
                     .show_ui(ui, |ui| {
                         for orientation in [GizmoOrientation::Global, GizmoOrientation::Local] {
