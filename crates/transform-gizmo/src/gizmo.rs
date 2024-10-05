@@ -241,7 +241,7 @@ impl Gizmo {
     ) -> Transform {
         let axis = match self.config.orientation() {
             GizmoOrientation::Local if !is_view_axis => {
-                DQuat::from(transform.rotation) * DVec3::from(axis)
+                (DQuat::from(transform.rotation) * DVec3::from(axis)).normalize()
             }
             _ => DVec3::from(axis),
         };
@@ -259,9 +259,11 @@ impl Gizmo {
             TransformPivotPoint::IndividualOrigins => transform.translation,
         };
 
+        let new_rotation = (delta * DQuat::from(transform.rotation)).normalize();
+
         Transform {
             scale: transform.scale,
-            rotation: (delta * DQuat::from(transform.rotation)).into(),
+            rotation: new_rotation.into(),
             translation,
         }
     }
