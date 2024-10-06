@@ -96,7 +96,7 @@ impl GizmoExt for Gizmo {
 
         let draw_data = self.draw();
 
-        ui.painter().with_clip_rect(egui_viewport).add(Mesh {
+        egui::Painter::new(ui.ctx().clone(), ui.layer_id(), egui_viewport).add(Mesh {
             indices: draw_data.indices,
             vertices: draw_data
                 .vertices
