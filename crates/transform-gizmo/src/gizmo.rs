@@ -9,7 +9,7 @@ use crate::config::{
 use crate::math::{screen_to_world, Transform};
 use crate::GizmoOrientation;
 use epaint::Mesh;
-use glam::{DQuat, DVec3};
+use glam::{DMat4, DQuat, DVec3};
 
 use crate::subgizmo::rotation::RotationParams;
 use crate::subgizmo::scale::ScaleParams;
@@ -223,7 +223,7 @@ impl Gizmo {
                     self.update_translation(delta, transform, start_transform)
                 }
                 GizmoResult::Scale { total } => {
-                    Self::update_scale(transform, start_transform, total)
+                    self.update_scale(transform, start_transform, total)
                 }
                 GizmoResult::Arcball { delta, total: _ } => {
                     self.update_rotation_quat(transform, delta.into())
@@ -287,14 +287,28 @@ impl Gizmo {
     }
 
     fn update_scale(
+        &self,
         transform: &Transform,
         start_transform: &Transform,
         scale: mint::Vector3<f64>,
     ) -> Transform {
+        let new_scale = match self.config.orientation() {
+            GizmoOrientation::Global => {
+                let scaled_transform_mat = DMat4::from_scale(scale.into())
+                    * DMat4::from_scale_rotation_translation(
+                        DVec3::from(start_transform.scale),
+                        DQuat::from(start_transform.rotation),
+                        DVec3::from(start_transform.translation),
+                    );
+                let (scale, _, _) = scaled_transform_mat.to_scale_rotation_translation();
+                scale
+            }
+            GizmoOrientation::Local => DVec3::from(start_transform.scale) * DVec3::from(scale),
+        };
+
         Transform {
-            scale: (DVec3::from(start_transform.scale) * DVec3::from(scale)).into(),
-            rotation: transform.rotation,
-            translation: transform.translation,
+            scale: new_scale.into(),
+            ..*transform
         }
     }
 

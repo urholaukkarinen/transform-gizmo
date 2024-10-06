@@ -93,19 +93,7 @@ impl GizmoConfig {
 
     /// Transform orientation of the gizmo
     pub(crate) fn orientation(&self) -> GizmoOrientation {
-        if self.is_scaling() {
-            // Scaling currently only works in local orientation,
-            // so the configured orientation is ignored.
-            GizmoOrientation::Local
-        } else {
-            self.orientation
-        }
-    }
-
-    /// Whether the config includes any scaling modes
-    fn is_scaling(&self) -> bool {
-        (self.mode_override.is_none() && !self.modes.is_disjoint(GizmoMode::all_scale()))
-            || self.mode_override.filter(GizmoMode::is_scale).is_some()
+        self.orientation
     }
 
     /// Whether the modes have changed, compared to given other config
