@@ -44,7 +44,7 @@
 //! ```
 //!
 //!
-use egui::{epaint::Vertex, Mesh, PointerButton, Pos2, Rgba, Ui};
+use egui::{epaint::Vertex, Mesh, PointerButton, Pos2, Rgba, Sense, Ui, Vec2};
 
 use transform_gizmo::math::Transform;
 pub use transform_gizmo::*;
@@ -84,9 +84,17 @@ impl GizmoExt for Gizmo {
             ..*self.config()
         });
 
+        let interaction = ui.interact(
+            Rect::from_center_size(cursor_pos, Vec2::splat(1.0)),
+            ui.id().with("_interaction"),
+            Sense::click_and_drag(),
+        );
+        let hovered = interaction.hovered();
+
         let gizmo_result = self.update(
             GizmoInteraction {
                 cursor_pos: (cursor_pos.x, cursor_pos.y),
+                hovered: hovered,
                 drag_started: ui
                     .input(|input| input.pointer.button_pressed(PointerButton::Primary)),
                 dragging: ui.input(|input| input.pointer.button_down(PointerButton::Primary)),
