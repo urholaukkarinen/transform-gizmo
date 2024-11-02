@@ -81,10 +81,12 @@ impl Gizmo {
     /// # let cursor_pos = Default::default();
     /// # let drag_started = true;
     /// # let dragging = true;
+    /// # let hovered = true;
     /// # let mut transforms = vec![];
     ///
     /// let interaction = GizmoInteraction {
     ///     cursor_pos,
+    ///     hovered,
     ///     drag_started,
     ///     dragging
     /// };
@@ -130,7 +132,7 @@ impl Gizmo {
 
         // If there is no active subgizmo, find which one of them
         // is under the mouse pointer, if any.
-        if self.active_subgizmo_id.is_none() {
+        if self.active_subgizmo_id.is_none() && interaction.hovered {
             if let Some(subgizmo) = self.pick_subgizmo(pointer_ray) {
                 subgizmo.set_focused(true);
 
@@ -636,6 +638,11 @@ impl Gizmo {
 pub struct GizmoInteraction {
     /// Current cursor position in window coordinates.
     pub cursor_pos: (f32, f32),
+    /// Whether the gizmo is hovered this frame.
+    /// Some other UI element might be covering the gizmo,
+    /// and in such case you may not want the gizmo to be
+    /// interactable.
+    pub hovered: bool,
     /// Whether dragging was started this frame.
     /// Usually this is set to true if the primary mouse
     /// button was just pressed.

@@ -454,6 +454,7 @@ fn update_gizmos(
 
     let gizmo_interaction = GizmoInteraction {
         cursor_pos: (cursor_pos.x, cursor_pos.y),
+        hovered: true,
         drag_started: mouse.just_pressed(MouseButton::Left),
         dragging: mouse.any_pressed([MouseButton::Left]),
     };
