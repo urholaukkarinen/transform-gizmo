@@ -94,7 +94,7 @@ impl GizmoExt for Gizmo {
         let gizmo_result = self.update(
             GizmoInteraction {
                 cursor_pos: (cursor_pos.x, cursor_pos.y),
-                hovered: hovered,
+                hovered,
                 drag_started: ui
                     .input(|input| input.pointer.button_pressed(PointerButton::Primary)),
                 dragging: ui.input(|input| input.pointer.button_down(PointerButton::Primary)),
