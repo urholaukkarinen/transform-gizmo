@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*", "examples/*"]
 
 [workspace.package]
-version = "0.3.0"
+version = "0.4.0"
 rust-version = "1.78.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -12,9 +12,9 @@ repository = "https://github.com/urholaukkarinen/transform-gizmo"
 authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 
 [workspace.dependencies]
-transform-gizmo = { version = "0.3.0", path = "crates/transform-gizmo" }
-transform-gizmo-egui = { version = "0.3.0", path = "crates/transform-gizmo-egui" }
-transform-gizmo-bevy = { version = "0.3.0", path = "crates/transform-gizmo-bevy" }
+transform-gizmo = { version = "0.4.0", path = "crates/transform-gizmo" }
+transform-gizmo-egui = { version = "0.4.0", path = "crates/transform-gizmo-egui" }
+transform-gizmo-bevy = { version = "0.4.0", path = "crates/transform-gizmo-bevy" }
 
 egui = "0.29"
 eframe = "0.29"
