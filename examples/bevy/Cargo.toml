@@ -18,7 +18,7 @@ bevy_mod_picking = "0.20.0"
 bevy_mod_outline = { git = "https://github.com/komadori/bevy_mod_outline.git", rev = "d24b2eaec26b02f91ef99ebf0d86b982ea05a0ed" }
 
 [dependencies.bevy_egui]
-version = "0.28"
+version = "0.29"
 features = ["open_url", "default_fonts", "render"]
 default-features = false
 

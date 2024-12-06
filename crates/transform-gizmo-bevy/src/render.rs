@@ -1,15 +1,18 @@
 use bevy_app::{App, Plugin};
-use bevy_asset::{load_internal_asset, Asset, Handle};
+use bevy_asset::{load_internal_asset, Asset, AssetId, Handle};
 use bevy_core_pipeline::core_3d::{Transparent3d, CORE_3D_DEPTH_FORMAT};
 use bevy_core_pipeline::prepass::{
     DeferredPrepass, DepthPrepass, MotionVectorPrepass, NormalPrepass,
 };
+use bevy_derive::{Deref, DerefMut};
 use bevy_ecs::prelude::*;
 use bevy_ecs::query::ROQueryItem;
 use bevy_ecs::system::lifetimeless::{Read, SRes};
 use bevy_ecs::system::SystemParamItem;
+use bevy_image::BevyDefault as _;
 use bevy_pbr::{MeshPipeline, MeshPipelineKey, SetMeshViewBindGroup};
-use bevy_reflect::TypePath;
+use bevy_reflect::{Reflect, TypePath};
+use bevy_render::extract_component::ExtractComponent;
 use bevy_render::mesh::PrimitiveTopology;
 use bevy_render::prelude::*;
 use bevy_render::render_asset::{
@@ -28,12 +31,13 @@ use bevy_render::render_resource::{
     VertexAttribute, VertexBufferLayout, VertexFormat, VertexState, VertexStepMode,
 };
 use bevy_render::renderer::RenderDevice;
-use bevy_render::texture::BevyDefault;
 use bevy_render::view::{ExtractedView, RenderLayers, ViewTarget};
 use bevy_render::{Extract, Render, RenderApp, RenderSet};
 use bevy_utils::{HashMap, HashSet};
 use bytemuck::cast_slice;
 use uuid::Uuid;
+
+use crate::GizmoCamera;
 
 const GIZMO_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(7414812681337026784);
 
@@ -74,7 +78,30 @@ impl Plugin for TransformGizmoRenderPlugin {
 
 #[derive(Resource, Default)]
 pub(crate) struct DrawDataHandles {
-    pub(crate) handles: HashMap<Uuid, Handle<GizmoDrawData>>,
+    pub(crate) handles: HashMap<Uuid, GizmoDrawDataHandle>,
+}
+
+#[derive(
+    Component, Default, Clone, Debug, Deref, DerefMut, Reflect, PartialEq, Eq, ExtractComponent,
+)]
+#[reflect(Component)]
+pub(crate) struct GizmoDrawDataHandle(pub(crate) Handle<GizmoDrawData>);
+
+impl From<Handle<GizmoDrawData>> for GizmoDrawDataHandle {
+    fn from(handle: Handle<GizmoDrawData>) -> Self {
+        Self(handle)
+    }
+}
+
+impl From<GizmoDrawDataHandle> for AssetId<GizmoDrawData> {
+    fn from(handle: GizmoDrawDataHandle) -> Self {
+        handle.0.id()
+    }
+}
+impl From<&GizmoDrawDataHandle> for AssetId<GizmoDrawData> {
+    fn from(handle: &GizmoDrawDataHandle) -> Self {
+        handle.0.id()
+    }
 }
 
 fn extract_gizmo_data(mut commands: Commands, handles: Extract<Res<DrawDataHandles>>) {
@@ -85,7 +112,7 @@ fn extract_gizmo_data(mut commands: Commands, handles: Extract<Res<DrawDataHandl
         .collect::<HashSet<_>>();
 
     for handle in handle_weak_refs {
-        commands.spawn((handle,));
+        commands.spawn(GizmoDrawDataHandle(handle));
     }
 }
 
@@ -146,7 +173,7 @@ struct DrawTransformGizmo;
 
 impl<P: PhaseItem> RenderCommand<P> for DrawTransformGizmo {
     type ViewQuery = ();
-    type ItemQuery = Read<Handle<GizmoDrawData>>;
+    type ItemQuery = Read<GizmoDrawDataHandle>;
     type Param = SRes<RenderAssets<GizmoBuffers>>;
 
     #[inline]
@@ -158,11 +185,11 @@ impl<P: PhaseItem> RenderCommand<P> for DrawTransformGizmo {
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         let Some(handle) = handle else {
-            return RenderCommandResult::Failure;
+            return RenderCommandResult::Failure("No GizmoDrawDataHandle component found");
         };
 
         let Some(gizmo) = gizmos.into_inner().get(handle) else {
-            return RenderCommandResult::Failure;
+            return RenderCommandResult::Failure("No GizmoDrawDataHandle inner found");
         };
 
         pass.set_index_buffer(gizmo.index_buffer.slice(..), 0, IndexFormat::Uint32);
@@ -220,6 +247,7 @@ impl SpecializedRenderPipeline for TransformGizmoPipeline {
 
         RenderPipelineDescriptor {
             label: Some("TransformGizmo Pipeline".into()),
+            zero_initialize_workgroup_memory: true, // ?
             vertex: VertexState {
                 shader: GIZMO_SHADER_HANDLE,
                 entry_point: "vertex".into(),
@@ -286,12 +314,13 @@ fn queue_transform_gizmos(
     pipeline: Res<TransformGizmoPipeline>,
     mut pipelines: ResMut<SpecializedRenderPipelines<TransformGizmoPipeline>>,
     pipeline_cache: Res<PipelineCache>,
-    msaa: Res<Msaa>,
-    transform_gizmos: Query<(Entity, &Handle<GizmoDrawData>)>,
+    msaa_q: Query<&Msaa, With<GizmoCamera>>,
+    transform_gizmos: Query<(Entity, &GizmoDrawDataHandle)>,
     transform_gizmo_assets: Res<RenderAssets<GizmoBuffers>>,
     mut views: Query<(
         Entity,
         &ExtractedView,
+        /* Include Msaa here? */
         Option<&RenderLayers>,
         (
             Has<NormalPrepass>,
@@ -303,6 +332,7 @@ fn queue_transform_gizmos(
     mut transparent_render_phases: ResMut<ViewSortedRenderPhases<Transparent3d>>,
 ) {
     let draw_function = draw_functions.read().get_id::<DrawGizmo>().unwrap();
+    let msaa = msaa_q.single();
 
     for (
         view_entity,
@@ -335,7 +365,7 @@ fn queue_transform_gizmos(
         }
 
         for (entity, handle) in &transform_gizmos {
-            let Some(_) = transform_gizmo_assets.get(handle.id()) else {
+            let Some(_) = transform_gizmo_assets.get(handle.0.id()) else {
                 continue;
             };
 
@@ -349,7 +379,7 @@ fn queue_transform_gizmos(
             );
 
             transparent_phase.add(Transparent3d {
-                entity,
+                entity: (entity, view_entity.into()), // TODO: ???
                 draw_function,
                 pipeline,
                 distance: 0.,
