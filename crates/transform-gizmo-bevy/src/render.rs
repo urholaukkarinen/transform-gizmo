@@ -226,8 +226,9 @@ impl SpecializedRenderPipeline for TransformGizmoPipeline {
 
     fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
         let mut shader_defs = vec![
-            #[cfg(feature = "webgl")]
-            "SIXTEEN_BYTE_ALIGNMENT".into(),
+            // TODO: When is this flag actually used?
+            // #[cfg(feature = "webgl")]
+            // "SIXTEEN_BYTE_ALIGNMENT".into(),
         ];
 
         if key.perspective {
@@ -314,13 +315,13 @@ fn queue_transform_gizmos(
     pipeline: Res<TransformGizmoPipeline>,
     mut pipelines: ResMut<SpecializedRenderPipelines<TransformGizmoPipeline>>,
     pipeline_cache: Res<PipelineCache>,
-    msaa_q: Query<&Msaa, With<GizmoCamera>>,
+    msaa_q: Query<Option<&Msaa>, With<GizmoCamera>>,
     transform_gizmos: Query<(Entity, &GizmoDrawDataHandle)>,
     transform_gizmo_assets: Res<RenderAssets<GizmoBuffers>>,
     mut views: Query<(
         Entity,
         &ExtractedView,
-        /* Include Msaa here? */
+        Option<&Msaa>,
         Option<&RenderLayers>,
         (
             Has<NormalPrepass>,
@@ -332,11 +333,11 @@ fn queue_transform_gizmos(
     mut transparent_render_phases: ResMut<ViewSortedRenderPhases<Transparent3d>>,
 ) {
     let draw_function = draw_functions.read().get_id::<DrawGizmo>().unwrap();
-    let msaa = msaa_q.single();
-
+    let camera_msaa = msaa_q.get_single().ok().flatten();
     for (
         view_entity,
         view,
+        entity_msaa,
         _render_layers,
         (normal_prepass, depth_prepass, motion_vector_prepass, deferred_prepass),
     ) in &mut views
@@ -345,7 +346,13 @@ fn queue_transform_gizmos(
             continue;
         };
 
-        let mut view_key = MeshPipelineKey::from_msaa_samples(msaa.samples())
+        // entity_msaa > camera_msaa > default
+        let msaa_sample_count = entity_msaa.map_or(
+            camera_msaa.unwrap_or(&Msaa::default()).samples(),
+            Msaa::samples,
+        );
+
+        let mut view_key = MeshPipelineKey::from_msaa_samples(msaa_sample_count)
             | MeshPipelineKey::from_hdr(view.hdr);
 
         if normal_prepass {
