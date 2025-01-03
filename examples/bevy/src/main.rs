@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use camera::PanOrbitCameraPlugin;
 use gui::GuiPlugin;
-use picking::PickingPlugin;
+use picking::GizmoPickingPlugin;
 use scene::ScenePlugin;
 use transform_gizmo_bevy::GizmoHotkeys;
 
@@ -27,7 +27,7 @@ fn main() {
         .add_plugins(PanOrbitCameraPlugin)
         .add_plugins(ScenePlugin)
         .add_plugins(TransformGizmoPlugin)
-        .add_plugins(PickingPlugin)
+        .add_plugins(GizmoPickingPlugin)
         .insert_resource(GizmoOptions {
             hotkeys: Some(GizmoHotkeys::default()),
             ..default()

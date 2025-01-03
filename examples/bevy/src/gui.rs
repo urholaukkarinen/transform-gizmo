@@ -152,7 +152,7 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
         .num_columns(2)
         .show(ui, |ui| {
             ui.label("Orientation");
-            egui::ComboBox::from_id_source("orientation_cb")
+            egui::ComboBox::from_id_salt("orientation_cb")
                 .selected_text(format!("{:?}", gizmo_options.gizmo_orientation))
                 .show_ui(ui, |ui| {
                     for orientation in [GizmoOrientation::Global, GizmoOrientation::Local] {
@@ -166,7 +166,7 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
             ui.end_row();
 
             ui.label("Pivot point");
-            egui::ComboBox::from_id_source("pivot_cb")
+            egui::ComboBox::from_id_salt("pivot_cb")
                 .selected_text(format!("{:?}", gizmo_options.pivot_point))
                 .show_ui(ui, |ui| {
                     for pivot_point in [

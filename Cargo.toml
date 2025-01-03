@@ -46,6 +46,7 @@ bevy_window = { version = "0.15", default-features = false }
 bevy_transform = { version = "0.15", default-features = false }
 bevy_derive = { version = "0.15", default-features = false }
 bevy_image = { version = "0.15", default-features = false }
+bevy_picking = {version = "0.15", default-features = false}
 
 [profile.release]
 opt-level = "s"

@@ -325,6 +325,7 @@ impl Gizmo {
     }
 
     /// Picks the subgizmo that is closest to the given world space ray.
+    #[allow(clippy::manual_inspect)]
     fn pick_subgizmo(&mut self, ray: Ray) -> Option<&mut SubGizmo> {
         // If mode is overridden, assume we only have that mode, and choose it.
         if self.config.mode_override.is_some() {

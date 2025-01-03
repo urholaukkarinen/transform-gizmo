@@ -27,6 +27,7 @@ bevy_core.workspace = true
 bevy_core_pipeline.workspace = true
 bevy_reflect.workspace = true
 bevy_math.workspace = true
+bevy_picking.workspace = true
 bevy_render.workspace = true
 bevy_input.workspace = true
 bevy_asset.workspace = true

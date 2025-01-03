@@ -1,29 +1,31 @@
-use bevy::prelude::*;
-use bevy_mod_outline::*;
-use bevy_mod_picking::{
-    picking_core::PickingPluginsSettings, prelude::*, selection::SelectionPluginSettings,
+use bevy::{
+    picking::pointer::{PointerInteraction, PointerPress},
+    prelude::*,
 };
+use bevy_mod_outline::*;
 use transform_gizmo_bevy::GizmoTarget;
 
-/// Integrates picking with gizmo and highlighting.
-pub struct PickingPlugin;
+#[derive(Component, Clone, Copy)]
+pub struct PickSelection {
+    pub is_selected: bool,
+}
 
-impl Plugin for PickingPlugin {
+/// Integrates picking with gizmo and highlighting.
+pub struct GizmoPickingPlugin;
+
+impl Plugin for GizmoPickingPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_plugins(DefaultPickingPlugins.build())
-            .add_plugins(OutlinePlugin)
-            .insert_resource(SelectionPluginSettings {
-                click_nothing_deselect_all: false,
-                ..default()
-            })
+        app.add_plugins(OutlinePlugin)
+            .add_plugins(MeshPickingPlugin)
             .add_systems(PreUpdate, toggle_picking_enabled)
-            .add_systems(Update, update_picking);
+            .add_systems(Update, update_picking)
+            .add_systems(Update, manage_selection);
     }
 }
 
 fn toggle_picking_enabled(
     gizmo_targets: Query<&GizmoTarget>,
-    mut picking_settings: ResMut<PickingPluginsSettings>,
+    mut picking_settings: ResMut<PickingPlugin>,
 ) {
     // Picking is disabled when any of the gizmos is focused or active.
 
@@ -32,17 +34,18 @@ fn toggle_picking_enabled(
         .all(|target| !target.is_focused() && !target.is_active());
 }
 
-fn update_picking(
+pub fn update_picking(
+    mut targets: Query<
+        (
+            Entity,
+            &PickSelection,
+            &mut OutlineVolume,
+            Option<&GizmoTarget>,
+        ),
+        Changed<PickSelection>,
+    >,
     mut commands: Commands,
-    mut targets: Query<(
-        Entity,
-        &PickSelection,
-        &mut OutlineVolume,
-        Option<&GizmoTarget>,
-    )>,
 ) {
-    // Continuously update entities based on their picking state
-
     for (entity, pick_interaction, mut outline, gizmo_target) in &mut targets {
         let mut entity_cmd = commands.entity(entity);
 
@@ -57,5 +60,47 @@ fn update_picking(
 
             outline.visible = false;
         }
+    }
+}
+
+pub fn manage_selection(
+    pointers: Query<&PointerInteraction, Changed<PointerPress>>,
+    mouse: Res<ButtonInput<MouseButton>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut pick_selection: Query<&mut PickSelection>,
+) {
+    // don't continue if the pointer was just pressed.
+    if !mouse.just_released(MouseButton::Left) {
+        return;
+    };
+    let pointer = match pointers.get_single() {
+        Ok(pointer) => pointer,
+        Err(err) => match err {
+            bevy::ecs::query::QuerySingleError::NoEntities(_) => {
+                // warn!(err);
+                return;
+            }
+            bevy::ecs::query::QuerySingleError::MultipleEntities(_) => {
+                warn!("demo only works with one pointer. delete extra pointer sources!");
+                return;
+            }
+        },
+    };
+    if let Some((e, _)) = pointer.first() {
+        let Ok(root) = pick_selection.get(*e).map(|n| n.is_selected) else {
+            return;
+        };
+
+        if !keys.pressed(KeyCode::ShiftLeft) {
+            for mut pick in &mut pick_selection {
+                pick.is_selected = false;
+            }
+        }
+
+        let Ok(mut pick) = pick_selection.get_mut(*e) else {
+            return;
+        };
+        pick.is_selected = root;
+        pick.is_selected ^= true;
     }
 }
