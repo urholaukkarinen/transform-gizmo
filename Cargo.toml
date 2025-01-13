@@ -3,8 +3,8 @@ resolver = "2"
 members = ["crates/*", "examples/*"]
 
 [workspace.package]
-version = "0.4.0"
-rust-version = "1.78.0"
+version = "0.5.0"
+rust-version = "1.82.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/urholaukkarinen/transform-gizmo"
@@ -12,15 +12,15 @@ repository = "https://github.com/urholaukkarinen/transform-gizmo"
 authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 
 [workspace.dependencies]
-transform-gizmo = { version = "0.4.0", path = "crates/transform-gizmo" }
-transform-gizmo-egui = { version = "0.4.0", path = "crates/transform-gizmo-egui" }
-transform-gizmo-bevy = { version = "0.4.0", path = "crates/transform-gizmo-bevy" }
+transform-gizmo = { version = "0.5.0", path = "crates/transform-gizmo" }
+transform-gizmo-egui = { version = "0.5.0", path = "crates/transform-gizmo-egui" }
+transform-gizmo-bevy = { version = "0.5.0", path = "crates/transform-gizmo-bevy" }
 
-egui = "0.29"
-eframe = "0.29"
-emath = "0.29"
-epaint = "0.29"
-ecolor = "0.29"
+egui = "0.30"
+eframe = "0.30"
+emath = "0.30"
+epaint = "0.30"
+ecolor = "0.30"
 glam = { version = "0.29.1", features = ["mint"] }
 mint = "0.5"
 enum_dispatch = "0.3.12"
@@ -28,22 +28,25 @@ ahash = "0.8.7"
 enumset = "1.1.3"
 bytemuck = "1.5"
 uuid = "1.1"
-bevy = "0.14"
+bevy = "0.15"
 
-bevy_app = { version = "0.14", default-features = false }
-bevy_core = { version = "0.14", default-features = false }
-bevy_core_pipeline = { version = "0.14", default-features = false }
-bevy_reflect = { version = "0.14", default-features = false }
-bevy_math = { version = "0.14", features = ["mint"], default-features = false }
-bevy_render = { version = "0.14", default-features = false }
-bevy_input = { version = "0.14", default-features = false }
-bevy_asset = { version = "0.14", default-features = false }
-bevy_utils = { version = "0.14", default-features = false }
-bevy_pbr = { version = "0.14", default-features = false }
-bevy_ecs = { version = "0.14", default-features = false }
-bevy_log = { version = "0.14", default-features = false }
-bevy_window = { version = "0.14", default-features = false }
-bevy_transform = { version = "0.14", default-features = false }
+bevy_app = { version = "0.15", default-features = false }
+bevy_core = { version = "0.15", default-features = false }
+bevy_core_pipeline = { version = "0.15", default-features = false }
+bevy_reflect = { version = "0.15", default-features = false }
+bevy_math = { version = "0.15", features = ["mint"], default-features = false }
+bevy_render = { version = "0.15", default-features = false }
+bevy_input = { version = "0.15", default-features = false }
+bevy_asset = { version = "0.15", default-features = false }
+bevy_utils = { version = "0.15", default-features = false }
+bevy_pbr = { version = "0.15", default-features = false }
+bevy_ecs = { version = "0.15", default-features = false }
+bevy_log = { version = "0.15", default-features = false }
+bevy_window = { version = "0.15", default-features = false }
+bevy_transform = { version = "0.15", default-features = false }
+bevy_derive = { version = "0.15", default-features = false }
+bevy_image = { version = "0.15", default-features = false }
+bevy_picking = {version = "0.15", default-features = false}
 
 [profile.release]
 opt-level = "s"
@@ -51,9 +54,6 @@ panic = "abort"
 
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "allow"
-future_incompatible = "deny"
-nonstandard_style = "deny"
-rust_2018_idioms = "warn"
 rust_2021_prelude_collisions = "deny"
 semicolon_in_expressions_from_macros = "deny"
 trivial_numeric_casts = "deny"
@@ -64,7 +64,6 @@ unused_lifetimes = "deny"
 unsafe_code = "deny"
 
 [workspace.lints.clippy]
-all = "deny"
 as_ptr_cast_mut = "deny"
 await_holding_lock = "deny"
 bool_to_int_with_if = "deny"
@@ -133,7 +132,7 @@ match_same_arms = "deny"
 match_wild_err_arm = "deny"
 match_wildcard_for_single_variants = "deny"
 mem_forget = "deny"
-mismatched_target_os = "deny"
+unexpected_cfgs = "deny"
 mismatching_type_param_order = "deny"
 missing_enforced_import_renames = "deny"
 missing_safety_doc = "deny"
