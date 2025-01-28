@@ -592,7 +592,9 @@ fn draw_gizmos(
         if is_new_asset {
             let asset = draw_data_assets.add(bevy_draw_data);
 
-            draw_data_handles.handles.insert(*gizmo_uuid, asset.clone());
+            draw_data_handles
+                .handles
+                .insert(*gizmo_uuid, asset.clone().into());
         }
     }
 }
