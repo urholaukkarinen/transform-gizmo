@@ -10,6 +10,7 @@ use bevy_ecs::query::ROQueryItem;
 use bevy_ecs::system::lifetimeless::{Read, SRes};
 use bevy_ecs::system::SystemParamItem;
 use bevy_image::BevyDefault as _;
+use bevy_log::info;
 use bevy_pbr::{MeshPipeline, MeshPipelineKey, SetMeshViewBindGroup};
 use bevy_reflect::{Reflect, TypePath};
 use bevy_render::extract_component::ExtractComponent;
@@ -31,6 +32,7 @@ use bevy_render::render_resource::{
     VertexAttribute, VertexBufferLayout, VertexFormat, VertexState, VertexStepMode,
 };
 use bevy_render::renderer::RenderDevice;
+use bevy_render::sync_world::TemporaryRenderEntity;
 use bevy_render::view::{ExtractedView, RenderLayers, ViewTarget};
 use bevy_render::{Extract, Render, RenderApp, RenderSet};
 use bevy_utils::{HashMap, HashSet};
@@ -47,7 +49,8 @@ impl Plugin for TransformGizmoRenderPlugin {
     fn build(&self, app: &mut App) {
         load_internal_asset!(app, GIZMO_SHADER_HANDLE, "gizmo.wgsl", Shader::from_wgsl);
 
-        app.init_resource::<DrawDataHandles>()
+        app.register_type::<DrawDataHandles>()
+            .init_resource::<DrawDataHandles>()
             .add_plugins(RenderAssetPlugin::<GizmoBuffers>::default());
 
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
@@ -76,7 +79,8 @@ impl Plugin for TransformGizmoRenderPlugin {
     }
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Reflect)]
+#[reflect(Resource)]
 pub(crate) struct DrawDataHandles {
     pub(crate) handles: HashMap<Uuid, GizmoDrawDataHandle>,
 }
@@ -112,7 +116,7 @@ fn extract_gizmo_data(mut commands: Commands, handles: Extract<Res<DrawDataHandl
         .collect::<HashSet<_>>();
 
     for handle in handle_weak_refs {
-        commands.spawn(GizmoDrawDataHandle(handle));
+        commands.spawn((GizmoDrawDataHandle(handle), TemporaryRenderEntity));
     }
 }
 
@@ -376,6 +380,11 @@ fn queue_transform_gizmos(
         }
 
         for (entity, handle) in &transform_gizmos {
+            // One draw call is created per iteration of this loop.
+            // The draw call is added on line 397.
+            // This loop runs once per entity in the render world that has this component on it: GizmoDrawDataHandle
+            // Every frame, the number of entities that this transform_gizmos query finds, increases, causing more and more draw calls.
+            // Since its in the render world, you cant simply see an exploding number of entities in the egui inspector, since it only shows simulation world entities.
             let Some(_) = transform_gizmo_assets.get(handle.0.id()) else {
                 continue;
             };
