@@ -10,7 +10,6 @@ use bevy_ecs::query::ROQueryItem;
 use bevy_ecs::system::lifetimeless::{Read, SRes};
 use bevy_ecs::system::SystemParamItem;
 use bevy_image::BevyDefault as _;
-use bevy_log::info;
 use bevy_pbr::{MeshPipeline, MeshPipelineKey, SetMeshViewBindGroup};
 use bevy_reflect::{Reflect, TypePath};
 use bevy_render::extract_component::ExtractComponent;
@@ -196,15 +195,13 @@ impl<P: PhaseItem> RenderCommand<P> for DrawTransformGizmo {
             return RenderCommandResult::Failure("No GizmoDrawDataHandle inner found");
         };
 
-        if gizmo.index_buffer.size() == 0 {
-            return RenderCommandResult::Failure("gizmo.index_buffer is empty");
+        if gizmo.index_buffer.size() > 0 {
+            pass.set_index_buffer(gizmo.index_buffer.slice(..), 0, IndexFormat::Uint32);
+            pass.set_vertex_buffer(0, gizmo.position_buffer.slice(..));
+            pass.set_vertex_buffer(1, gizmo.color_buffer.slice(..));
+
+            pass.draw_indexed(0..gizmo.index_count, 0, 0..1);
         }
-
-        pass.set_index_buffer(gizmo.index_buffer.slice(..), 0, IndexFormat::Uint32);
-        pass.set_vertex_buffer(0, gizmo.position_buffer.slice(..));
-        pass.set_vertex_buffer(1, gizmo.color_buffer.slice(..));
-
-        pass.draw_indexed(0..gizmo.index_count, 0, 0..1);
 
         RenderCommandResult::Success
     }

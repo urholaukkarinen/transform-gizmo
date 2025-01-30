@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*", "examples/*"]
 
 [workspace.package]
-version = "0.5.0"
+version = "0.5.1"
 rust-version = "1.82.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -12,9 +12,9 @@ repository = "https://github.com/urholaukkarinen/transform-gizmo"
 authors = ["Urho Laukkarinen <urho.laukkarinen@gmail.com>"]
 
 [workspace.dependencies]
-transform-gizmo = { version = "0.5.0", path = "crates/transform-gizmo" }
-transform-gizmo-egui = { version = "0.5.0", path = "crates/transform-gizmo-egui" }
-transform-gizmo-bevy = { version = "0.5.0", path = "crates/transform-gizmo-bevy" }
+transform-gizmo = { version = "0.5.1", path = "crates/transform-gizmo" }
+transform-gizmo-egui = { version = "0.5.1", path = "crates/transform-gizmo-egui" }
+transform-gizmo-bevy = { version = "0.5.1", path = "crates/transform-gizmo-bevy" }
 
 egui = "0.30"
 eframe = "0.30"
@@ -46,7 +46,7 @@ bevy_window = { version = "0.15", default-features = false }
 bevy_transform = { version = "0.15", default-features = false }
 bevy_derive = { version = "0.15", default-features = false }
 bevy_image = { version = "0.15", default-features = false }
-bevy_picking = {version = "0.15", default-features = false}
+bevy_picking = { version = "0.15", default-features = false }
 
 [profile.release]
 opt-level = "s"
