@@ -4,6 +4,8 @@ use crate::subgizmo::{SubGizmoConfig, SubGizmoKind};
 use crate::{config::PreparedGizmoConfig, gizmo::Ray, GizmoDrawData, GizmoResult};
 use ecolor::Color32;
 
+use super::common::PickResult;
+
 pub(crate) type ArcballSubGizmo = SubGizmoConfig<Arcball>;
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -18,14 +20,22 @@ pub(crate) struct Arcball;
 impl SubGizmoKind for Arcball {
     type Params = ();
     type State = ArcballState;
+    type PickPreview = PickResult;
 
-    fn pick(subgizmo: &mut ArcballSubGizmo, ray: Ray) -> Option<f64> {
-        let pick_result = pick_circle(
+    fn preview_pick(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> super::common::PickResult
+    where
+        Self: Sized,
+    {
+        pick_circle(
             &subgizmo.config,
             ray,
             arcball_radius(&subgizmo.config),
             true,
-        );
+        )
+    }
+
+    fn pick(subgizmo: &mut ArcballSubGizmo, ray: Ray) -> Option<f64> {
+        let pick_result = Self::preview_pick(subgizmo, ray);
 
         subgizmo.state.last_pos = ray.screen_pos;
 

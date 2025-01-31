@@ -9,6 +9,8 @@ use crate::subgizmo::common::{
 use crate::subgizmo::{common::TransformKind, SubGizmoConfig, SubGizmoKind};
 use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult};
 
+use super::common::PickResult;
+
 pub(crate) type ScaleSubGizmo = SubGizmoConfig<Scale>;
 
 #[derive(Debug, Copy, Clone, Hash)]
@@ -29,9 +31,13 @@ pub(crate) struct Scale;
 impl SubGizmoKind for Scale {
     type Params = ScaleParams;
     type State = ScaleState;
+    type PickPreview = PickResult;
 
-    fn pick(subgizmo: &mut ScaleSubGizmo, ray: Ray) -> Option<f64> {
-        let pick_result = match (subgizmo.transform_kind, subgizmo.direction) {
+    fn preview_pick(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> super::common::PickResult
+    where
+        Self: Sized,
+    {
+        match (subgizmo.transform_kind, subgizmo.direction) {
             (TransformKind::Plane, GizmoDirection::View) => pick_circle(
                 &subgizmo.config,
                 ray,
@@ -42,7 +48,11 @@ impl SubGizmoKind for Scale {
             (TransformKind::Axis, _) => {
                 pick_arrow(&subgizmo.config, ray, subgizmo.direction, subgizmo.mode)
             }
-        };
+        }
+    }
+
+    fn pick(subgizmo: &mut ScaleSubGizmo, ray: Ray) -> Option<f64> {
+        let pick_result = Self::preview_pick(subgizmo, ray);
 
         let start_delta = distance_from_origin_2d(subgizmo, ray.screen_pos)?;
 

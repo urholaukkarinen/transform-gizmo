@@ -8,6 +8,8 @@ use crate::shape::ShapeBuidler;
 use crate::{config::PreparedGizmoConfig, gizmo::Ray, GizmoDirection, GizmoDrawData};
 use glam::{DMat3, DMat4, DQuat, DVec3};
 
+use super::Picked;
+
 const ARROW_FADE: RangeInclusive<f64> = 0.95..=0.99;
 const PLANE_FADE: RangeInclusive<f64> = 0.70..=0.86;
 
@@ -23,6 +25,12 @@ pub(crate) struct PickResult {
     pub visibility: f64,
     pub picked: bool,
     pub t: f64,
+}
+
+impl Picked for PickResult {
+    fn picked(&self) -> bool {
+        self.picked
+    }
 }
 
 struct ArrowParams {

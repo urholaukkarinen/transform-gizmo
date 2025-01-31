@@ -49,11 +49,13 @@ pub(crate) trait SubGizmoControl {
     fn update(&mut self, ray: Ray) -> Option<GizmoResult>;
     /// Draw the subgizmo.
     fn draw(&self) -> GizmoDrawData;
+    fn pick_preview(&self, ray: Ray) -> bool;
 }
 
 pub(crate) trait SubGizmoKind: 'static {
     type Params: Debug + Copy + Hash;
     type State: Debug + Copy + Clone + Send + Sync + Default + 'static;
+    type PickPreview: Picked + 'static;
 
     fn pick(subgizmo: &mut SubGizmoConfig<Self>, ray: Ray) -> Option<f64>
     where
@@ -64,6 +66,14 @@ pub(crate) trait SubGizmoKind: 'static {
     fn draw(subgizmo: &SubGizmoConfig<Self>) -> GizmoDrawData
     where
         Self: Sized;
+
+    fn preview_pick(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> Self::PickPreview
+    where
+        Self: Sized;
+}
+
+pub trait Picked {
+    fn picked(&self) -> bool;
 }
 
 #[derive(Clone, Debug)]
@@ -152,5 +162,9 @@ where
 
     fn draw(&self) -> GizmoDrawData {
         T::draw(self)
+    }
+
+    fn pick_preview(&self, ray: Ray) -> bool {
+        T::preview_pick(self, ray).picked()
     }
 }

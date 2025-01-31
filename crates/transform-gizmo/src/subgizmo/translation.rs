@@ -7,6 +7,8 @@ use crate::subgizmo::common::{
 use crate::subgizmo::{common::TransformKind, SubGizmoConfig, SubGizmoKind};
 use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoOrientation, GizmoResult};
 
+use super::common::PickResult;
+
 pub(crate) type TranslationSubGizmo = SubGizmoConfig<Translation>;
 
 #[derive(Debug, Copy, Clone, Hash)]
@@ -30,9 +32,10 @@ pub(crate) struct Translation;
 impl SubGizmoKind for Translation {
     type Params = TranslationParams;
     type State = TranslationState;
+    type PickPreview = PickResult;
 
-    fn pick(subgizmo: &mut TranslationSubGizmo, ray: Ray) -> Option<f64> {
-        let pick_result = match (subgizmo.transform_kind, subgizmo.direction) {
+    fn preview_pick(subgizmo: &TranslationSubGizmo, ray: Ray) -> PickResult {
+        match (subgizmo.transform_kind, subgizmo.direction) {
             (TransformKind::Plane, GizmoDirection::View) => pick_circle(
                 &subgizmo.config,
                 ray,
@@ -43,7 +46,11 @@ impl SubGizmoKind for Translation {
             (TransformKind::Axis, _) => {
                 pick_arrow(&subgizmo.config, ray, subgizmo.direction, subgizmo.mode)
             }
-        };
+        }
+    }
+
+    fn pick(subgizmo: &mut TranslationSubGizmo, ray: Ray) -> Option<f64> {
+        let pick_result = Self::preview_pick(subgizmo, ray);
 
         subgizmo.opacity = pick_result.visibility as _;
 

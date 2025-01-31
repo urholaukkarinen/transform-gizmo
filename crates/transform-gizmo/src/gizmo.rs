@@ -197,6 +197,11 @@ impl Gizmo {
         draw_data
     }
 
+    pub fn pick_preview(&self, cursor_pos: (f32, f32)) -> bool {
+        let pointer_ray = self.pointer_ray(Pos2::from(cursor_pos));
+        self.subgizmos.iter().any(|x| x.pick_preview(pointer_ray))
+    }
+
     fn active_subgizmo_mut(&mut self) -> Option<&mut SubGizmo> {
         self.active_subgizmo_id.and_then(|id| {
             self.subgizmos
