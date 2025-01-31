@@ -33,6 +33,7 @@ use bevy_asset::{AssetApp, Assets};
 use bevy_ecs::prelude::*;
 use bevy_input::prelude::*;
 use bevy_math::{DQuat, DVec3, Vec2};
+use bevy_picking::focus::HoverMap;
 use bevy_render::prelude::*;
 use bevy_transform::prelude::*;
 use bevy_utils::HashMap;
@@ -49,6 +50,7 @@ pub use transform_gizmo::{
     GizmoConfig, *,
 };
 
+pub mod picking;
 pub mod prelude;
 
 mod render;
@@ -370,6 +372,7 @@ fn update_gizmos(
     mut gizmo_storage: ResMut<GizmoStorage>,
     mut last_cursor_pos: Local<Vec2>,
     mut last_scaled_cursor_pos: Local<Vec2>,
+    hover_map: Res<HoverMap>,
 ) {
     let Ok(window) = q_window.get_single() else {
         // No primary window found.
@@ -452,9 +455,15 @@ fn update_gizmos(
         pixels_per_point: scale_factor,
     };
 
+    // The gizmo picking backend sends hits to the entity the gizmo is targeting.
+    // We check for those entities in the hover map to.
+    let any_gizmo_hovered = q_targets
+        .iter()
+        .any(|(entity, ..)| hover_map.iter().any(|(_, map)| map.contains_key(&entity)));
+
     let gizmo_interaction = GizmoInteraction {
         cursor_pos: (cursor_pos.x, cursor_pos.y),
-        hovered: true,
+        hovered: any_gizmo_hovered,
         drag_started: mouse.just_pressed(MouseButton::Left),
         dragging: mouse.any_pressed([MouseButton::Left]),
     };
