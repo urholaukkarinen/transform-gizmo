@@ -3,16 +3,11 @@
 
 use bevy::color::palettes::css::LIME;
 use bevy::prelude::*;
-use transform_gizmo_bevy::picking::TransformGizmoPickingPlugin;
 use transform_gizmo_bevy::*;
 
 fn main() {
     App::new()
-        .add_plugins((
-            DefaultPlugins,
-            TransformGizmoPlugin,
-            TransformGizmoPickingPlugin,
-        ))
+        .add_plugins((DefaultPlugins, TransformGizmoPlugin))
         .add_systems(Startup, setup)
         .add_observer(|trigger: Trigger<Pointer<Over>>| {
             info!("Moved over: {}", trigger.entity());

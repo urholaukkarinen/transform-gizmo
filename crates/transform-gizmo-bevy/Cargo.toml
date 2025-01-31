@@ -11,13 +11,12 @@ authors.workspace = true
 categories = ["gui", "game-development", "game-engines"]
 keywords = ["gizmo", "bevy"]
 readme = "../../README.md"
-include = [
-    "../../LICENSE-APACHE",
-    "../../LICENSE-MIT",
-    "**/*.rs",
-    "**/*.wgsl",
-    "Cargo.toml",
-]
+include = ["../../LICENSE-APACHE", "../../LICENSE-MIT", "**/*.rs", "**/*.wgsl", "Cargo.toml"]
+
+[features]
+default = ["gizmo_picking_backend", "mouse_interaction"]
+gizmo_picking_backend = []
+mouse_interaction = []
 
 [dependencies]
 transform-gizmo.workspace = true

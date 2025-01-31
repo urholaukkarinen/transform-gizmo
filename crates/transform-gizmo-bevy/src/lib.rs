@@ -38,6 +38,8 @@ use bevy_render::prelude::*;
 use bevy_transform::prelude::*;
 use bevy_utils::HashMap;
 use bevy_window::{PrimaryWindow, Window};
+use mouse_interact::MouseGizmoInteractionPlugin;
+use picking::TransformGizmoPickingPlugin;
 use uuid::Uuid;
 
 use render::{DrawDataHandles, TransformGizmoRenderPlugin};
@@ -50,6 +52,7 @@ pub use transform_gizmo::{
     GizmoConfig, *,
 };
 
+pub mod mouse_interact;
 pub mod picking;
 pub mod prelude;
 
@@ -68,11 +71,18 @@ impl Plugin for TransformGizmoPlugin {
         app.init_asset::<render::GizmoDrawData>()
             .init_resource::<GizmoOptions>()
             .init_resource::<GizmoStorage>()
+            .add_event::<GizmoDragStarted>()
+            .add_event::<GizmoDragging>()
             .add_plugins(TransformGizmoRenderPlugin)
             .add_systems(
                 Last,
                 (handle_hotkeys, update_gizmos, draw_gizmos, cleanup_old_data).chain(),
             );
+
+        #[cfg(feature = "gizmo_picking_backend")]
+        app.add_plugins(TransformGizmoPickingPlugin);
+        #[cfg(feature = "mouse_interaction")]
+        app.add_plugins(MouseGizmoInteractionPlugin);
     }
 }
 
@@ -362,17 +372,23 @@ fn handle_hotkeys(
     }
 }
 
+#[derive(Debug, Event, Default)]
+pub struct GizmoDragStarted;
+#[derive(Debug, Event, Default)]
+pub struct GizmoDragging;
+
 #[allow(clippy::too_many_arguments)]
 fn update_gizmos(
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_gizmo_camera: Query<(&Camera, &GlobalTransform), With<GizmoCamera>>,
     mut q_targets: Query<(Entity, &mut Transform, &mut GizmoTarget), Without<GizmoCamera>>,
-    mouse: Res<ButtonInput<MouseButton>>,
+    mut drag_started: EventReader<GizmoDragStarted>,
+    mut dragging: EventReader<GizmoDragging>,
     gizmo_options: Res<GizmoOptions>,
     mut gizmo_storage: ResMut<GizmoStorage>,
     mut last_cursor_pos: Local<Vec2>,
     mut last_scaled_cursor_pos: Local<Vec2>,
-    hover_map: Res<HoverMap>,
+    #[cfg(feature = "gizmo_picking_backend")] hover_map: Res<HoverMap>,
 ) {
     let Ok(window) = q_window.get_single() else {
         // No primary window found.
@@ -455,17 +471,20 @@ fn update_gizmos(
         pixels_per_point: scale_factor,
     };
 
+    #[cfg(feature = "gizmo_picking_backend")]
     // The gizmo picking backend sends hits to the entity the gizmo is targeting.
     // We check for those entities in the hover map to.
     let any_gizmo_hovered = q_targets
         .iter()
         .any(|(entity, ..)| hover_map.iter().any(|(_, map)| map.contains_key(&entity)));
+    #[cfg(not(feature = "gizmo_picking_backend"))]
+    let any_gizmo_hovered = true;
 
     let gizmo_interaction = GizmoInteraction {
         cursor_pos: (cursor_pos.x, cursor_pos.y),
         hovered: any_gizmo_hovered,
-        drag_started: mouse.just_pressed(MouseButton::Left),
-        dragging: mouse.any_pressed([MouseButton::Left]),
+        drag_started: drag_started.read().len() > 0,
+        dragging: dragging.read().len() > 0,
     };
 
     let mut target_entities: Vec<Entity> = vec![];

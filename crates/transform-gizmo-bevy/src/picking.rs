@@ -46,6 +46,9 @@ fn update_hits(
             })
             .collect::<Vec<_>>();
 
+        // TODO: Use a purpose-picked order for hits. It should be below ui and egui, in front of f32::NEG_INFINITY
+        // TODO: Perhapse this should be configurable through a resource? Or just use camera order +/- an offset like what UI picking does?
+
         output.send(PointerHits::new(*pointer_id, hits, 0.0));
     }
 }
