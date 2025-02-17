@@ -6,7 +6,7 @@ use crate::math::{
     ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen, DMat3, DMat4, DQuat,
     DVec2, DVec3, Pos2,
 };
-use crate::shape::ShapeBuidler;
+use crate::shape::ShapeBuilder;
 use crate::subgizmo::common::{gizmo_color, gizmo_local_normal, gizmo_normal, outer_circle_radius};
 use crate::subgizmo::{SubGizmoConfig, SubGizmoKind};
 use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoResult};
@@ -111,7 +111,7 @@ impl SubGizmoKind for Rotation {
         let config = subgizmo.config;
 
         let transform = rotation_matrix(subgizmo);
-        let shape_builder = ShapeBuidler::new(
+        let shape_builder = ShapeBuilder::new(
             config.view_projection * transform,
             config.viewport,
             config.pixels_per_point,
