@@ -10,13 +10,13 @@ use crate::math::world_to_screen;
 
 const STEPS_PER_RAD: f64 = 20.0;
 
-pub(crate) struct ShapeBuidler {
+pub(crate) struct ShapeBuilder {
     mvp: DMat4,
     viewport: Rect,
     pixels_per_point: f32,
 }
 
-impl ShapeBuidler {
+impl ShapeBuilder {
     pub(crate) fn new(mvp: DMat4, viewport: Rect, pixels_per_point: f32) -> Self {
         Self {
             mvp,
