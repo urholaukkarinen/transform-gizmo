@@ -4,7 +4,7 @@ use ecolor::Color32;
 use enumset::EnumSet;
 use std::ops::{Add, RangeInclusive};
 
-use crate::shape::ShapeBuidler;
+use crate::shape::ShapeBuilder;
 use crate::{config::PreparedGizmoConfig, gizmo::Ray, GizmoDirection, GizmoDrawData};
 use glam::{DMat3, DMat4, DQuat, DVec3};
 
@@ -190,7 +190,7 @@ pub(crate) fn draw_arrow(
         DMat4::from_translation(config.translation)
     };
 
-    let shape_builder = ShapeBuidler::new(
+    let shape_builder = ShapeBuilder::new(
         config.view_projection * transform,
         config.viewport,
         config.pixels_per_point,
@@ -251,7 +251,7 @@ pub(crate) fn draw_plane(
         DMat4::from_translation(config.translation)
     };
 
-    let shape_builder = ShapeBuidler::new(
+    let shape_builder = ShapeBuilder::new(
         config.view_projection * transform,
         config.viewport,
         config.pixels_per_point,
@@ -300,7 +300,7 @@ pub(crate) fn draw_circle(
 
     let transform = DMat4::from_rotation_translation(rotation, config.translation);
 
-    let shape_builder = ShapeBuidler::new(
+    let shape_builder = ShapeBuilder::new(
         config.view_projection * transform,
         config.viewport,
         config.pixels_per_point,
