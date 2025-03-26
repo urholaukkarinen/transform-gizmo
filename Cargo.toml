@@ -16,12 +16,12 @@ transform-gizmo = { version = "0.5.1", path = "crates/transform-gizmo" }
 transform-gizmo-egui = { version = "0.5.1", path = "crates/transform-gizmo-egui" }
 transform-gizmo-bevy = { version = "0.5.1", path = "crates/transform-gizmo-bevy" }
 
-egui = "0.30"
-eframe = "0.30"
-emath = "0.30"
-epaint = "0.30"
-ecolor = "0.30"
-glam = { version = "0.29.1", features = ["mint"] }
+egui = "0.31"
+eframe = "0.31"
+emath = "0.31"
+epaint = "0.31"
+ecolor = "0.31"
+glam = { version = "0.30", features = ["mint"] }
 mint = "0.5"
 enum_dispatch = "0.3.12"
 ahash = "0.8.7"
