@@ -5,7 +5,7 @@ members = ["crates/*", "examples/*"]
 [workspace.package]
 version = "0.5.1"
 rust-version = "1.85.0"
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/urholaukkarinen/transform-gizmo"
 repository = "https://github.com/urholaukkarinen/transform-gizmo"
