@@ -44,12 +44,13 @@ use uuid::Uuid;
 
 use render::{DrawDataHandles, TransformGizmoRenderPlugin};
 use transform_gizmo::config::{
-    GizmoModeKind, TransformPivotPoint, DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE,
-    DEFAULT_SNAP_SCALE,
+    DEFAULT_SNAP_ANGLE, DEFAULT_SNAP_DISTANCE, DEFAULT_SNAP_SCALE, GizmoModeKind,
+    TransformPivotPoint,
 };
 pub use transform_gizmo::{
+    GizmoConfig,
     math::{Pos2, Rect},
-    GizmoConfig, *,
+    *,
 };
 
 pub mod mouse_interact;

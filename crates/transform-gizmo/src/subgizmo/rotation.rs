@@ -3,13 +3,13 @@ use std::f64::consts::{FRAC_PI_2, PI, TAU};
 use ecolor::Color32;
 
 use crate::math::{
-    ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen, DMat3, DMat4, DQuat,
-    DVec2, DVec3, Pos2,
+    DMat3, DMat4, DQuat, DVec2, DVec3, Pos2, ray_to_plane_origin, rotation_align,
+    round_to_interval, world_to_screen,
 };
 use crate::shape::ShapeBuidler;
 use crate::subgizmo::common::{gizmo_color, gizmo_local_normal, gizmo_normal, outer_circle_radius};
 use crate::subgizmo::{SubGizmoConfig, SubGizmoKind};
-use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoResult};
+use crate::{GizmoDirection, GizmoDrawData, GizmoResult, gizmo::Ray};
 
 use super::Picked;
 

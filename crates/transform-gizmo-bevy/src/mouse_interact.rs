@@ -1,6 +1,6 @@
 use bevy_app::{App, Plugin, Update};
 use bevy_ecs::{event::EventWriter, system::Res};
-use bevy_input::{mouse::MouseButton, ButtonInput};
+use bevy_input::{ButtonInput, mouse::MouseButton};
 
 use crate::{GizmoDragStarted, GizmoDragging};
 

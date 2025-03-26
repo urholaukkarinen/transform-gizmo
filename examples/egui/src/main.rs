@@ -1,4 +1,4 @@
-use eframe::{egui, NativeOptions};
+use eframe::{NativeOptions, egui};
 use transform_gizmo_egui::math::{DQuat, Transform};
 use transform_gizmo_egui::{
     math::{DMat4, DVec3},

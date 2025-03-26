@@ -3,11 +3,11 @@ use emath::Pos2;
 use enumset::EnumSet;
 use std::ops::{Add, AddAssign, Sub};
 
+use crate::GizmoOrientation;
 use crate::config::{
     GizmoConfig, GizmoDirection, GizmoMode, PreparedGizmoConfig, TransformPivotPoint,
 };
-use crate::math::{screen_to_world, Transform};
-use crate::GizmoOrientation;
+use crate::math::{Transform, screen_to_world};
 use epaint::Mesh;
 use glam::{DMat4, DQuat, DVec3};
 
@@ -15,8 +15,8 @@ use crate::subgizmo::rotation::RotationParams;
 use crate::subgizmo::scale::ScaleParams;
 use crate::subgizmo::translation::TranslationParams;
 use crate::subgizmo::{
-    common::TransformKind, ArcballSubGizmo, RotationSubGizmo, ScaleSubGizmo, SubGizmo,
-    SubGizmoControl, TranslationSubGizmo,
+    ArcballSubGizmo, RotationSubGizmo, ScaleSubGizmo, SubGizmo, SubGizmoControl,
+    TranslationSubGizmo, common::TransformKind,
 };
 
 /// A 3D transformation gizmo.

@@ -1,14 +1,14 @@
 use bevy_app::{App, Plugin};
-use bevy_asset::{load_internal_asset, Asset, AssetId, Handle};
-use bevy_core_pipeline::core_3d::{Transparent3d, CORE_3D_DEPTH_FORMAT};
+use bevy_asset::{Asset, AssetId, Handle, load_internal_asset};
+use bevy_core_pipeline::core_3d::{CORE_3D_DEPTH_FORMAT, Transparent3d};
 use bevy_core_pipeline::prepass::{
     DeferredPrepass, DepthPrepass, MotionVectorPrepass, NormalPrepass,
 };
 use bevy_derive::{Deref, DerefMut};
 use bevy_ecs::prelude::*;
 use bevy_ecs::query::ROQueryItem;
-use bevy_ecs::system::lifetimeless::{Read, SRes};
 use bevy_ecs::system::SystemParamItem;
+use bevy_ecs::system::lifetimeless::{Read, SRes};
 use bevy_image::BevyDefault as _;
 use bevy_pbr::{MeshPipeline, MeshPipelineKey, SetMeshViewBindGroup};
 use bevy_reflect::{Reflect, TypePath};
@@ -16,8 +16,8 @@ use bevy_render::extract_component::ExtractComponent;
 use bevy_render::mesh::PrimitiveTopology;
 use bevy_render::prelude::*;
 use bevy_render::render_asset::{
-    prepare_assets, PrepareAssetError, RenderAsset, RenderAssetPlugin, RenderAssetUsages,
-    RenderAssets,
+    PrepareAssetError, RenderAsset, RenderAssetPlugin, RenderAssetUsages, RenderAssets,
+    prepare_assets,
 };
 use bevy_render::render_phase::{
     AddRenderCommand, DrawFunctions, PhaseItem, PhaseItemExtraIndex, RenderCommand,

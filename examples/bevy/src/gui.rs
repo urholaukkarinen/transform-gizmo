@@ -1,7 +1,7 @@
 use bevy::{math::DQuat, prelude::*};
 use bevy_egui::{
-    egui::{self, Layout, RichText, Widget},
     EguiContexts, EguiPlugin,
+    egui::{self, Layout, RichText, Widget},
 };
 use transform_gizmo_bevy::{config::TransformPivotPoint, prelude::*};
 

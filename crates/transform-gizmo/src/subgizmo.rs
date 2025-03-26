@@ -5,7 +5,7 @@ use std::ops::Deref;
 
 use enum_dispatch::enum_dispatch;
 
-use crate::{config::PreparedGizmoConfig, gizmo::Ray, GizmoDrawData, GizmoResult};
+use crate::{GizmoDrawData, GizmoResult, config::PreparedGizmoConfig, gizmo::Ray};
 
 pub(crate) use arcball::ArcballSubGizmo;
 pub(crate) use rotation::RotationSubGizmo;

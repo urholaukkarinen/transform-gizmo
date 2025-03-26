@@ -1,7 +1,7 @@
 pub use crate::config::{GizmoConfig, GizmoDirection, GizmoMode, GizmoOrientation, GizmoVisuals};
 pub use crate::gizmo::{Gizmo, GizmoDrawData, GizmoInteraction, GizmoResult};
 
-pub use enumset::{enum_set, EnumSet};
+pub use enumset::{EnumSet, enum_set};
 
 pub use mint;
 

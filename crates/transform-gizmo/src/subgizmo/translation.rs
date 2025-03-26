@@ -1,11 +1,11 @@
-use crate::math::{intersect_plane, ray_to_ray, round_to_interval, DVec3};
+use crate::math::{DVec3, intersect_plane, ray_to_ray, round_to_interval};
 
 use crate::subgizmo::common::{
     draw_arrow, draw_circle, draw_plane, gizmo_color, gizmo_normal, inner_circle_radius,
     pick_arrow, pick_circle, pick_plane, plane_bitangent, plane_global_origin, plane_tangent,
 };
-use crate::subgizmo::{common::TransformKind, SubGizmoConfig, SubGizmoKind};
-use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoOrientation, GizmoResult};
+use crate::subgizmo::{SubGizmoConfig, SubGizmoKind, common::TransformKind};
+use crate::{GizmoDirection, GizmoDrawData, GizmoMode, GizmoOrientation, GizmoResult, gizmo::Ray};
 
 use super::common::PickResult;
 
