@@ -18,7 +18,7 @@ bevy_infinite_grid = "0.14"
 bevy_mod_outline = { git = "https://github.com/komadori/bevy_mod_outline.git", rev = "3bd8357c656f6100c3fe13a2d6bab50f6de72a6f" }
 
 [dependencies.bevy_egui]
-version = "0.31"
+version = "0.33"
 features = ["open_url", "default_fonts", "render"]
 default-features = false
 

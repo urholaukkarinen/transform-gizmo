@@ -23,7 +23,7 @@ fn update_ui(
     });
 
     egui::CentralPanel::default()
-        .frame(egui::Frame::none())
+        .frame(egui::Frame::new())
         .show(contexts.ctx_mut(), |ui| {
             let latest_gizmo_result = gizmo_targets
                 .iter()
@@ -71,8 +71,8 @@ fn draw_gizmo_result(ui: &mut egui::Ui, gizmo_result: Option<GizmoResult>) {
             }
         };
 
-        egui::Frame::none()
-            .outer_margin(egui::Margin::same(10.0))
+        egui::Frame::new()
+            .outer_margin(egui::Margin::same(10))
             .show(ui, |ui| {
                 ui.label(text);
             });
