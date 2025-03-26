@@ -19,6 +19,12 @@ jobs:
       - name: cache
         uses: Swatinem/rust-cache@v2
 
+      - name: install cargo fmt
+        run: rustup component add rustfmt
+
+      - name: install clippy
+        run: rustup component add clippy
+
       - name: fmt
         run: cargo fmt --all -- --check
 
