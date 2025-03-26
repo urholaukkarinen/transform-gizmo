@@ -3,7 +3,7 @@ use std::f64::consts::TAU;
 use crate::math::{Pos2, Rect};
 use ecolor::Color32;
 use epaint::{Mesh, PathStroke, TessellationOptions, Tessellator, TextureId};
-pub(crate) use epaint::{Stroke, Shape};
+pub(crate) use epaint::{Shape, Stroke};
 use glam::{DMat4, DVec3};
 
 use crate::math::world_to_screen;
@@ -103,12 +103,7 @@ impl ShapeBuidler {
         self.tessellate_shape(Shape::convex_polygon(points, color, stroke.into()))
     }
 
-    pub(crate) fn line_segment(
-        &self,
-        from: DVec3,
-        to: DVec3,
-        stroke: impl Into<Stroke>,
-    ) -> Mesh {
+    pub(crate) fn line_segment(&self, from: DVec3, to: DVec3, stroke: impl Into<Stroke>) -> Mesh {
         let mut points: [Pos2; 2] = Default::default();
 
         for (i, point) in points.iter_mut().enumerate() {
