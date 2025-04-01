@@ -197,6 +197,7 @@ impl Gizmo {
         draw_data
     }
 
+    /// Checks all sub-gizmos for intersections with the cursor. If there is one, return true.
     pub fn pick_preview(&self, cursor_pos: (f32, f32)) -> bool {
         let pointer_ray = self.pointer_ray(Pos2::from(cursor_pos));
         self.subgizmos.iter().any(|x| x.pick_preview(pointer_ray))

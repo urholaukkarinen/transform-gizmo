@@ -459,7 +459,7 @@ impl Default for GizmoVisuals {
             z_color: Color32::from_rgb(0, 125, 255),
             s_color: Color32::from_rgb(255, 255, 255),
             inactive_alpha: 0.7,
-            highlight_alpha: 0.1,
+            highlight_alpha: 1.0,
             highlight_color: None,
             stroke_width: 4.0,
             gizmo_size: 75.0,

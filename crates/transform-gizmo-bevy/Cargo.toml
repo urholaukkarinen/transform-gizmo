@@ -14,7 +14,7 @@ include = ["../../LICENSE-APACHE", "../../LICENSE-MIT", "**/*.rs", "**/*.wgsl", 
 
 [features]
 default = ["gizmo_picking_backend", "mouse_interaction"]
-gizmo_picking_backend = []
+gizmo_picking_backend = ["dep:bevy_picking"]
 mouse_interaction = []
 
 [dependencies]
@@ -25,7 +25,7 @@ bevy_core.workspace = true
 bevy_core_pipeline.workspace = true
 bevy_reflect.workspace = true
 bevy_math.workspace = true
-bevy_picking.workspace = true
+bevy_picking = {workspace = true, optional = true}
 bevy_render.workspace = true
 bevy_input.workspace = true
 bevy_asset.workspace = true
