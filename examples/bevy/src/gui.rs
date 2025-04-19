@@ -8,7 +8,7 @@ use transform_gizmo_bevy::{config::TransformPivotPoint, prelude::*};
 pub struct GuiPlugin;
 
 impl Plugin for GuiPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
+    fn build(&self, app: &mut App) {
         app.add_plugins(EguiPlugin).add_systems(Update, update_ui);
     }
 }
@@ -18,18 +18,25 @@ fn update_ui(
     mut gizmo_options: ResMut<GizmoOptions>,
     gizmo_targets: Query<&GizmoTarget>,
 ) {
-    egui::SidePanel::left("options").show(contexts.ctx_mut(), |ui| {
+    let options_panel = egui::SidePanel::left("options").show(contexts.ctx_mut(), |ui| {
         draw_options(ui, &mut gizmo_options);
     });
 
-    egui::CentralPanel::default()
-        .frame(egui::Frame::new())
+    egui::Area::new("gizmo_result".into())
+        .interactable(false)
+        .movable(false)
+        .anchor(
+            egui::Align2::LEFT_TOP,
+            options_panel.response.rect.right_top().to_vec2(),
+        )
         .show(contexts.ctx_mut(), |ui| {
-            let latest_gizmo_result = gizmo_targets
-                .iter()
-                .find_map(|target| target.latest_result());
+            ui.allocate_ui(ui.ctx().available_rect().size(), |ui| {
+                let latest_gizmo_result = gizmo_targets
+                    .iter()
+                    .find_map(|target| target.latest_result());
 
-            draw_gizmo_result(ui, latest_gizmo_result);
+                draw_gizmo_result(ui, latest_gizmo_result);
+            });
         });
 }
 
