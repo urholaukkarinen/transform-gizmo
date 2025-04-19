@@ -67,7 +67,7 @@ pub(crate) trait SubGizmoKind: 'static {
     where
         Self: Sized;
 
-    fn preview_pick(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> Self::PickPreview
+    fn pick_preview(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> Self::PickPreview
     where
         Self: Sized;
 }
@@ -165,6 +165,6 @@ where
     }
 
     fn pick_preview(&self, ray: Ray) -> bool {
-        T::preview_pick(self, ray).picked()
+        T::pick_preview(self, ray).picked()
     }
 }

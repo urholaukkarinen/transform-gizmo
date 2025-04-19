@@ -22,7 +22,7 @@ impl SubGizmoKind for Arcball {
     type State = ArcballState;
     type PickPreview = PickResult;
 
-    fn preview_pick(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> super::common::PickResult
+    fn pick_preview(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> super::common::PickResult
     where
         Self: Sized,
     {
@@ -35,7 +35,7 @@ impl SubGizmoKind for Arcball {
     }
 
     fn pick(subgizmo: &mut ArcballSubGizmo, ray: Ray) -> Option<f64> {
-        let pick_result = Self::preview_pick(subgizmo, ray);
+        let pick_result = Self::pick_preview(subgizmo, ray);
 
         subgizmo.state.last_pos = ray.screen_pos;
 

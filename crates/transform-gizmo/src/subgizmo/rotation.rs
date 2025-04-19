@@ -48,7 +48,7 @@ impl SubGizmoKind for Rotation {
     type State = RotationState;
     type PickPreview = RotationPickResult;
 
-    fn preview_pick(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> Self::PickPreview
+    fn pick_preview(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> Self::PickPreview
     where
         Self: Sized,
     {
@@ -92,7 +92,7 @@ impl SubGizmoKind for Rotation {
     }
 
     fn pick(subgizmo: &mut RotationSubGizmo, ray: Ray) -> Option<f64> {
-        let pick_result = Self::preview_pick(subgizmo, ray);
+        let pick_result = Self::pick_preview(subgizmo, ray);
 
         subgizmo.state.start_axis_angle = pick_result.angle;
         subgizmo.state.start_rotation_angle = pick_result.rotation_angle;

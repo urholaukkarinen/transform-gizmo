@@ -33,7 +33,7 @@ impl SubGizmoKind for Scale {
     type State = ScaleState;
     type PickPreview = PickResult;
 
-    fn preview_pick(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> super::common::PickResult
+    fn pick_preview(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> super::common::PickResult
     where
         Self: Sized,
     {
@@ -52,7 +52,7 @@ impl SubGizmoKind for Scale {
     }
 
     fn pick(subgizmo: &mut ScaleSubGizmo, ray: Ray) -> Option<f64> {
-        let pick_result = Self::preview_pick(subgizmo, ray);
+        let pick_result = Self::pick_preview(subgizmo, ray);
 
         let start_delta = distance_from_origin_2d(subgizmo, ray.screen_pos)?;
 

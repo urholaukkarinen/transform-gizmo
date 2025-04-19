@@ -34,7 +34,7 @@ impl SubGizmoKind for Translation {
     type State = TranslationState;
     type PickPreview = PickResult;
 
-    fn preview_pick(subgizmo: &TranslationSubGizmo, ray: Ray) -> PickResult {
+    fn pick_preview(subgizmo: &TranslationSubGizmo, ray: Ray) -> PickResult {
         match (subgizmo.transform_kind, subgizmo.direction) {
             (TransformKind::Plane, GizmoDirection::View) => pick_circle(
                 &subgizmo.config,
@@ -50,7 +50,7 @@ impl SubGizmoKind for Translation {
     }
 
     fn pick(subgizmo: &mut TranslationSubGizmo, ray: Ray) -> Option<f64> {
-        let pick_result = Self::preview_pick(subgizmo, ray);
+        let pick_result = Self::pick_preview(subgizmo, ray);
 
         subgizmo.opacity = pick_result.visibility as _;
 
