@@ -377,11 +377,6 @@ fn queue_transform_gizmos(
         }
 
         for (entity, handle) in &transform_gizmos {
-            // One draw call is created per iteration of this loop.
-            // The draw call is added on line 397.
-            // This loop runs once per entity in the render world that has this component on it: GizmoDrawDataHandle
-            // Every frame, the number of entities that this transform_gizmos query finds, increases, causing more and more draw calls.
-            // Since its in the render world, you cant simply see an exploding number of entities in the egui inspector, since it only shows simulation world entities.
             let Some(_) = transform_gizmo_assets.get(handle.0.id()) else {
                 continue;
             };
@@ -396,7 +391,7 @@ fn queue_transform_gizmos(
             );
 
             transparent_phase.add(Transparent3d {
-                entity: (entity, view_entity.into()), // TODO: ???
+                entity: (entity, view_entity.into()),
                 draw_function,
                 pipeline,
                 distance: 0.,
