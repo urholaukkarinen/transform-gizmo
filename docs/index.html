@@ -32,9 +32,9 @@
     </style>
 
     
-<script type="module" nonce="GS2kKCZbtF0ktSPG5BxZxg==">
+<script type="module">
 import init, * as bindings from './bevy-example.js';
-const wasm = await init('./bevy-example_bg.wasm');
+const wasm = await init({ module_or_path: './bevy-example_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -46,9 +46,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
     <!-- this is the base url relative to which other urls will be constructed. trunk will insert this from the public-url option -->
     <base href="./" />
-
-<link rel="modulepreload" href="./bevy-example.js" crossorigin=anonymous integrity="sha384-6Ldp6Ir9b4WgCo9BjLLdK0MSfijLTvGaNTksXW+wkwsR5WrJQNyXJ8R+Z4muz/Ed">
-<link rel="preload" href="./bevy-example_bg.wasm" crossorigin=anonymous integrity="sha384-jlNgB4IzY84wt1EExECMOmRyoeE8OyWTiJ302FDm7gDUIqk3Eg6hs50PflkxWLmW" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="./bevy-example.js" crossorigin="anonymous" integrity="sha384-RUKkGg9LUAWOzJHg032CpEhLPtZ9MN5qcUmD8gdJ1rrLUgweptFBqgmtYvvd2OTI"><link rel="preload" href="./bevy-example_bg.wasm" crossorigin="anonymous" integrity="sha384-JyVcTsHVn3SvTwWavtDfGLRoD0c/mj1kDtVSpkRq5damBgCEqxIVa4/nt0YOq580" as="fetch" type="application/wasm"></head>
 
 <body oncontextmenu="return false;">
 </body>
