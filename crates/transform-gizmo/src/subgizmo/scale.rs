@@ -1,13 +1,15 @@
 use glam::DVec3;
 
-use crate::math::{round_to_interval, world_to_screen, Pos2};
+use crate::math::{Pos2, round_to_interval, world_to_screen};
 
 use crate::subgizmo::common::{
     draw_arrow, draw_circle, draw_plane, gizmo_color, gizmo_local_normal, outer_circle_radius,
     pick_arrow, pick_circle, pick_plane, plane_bitangent, plane_tangent,
 };
-use crate::subgizmo::{common::TransformKind, SubGizmoConfig, SubGizmoKind};
-use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult};
+use crate::subgizmo::{SubGizmoConfig, SubGizmoKind, common::TransformKind};
+use crate::{GizmoDirection, GizmoDrawData, GizmoMode, GizmoResult, gizmo::Ray};
+
+use super::common::PickResult;
 
 pub(crate) type ScaleSubGizmo = SubGizmoConfig<Scale>;
 
@@ -29,9 +31,13 @@ pub(crate) struct Scale;
 impl SubGizmoKind for Scale {
     type Params = ScaleParams;
     type State = ScaleState;
+    type PickPreview = PickResult;
 
-    fn pick(subgizmo: &mut ScaleSubGizmo, ray: Ray) -> Option<f64> {
-        let pick_result = match (subgizmo.transform_kind, subgizmo.direction) {
+    fn preview_pick(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> super::common::PickResult
+    where
+        Self: Sized,
+    {
+        match (subgizmo.transform_kind, subgizmo.direction) {
             (TransformKind::Plane, GizmoDirection::View) => pick_circle(
                 &subgizmo.config,
                 ray,
@@ -42,7 +48,11 @@ impl SubGizmoKind for Scale {
             (TransformKind::Axis, _) => {
                 pick_arrow(&subgizmo.config, ray, subgizmo.direction, subgizmo.mode)
             }
-        };
+        }
+    }
+
+    fn pick(subgizmo: &mut ScaleSubGizmo, ray: Ray) -> Option<f64> {
+        let pick_result = Self::preview_pick(subgizmo, ray);
 
         let start_delta = distance_from_origin_2d(subgizmo, ray.screen_pos)?;
 

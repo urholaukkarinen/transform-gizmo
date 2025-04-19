@@ -1,12 +1,14 @@
-use crate::math::{ray_to_plane_origin, segment_to_segment};
 use crate::GizmoMode;
+use crate::math::{ray_to_plane_origin, segment_to_segment};
 use ecolor::Color32;
 use enumset::EnumSet;
 use std::ops::{Add, RangeInclusive};
 
 use crate::shape::ShapeBuidler;
-use crate::{config::PreparedGizmoConfig, gizmo::Ray, GizmoDirection, GizmoDrawData};
+use crate::{GizmoDirection, GizmoDrawData, config::PreparedGizmoConfig, gizmo::Ray};
 use glam::{DMat3, DMat4, DQuat, DVec3};
+
+use super::Picked;
 
 const ARROW_FADE: RangeInclusive<f64> = 0.95..=0.99;
 const PLANE_FADE: RangeInclusive<f64> = 0.70..=0.86;
@@ -23,6 +25,12 @@ pub(crate) struct PickResult {
     pub visibility: f64,
     pub picked: bool,
     pub t: f64,
+}
+
+impl Picked for PickResult {
+    fn picked(&self) -> bool {
+        self.picked
+    }
 }
 
 struct ArrowParams {

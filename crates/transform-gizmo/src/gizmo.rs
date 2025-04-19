@@ -3,11 +3,11 @@ use emath::Pos2;
 use enumset::EnumSet;
 use std::ops::{Add, AddAssign, Sub};
 
+use crate::GizmoOrientation;
 use crate::config::{
     GizmoConfig, GizmoDirection, GizmoMode, PreparedGizmoConfig, TransformPivotPoint,
 };
-use crate::math::{screen_to_world, Transform};
-use crate::GizmoOrientation;
+use crate::math::{Transform, screen_to_world};
 use epaint::Mesh;
 use glam::{DMat4, DQuat, DVec3};
 
@@ -15,8 +15,8 @@ use crate::subgizmo::rotation::RotationParams;
 use crate::subgizmo::scale::ScaleParams;
 use crate::subgizmo::translation::TranslationParams;
 use crate::subgizmo::{
-    common::TransformKind, ArcballSubGizmo, RotationSubGizmo, ScaleSubGizmo, SubGizmo,
-    SubGizmoControl, TranslationSubGizmo,
+    ArcballSubGizmo, RotationSubGizmo, ScaleSubGizmo, SubGizmo, SubGizmoControl,
+    TranslationSubGizmo, common::TransformKind,
 };
 
 /// A 3D transformation gizmo.
@@ -197,6 +197,12 @@ impl Gizmo {
         draw_data
     }
 
+    /// Checks all sub-gizmos for intersections with the cursor. If there is one, return true.
+    pub fn pick_preview(&self, cursor_pos: (f32, f32)) -> bool {
+        let pointer_ray = self.pointer_ray(Pos2::from(cursor_pos));
+        self.subgizmos.iter().any(|x| x.pick_preview(pointer_ray))
+    }
+
     fn active_subgizmo_mut(&mut self) -> Option<&mut SubGizmo> {
         self.active_subgizmo_id.and_then(|id| {
             self.subgizmos
@@ -325,6 +331,7 @@ impl Gizmo {
     }
 
     /// Picks the subgizmo that is closest to the given world space ray.
+    #[allow(clippy::manual_inspect)]
     fn pick_subgizmo(&mut self, ray: Ray) -> Option<&mut SubGizmo> {
         // If mode is overridden, assume we only have that mode, and choose it.
         if self.config.mode_override.is_some() {

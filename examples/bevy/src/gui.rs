@@ -1,7 +1,7 @@
 use bevy::{math::DQuat, prelude::*};
 use bevy_egui::{
-    egui::{self, Layout, RichText, Widget},
     EguiContexts, EguiPlugin,
+    egui::{self, Layout, RichText, Widget},
 };
 use transform_gizmo_bevy::{config::TransformPivotPoint, prelude::*};
 
@@ -23,7 +23,7 @@ fn update_ui(
     });
 
     egui::CentralPanel::default()
-        .frame(egui::Frame::none())
+        .frame(egui::Frame::new())
         .show(contexts.ctx_mut(), |ui| {
             let latest_gizmo_result = gizmo_targets
                 .iter()
@@ -71,8 +71,8 @@ fn draw_gizmo_result(ui: &mut egui::Ui, gizmo_result: Option<GizmoResult>) {
             }
         };
 
-        egui::Frame::none()
-            .outer_margin(egui::Margin::same(10.0))
+        egui::Frame::new()
+            .outer_margin(egui::Margin::same(10))
             .show(ui, |ui| {
                 ui.label(text);
             });
@@ -152,7 +152,7 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
         .num_columns(2)
         .show(ui, |ui| {
             ui.label("Orientation");
-            egui::ComboBox::from_id_source("orientation_cb")
+            egui::ComboBox::from_id_salt("orientation_cb")
                 .selected_text(format!("{:?}", gizmo_options.gizmo_orientation))
                 .show_ui(ui, |ui| {
                     for orientation in [GizmoOrientation::Global, GizmoOrientation::Local] {
@@ -166,7 +166,7 @@ fn draw_options(ui: &mut egui::Ui, gizmo_options: &mut GizmoOptions) {
             ui.end_row();
 
             ui.label("Pivot point");
-            egui::ComboBox::from_id_source("pivot_cb")
+            egui::ComboBox::from_id_salt("pivot_cb")
                 .selected_text(format!("{:?}", gizmo_options.pivot_point))
                 .show_ui(ui, |ui| {
                     for pivot_point in [

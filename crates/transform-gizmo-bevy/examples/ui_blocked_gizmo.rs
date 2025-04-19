@@ -1,4 +1,4 @@
-//! A very simple example
+//! Gizmo interactions blocked by other picking backends. In this case, UI.
 //! See the project root's `examples` directory for more examples
 
 use bevy::color::palettes::css::LIME;
@@ -9,6 +9,9 @@ fn main() {
     App::new()
         .add_plugins((DefaultPlugins, TransformGizmoPlugin))
         .add_systems(Startup, setup)
+        .add_observer(|trigger: Trigger<Pointer<Over>>| {
+            info!("Moved over: {}", trigger.entity());
+        })
         .run();
 }
 
@@ -17,6 +20,17 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Percent(50.0),
+            top: Val::Percent(50.0),
+            width: Val::Px(200.0),
+            height: Val::Px(200.0),
+            ..default()
+        },
+        BackgroundColor(Srgba::new(0.4, 0.4, 0.6, 1.0).into()),
+    ));
     // camera
     commands.spawn((
         Camera3d::default(),

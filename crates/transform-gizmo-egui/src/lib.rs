@@ -44,7 +44,7 @@
 //! ```
 //!
 //!
-use egui::{epaint::Vertex, Mesh, PointerButton, Pos2, Rgba, Sense, Ui, Vec2};
+use egui::{Mesh, PointerButton, Pos2, Rgba, Sense, Ui, Vec2, epaint::Vertex};
 
 use transform_gizmo::math::Transform;
 pub use transform_gizmo::*;
@@ -55,7 +55,7 @@ pub trait GizmoExt {
     ///
     /// Returns result of the gizmo interaction.
     fn interact(&mut self, ui: &Ui, targets: &[Transform])
-        -> Option<(GizmoResult, Vec<Transform>)>;
+    -> Option<(GizmoResult, Vec<Transform>)>;
 }
 
 impl GizmoExt for Gizmo {

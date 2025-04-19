@@ -1,11 +1,13 @@
-use crate::math::{intersect_plane, ray_to_ray, round_to_interval, DVec3};
+use crate::math::{DVec3, intersect_plane, ray_to_ray, round_to_interval};
 
 use crate::subgizmo::common::{
     draw_arrow, draw_circle, draw_plane, gizmo_color, gizmo_normal, inner_circle_radius,
     pick_arrow, pick_circle, pick_plane, plane_bitangent, plane_global_origin, plane_tangent,
 };
-use crate::subgizmo::{common::TransformKind, SubGizmoConfig, SubGizmoKind};
-use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoMode, GizmoOrientation, GizmoResult};
+use crate::subgizmo::{SubGizmoConfig, SubGizmoKind, common::TransformKind};
+use crate::{GizmoDirection, GizmoDrawData, GizmoMode, GizmoOrientation, GizmoResult, gizmo::Ray};
+
+use super::common::PickResult;
 
 pub(crate) type TranslationSubGizmo = SubGizmoConfig<Translation>;
 
@@ -30,9 +32,10 @@ pub(crate) struct Translation;
 impl SubGizmoKind for Translation {
     type Params = TranslationParams;
     type State = TranslationState;
+    type PickPreview = PickResult;
 
-    fn pick(subgizmo: &mut TranslationSubGizmo, ray: Ray) -> Option<f64> {
-        let pick_result = match (subgizmo.transform_kind, subgizmo.direction) {
+    fn preview_pick(subgizmo: &TranslationSubGizmo, ray: Ray) -> PickResult {
+        match (subgizmo.transform_kind, subgizmo.direction) {
             (TransformKind::Plane, GizmoDirection::View) => pick_circle(
                 &subgizmo.config,
                 ray,
@@ -43,7 +46,11 @@ impl SubGizmoKind for Translation {
             (TransformKind::Axis, _) => {
                 pick_arrow(&subgizmo.config, ray, subgizmo.direction, subgizmo.mode)
             }
-        };
+        }
+    }
+
+    fn pick(subgizmo: &mut TranslationSubGizmo, ray: Ray) -> Option<f64> {
+        let pick_result = Self::preview_pick(subgizmo, ray);
 
         subgizmo.opacity = pick_result.visibility as _;
 

@@ -3,13 +3,15 @@ use std::f64::consts::{FRAC_PI_2, PI, TAU};
 use ecolor::Color32;
 
 use crate::math::{
-    ray_to_plane_origin, rotation_align, round_to_interval, world_to_screen, DMat3, DMat4, DQuat,
-    DVec2, DVec3, Pos2,
+    DMat3, DMat4, DQuat, DVec2, DVec3, Pos2, ray_to_plane_origin, rotation_align,
+    round_to_interval, world_to_screen,
 };
 use crate::shape::ShapeBuidler;
 use crate::subgizmo::common::{gizmo_color, gizmo_local_normal, gizmo_normal, outer_circle_radius};
 use crate::subgizmo::{SubGizmoConfig, SubGizmoKind};
-use crate::{gizmo::Ray, GizmoDirection, GizmoDrawData, GizmoResult};
+use crate::{GizmoDirection, GizmoDrawData, GizmoResult, gizmo::Ray};
+
+use super::Picked;
 
 pub(crate) type RotationSubGizmo = SubGizmoConfig<Rotation>;
 
@@ -29,11 +31,27 @@ pub(crate) struct RotationState {
 #[derive(Default, Debug, Copy, Clone)]
 pub(crate) struct Rotation;
 
+pub struct RotationPickResult {
+    angle: f64,
+    rotation_angle: f64,
+    picked: bool,
+    t: f64,
+}
+impl Picked for RotationPickResult {
+    fn picked(&self) -> bool {
+        self.picked
+    }
+}
+
 impl SubGizmoKind for Rotation {
     type Params = RotationParams;
     type State = RotationState;
+    type PickPreview = RotationPickResult;
 
-    fn pick(subgizmo: &mut RotationSubGizmo, ray: Ray) -> Option<f64> {
+    fn preview_pick(subgizmo: &SubGizmoConfig<Self>, ray: Ray) -> Self::PickPreview
+    where
+        Self: Sized,
+    {
         let radius = arc_radius(subgizmo);
         let config = subgizmo.config;
         let origin = config.translation;
@@ -60,15 +78,29 @@ impl SubGizmoKind for Rotation {
             f64::atan2(offset.cross(forward).dot(normal), offset.dot(forward))
         };
 
+        let picked = dist_from_gizmo_edge <= config.focus_distance as f64
+            && angle.abs() < arc_angle(subgizmo);
+
         let rotation_angle = rotation_angle(subgizmo, ray.screen_pos).unwrap_or(0.0);
-        subgizmo.state.start_axis_angle = angle;
-        subgizmo.state.start_rotation_angle = rotation_angle;
-        subgizmo.state.last_rotation_angle = rotation_angle;
+
+        Self::PickPreview {
+            angle,
+            rotation_angle,
+            picked,
+            t,
+        }
+    }
+
+    fn pick(subgizmo: &mut RotationSubGizmo, ray: Ray) -> Option<f64> {
+        let pick_result = Self::preview_pick(subgizmo, ray);
+
+        subgizmo.state.start_axis_angle = pick_result.angle;
+        subgizmo.state.start_rotation_angle = pick_result.rotation_angle;
+        subgizmo.state.last_rotation_angle = pick_result.rotation_angle;
         subgizmo.state.current_delta = 0.0;
 
-        if dist_from_gizmo_edge <= config.focus_distance as f64 && angle.abs() < arc_angle(subgizmo)
-        {
-            Some(t)
+        if pick_result.picked {
+            Some(pick_result.t)
         } else {
             None
         }

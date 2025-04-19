@@ -11,13 +11,19 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.72.0
+          toolchain: 1.85.0
 
       - name: install dependencies
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
 
       - name: cache
         uses: Swatinem/rust-cache@v2
+
+      - name: install cargo fmt
+        run: rustup component add rustfmt
+
+      - name: install clippy
+        run: rustup component add clippy
 
       - name: fmt
         run: cargo fmt --all -- --check

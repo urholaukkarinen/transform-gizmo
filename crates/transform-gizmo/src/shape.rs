@@ -2,8 +2,8 @@ use std::f64::consts::TAU;
 
 use crate::math::{Pos2, Rect};
 use ecolor::Color32;
-use epaint::{Mesh, TessellationOptions, Tessellator, TextureId};
-pub(crate) use epaint::{PathStroke, Shape, Stroke};
+use epaint::{Mesh, PathStroke, TessellationOptions, Tessellator, TextureId};
+pub(crate) use epaint::{Shape, Stroke};
 use glam::{DMat4, DVec3};
 
 use crate::math::world_to_screen;
@@ -69,7 +69,7 @@ impl ShapeBuidler {
         radius: f64,
         start_angle: f64,
         end_angle: f64,
-        stroke: impl Into<PathStroke>,
+        stroke: impl Into<Stroke>,
     ) -> Mesh {
         let mut points = self.arc_points(radius, start_angle, end_angle);
 
@@ -87,7 +87,7 @@ impl ShapeBuidler {
         })
     }
 
-    pub(crate) fn circle(&self, radius: f64, stroke: impl Into<PathStroke>) -> Mesh {
+    pub(crate) fn circle(&self, radius: f64, stroke: impl Into<Stroke>) -> Mesh {
         self.arc(radius, 0.0, TAU, stroke)
     }
 
@@ -103,12 +103,7 @@ impl ShapeBuidler {
         self.tessellate_shape(Shape::convex_polygon(points, color, stroke.into()))
     }
 
-    pub(crate) fn line_segment(
-        &self,
-        from: DVec3,
-        to: DVec3,
-        stroke: impl Into<PathStroke>,
-    ) -> Mesh {
+    pub(crate) fn line_segment(&self, from: DVec3, to: DVec3, stroke: impl Into<Stroke>) -> Mesh {
         let mut points: [Pos2; 2] = Default::default();
 
         for (i, point) in points.iter_mut().enumerate() {
@@ -136,7 +131,7 @@ impl ShapeBuidler {
             Shape::convex_polygon(
                 vec![start - cross, start + cross, end],
                 stroke.color,
-                PathStroke::NONE,
+                Stroke::NONE,
             )
         } else {
             Shape::Noop
