@@ -40,14 +40,8 @@ fn update_hits(
             .filter(|(_entity, gizmo)| {
                 gizmo.pick_preview((location.position.x, location.position.y))
             })
-            .map(|(entity, _gizmo)| {
-                // TODO: Provide camera entity based on the window the pointer was in?? idk
-                (*entity, HitData::new(*entity, 0.0, None, None))
-            })
+            .map(|(entity, _gizmo)| (*entity, HitData::new(*entity, 0.0, None, None)))
             .collect::<Vec<_>>();
-
-        // TODO: Use a purpose-picked order for hits. It should be below ui and egui, in front of f32::NEG_INFINITY
-        // TODO: Perhapse this should be configurable through a resource? Or just use camera order +/- an offset like what UI picking does?
 
         output.send(PointerHits::new(*pointer_id, hits, 0.0));
     }
