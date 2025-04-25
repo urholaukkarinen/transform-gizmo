@@ -28,25 +28,25 @@ ahash = "0.8"
 enumset = "1.1"
 bytemuck = "1.22"
 uuid = "1.1"
-bevy = "0.15"
+bevy = "0.16"
 
-bevy_app = { version = "0.15", default-features = false }
-bevy_core = { version = "0.15", default-features = false }
-bevy_core_pipeline = { version = "0.15", default-features = false }
-bevy_reflect = { version = "0.15", default-features = false }
-bevy_math = { version = "0.15", features = ["mint"], default-features = false }
-bevy_render = { version = "0.15", default-features = false }
-bevy_input = { version = "0.15", default-features = false }
-bevy_asset = { version = "0.15", default-features = false }
-bevy_utils = { version = "0.15", default-features = false }
-bevy_pbr = { version = "0.15", default-features = false }
-bevy_ecs = { version = "0.15", default-features = false }
-bevy_log = { version = "0.15", default-features = false }
-bevy_window = { version = "0.15", default-features = false }
-bevy_transform = { version = "0.15", default-features = false }
-bevy_derive = { version = "0.15", default-features = false }
-bevy_image = { version = "0.15", default-features = false }
-bevy_picking = { version = "0.15", default-features = false }
+bevy_app = { version = "0.16", default-features = false }
+bevy_core_pipeline = { version = "0.16", default-features = false }
+bevy_reflect = { version = "0.16", default-features = false }
+bevy_math = { version = "0.16", features = ["mint"], default-features = false }
+bevy_render = { version = "0.16", default-features = false }
+bevy_input = { version = "0.16", default-features = false }
+bevy_asset = { version = "0.16", default-features = false }
+bevy_utils = { version = "0.16", default-features = false }
+bevy_platform = { version = "0.16", default-features = false }
+bevy_pbr = { version = "0.16", default-features = false }
+bevy_ecs = { version = "0.16", default-features = false }
+bevy_log = { version = "0.16", default-features = false }
+bevy_window = { version = "0.16", default-features = false }
+bevy_transform = { version = "0.16", default-features = false }
+bevy_derive = { version = "0.16", default-features = false }
+bevy_image = { version = "0.16", default-features = false }
+bevy_picking = { version = "0.16", default-features = false }
 
 [profile.release]
 opt-level = "s"

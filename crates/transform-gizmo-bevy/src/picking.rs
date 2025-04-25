@@ -1,7 +1,7 @@
 use bevy_app::{Plugin, PreUpdate};
 use bevy_ecs::{
     event::EventWriter,
-    schedule::IntoSystemConfigs,
+    schedule::IntoScheduleConfigs,
     system::{Query, Res},
 };
 use bevy_picking::{
@@ -43,6 +43,6 @@ fn update_hits(
             .map(|(entity, _gizmo)| (*entity, HitData::new(*entity, 0.0, None, None)))
             .collect::<Vec<_>>();
 
-        output.send(PointerHits::new(*pointer_id, hits, 0.0));
+        output.write(PointerHits::new(*pointer_id, hits, 0.0));
     }
 }

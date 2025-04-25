@@ -21,7 +21,6 @@ mouse_interaction = []
 transform-gizmo.workspace = true
 
 bevy_app.workspace = true
-bevy_core.workspace = true
 bevy_core_pipeline.workspace = true
 bevy_reflect.workspace = true
 bevy_math.workspace = true
@@ -30,6 +29,7 @@ bevy_render.workspace = true
 bevy_input.workspace = true
 bevy_asset.workspace = true
 bevy_utils.workspace = true
+bevy_platform.workspace = true
 bevy_pbr.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true

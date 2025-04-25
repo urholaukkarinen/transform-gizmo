@@ -73,7 +73,7 @@ pub fn manage_selection(
     if !mouse.just_released(MouseButton::Left) {
         return;
     };
-    let pointer = match pointers.get_single() {
+    let pointer = match pointers.single() {
         Ok(pointer) => pointer,
         Err(err) => match err {
             bevy::ecs::query::QuerySingleError::NoEntities(_) => {

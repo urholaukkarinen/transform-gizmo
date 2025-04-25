@@ -33,10 +33,10 @@ use bevy_asset::{AssetApp, Assets};
 use bevy_ecs::prelude::*;
 use bevy_input::prelude::*;
 use bevy_math::{DQuat, DVec3, Vec2};
-use bevy_picking::focus::HoverMap;
+use bevy_picking::hover::HoverMap;
+use bevy_platform::collections::HashMap;
 use bevy_render::prelude::*;
 use bevy_transform::prelude::*;
-use bevy_utils::HashMap;
 use bevy_window::{PrimaryWindow, Window};
 use mouse_interact::MouseGizmoInteractionPlugin;
 use picking::TransformGizmoPickingPlugin;
@@ -391,7 +391,7 @@ fn update_gizmos(
     mut last_scaled_cursor_pos: Local<Vec2>,
     #[cfg(feature = "gizmo_picking_backend")] hover_map: Res<HoverMap>,
 ) {
-    let Ok(window) = q_window.get_single() else {
+    let Ok(window) = q_window.single() else {
         // No primary window found.
         return;
     };
