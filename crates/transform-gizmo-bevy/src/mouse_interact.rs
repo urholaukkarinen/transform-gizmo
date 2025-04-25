@@ -17,10 +17,10 @@ fn mouse_interact_gizmo(
     mut dragging: EventWriter<GizmoDragging>,
 ) {
     if mouse.just_pressed(MouseButton::Left) {
-        drag_started.send_default();
+        drag_started.write_default();
     }
 
     if mouse.pressed(MouseButton::Left) {
-        dragging.send_default();
+        dragging.write_default();
     }
 }

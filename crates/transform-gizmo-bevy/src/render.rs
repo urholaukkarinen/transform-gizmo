@@ -1,5 +1,5 @@
 use bevy_app::{App, Plugin};
-use bevy_asset::{Asset, AssetId, Handle, load_internal_asset};
+use bevy_asset::{Asset, AssetId, Handle, load_internal_asset, weak_handle};
 use bevy_core_pipeline::core_3d::{CORE_3D_DEPTH_FORMAT, Transparent3d};
 use bevy_core_pipeline::prepass::{
     DeferredPrepass, DepthPrepass, MotionVectorPrepass, NormalPrepass,
@@ -11,6 +11,7 @@ use bevy_ecs::system::SystemParamItem;
 use bevy_ecs::system::lifetimeless::{Read, SRes};
 use bevy_image::BevyDefault as _;
 use bevy_pbr::{MeshPipeline, MeshPipelineKey, SetMeshViewBindGroup};
+use bevy_platform::collections::{HashMap, HashSet};
 use bevy_reflect::{Reflect, TypePath};
 use bevy_render::extract_component::ExtractComponent;
 use bevy_render::mesh::PrimitiveTopology;
@@ -34,13 +35,12 @@ use bevy_render::renderer::RenderDevice;
 use bevy_render::sync_world::TemporaryRenderEntity;
 use bevy_render::view::{ExtractedView, RenderLayers, ViewTarget};
 use bevy_render::{Extract, Render, RenderApp, RenderSet};
-use bevy_utils::{HashMap, HashSet};
 use bytemuck::cast_slice;
 use uuid::Uuid;
 
 use crate::GizmoCamera;
 
-const GIZMO_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(7414812681337026784);
+const GIZMO_SHADER_HANDLE: Handle<Shader> = weak_handle!("e44be110-cb2b-4a8d-9c0c-965424e6a633");
 
 pub(crate) struct TransformGizmoRenderPlugin;
 
@@ -140,8 +140,9 @@ impl RenderAsset for GizmoBuffers {
 
     fn prepare_asset(
         source_asset: Self::SourceAsset,
+        _: AssetId<Self::SourceAsset>,
         render_device: &mut SystemParamItem<Self::Param>,
-    ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
+    ) -> std::result::Result<Self, PrepareAssetError<Self::SourceAsset>> {
         let position_buffer_data = cast_slice(&source_asset.0.vertices);
         let position_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             usage: BufferUsages::VERTEX,
@@ -338,7 +339,7 @@ fn queue_transform_gizmos(
     mut transparent_render_phases: ResMut<ViewSortedRenderPhases<Transparent3d>>,
 ) {
     let draw_function = draw_functions.read().get_id::<DrawGizmo>().unwrap();
-    let camera_msaa = msaa_q.get_single().ok().flatten();
+    let camera_msaa = msaa_q.single().ok().flatten();
     for (
         view_entity,
         view,
@@ -347,7 +348,8 @@ fn queue_transform_gizmos(
         (normal_prepass, depth_prepass, motion_vector_prepass, deferred_prepass),
     ) in &mut views
     {
-        let Some(transparent_phase) = transparent_render_phases.get_mut(&view_entity) else {
+        let Some(transparent_phase) = transparent_render_phases.get_mut(&view.retained_view_entity)
+        else {
             continue;
         };
 
@@ -396,7 +398,8 @@ fn queue_transform_gizmos(
                 pipeline,
                 distance: 0.,
                 batch_range: 0..1,
-                extra_index: PhaseItemExtraIndex::NONE,
+                extra_index: PhaseItemExtraIndex::None,
+                indexed: false,
             });
         }
     }
