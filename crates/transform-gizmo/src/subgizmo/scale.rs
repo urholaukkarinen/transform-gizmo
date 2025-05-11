@@ -56,8 +56,6 @@ impl SubGizmoKind for Scale {
 
         let start_delta = distance_from_origin_2d(subgizmo, ray.screen_pos)?;
 
-        subgizmo.opacity = pick_result.visibility as _;
-
         subgizmo.state.start_delta = start_delta;
 
         if pick_result.picked {
@@ -95,7 +93,6 @@ impl SubGizmoKind for Scale {
         match (subgizmo.transform_kind, subgizmo.direction) {
             (TransformKind::Axis, _) => draw_arrow(
                 &subgizmo.config,
-                subgizmo.opacity,
                 subgizmo.focused,
                 subgizmo.direction,
                 subgizmo.mode,
@@ -106,12 +103,9 @@ impl SubGizmoKind for Scale {
                 outer_circle_radius(&subgizmo.config),
                 false,
             ),
-            (TransformKind::Plane, _) => draw_plane(
-                &subgizmo.config,
-                subgizmo.opacity,
-                subgizmo.focused,
-                subgizmo.direction,
-            ),
+            (TransformKind::Plane, _) => {
+                draw_plane(&subgizmo.config, subgizmo.focused, subgizmo.direction)
+            }
         }
     }
 }

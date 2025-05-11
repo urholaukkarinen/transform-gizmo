@@ -22,7 +22,6 @@ pub(crate) enum TransformKind {
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct PickResult {
     pub subgizmo_point: DVec3,
-    pub visibility: f64,
     pub picked: bool,
     pub t: f64,
 }
@@ -79,6 +78,11 @@ fn arrow_params(config: &PreparedGizmoConfig, direction: DVec3, mode: GizmoMode)
     }
 }
 
+fn arrow_visibility(config: &PreparedGizmoConfig, direction: DVec3) -> f64 {
+    let dot = config.eye_to_model_dir.dot(direction).abs();
+    (1.0 - (dot - *ARROW_FADE.start()) / (*ARROW_FADE.end() - *ARROW_FADE.start())).min(1.0)
+}
+
 pub(crate) fn pick_arrow(
     config: &PreparedGizmoConfig,
     ray: Ray,
@@ -105,16 +109,12 @@ pub(crate) fn pick_arrow(
         arrow_params.start + arrow_params.direction * arrow_params.length * subgizmo_t;
     let dist = (ray_point - subgizmo_point).length();
 
-    let dot = config.eye_to_model_dir.dot(arrow_params.direction).abs();
-
-    let visibility =
-        (1.0 - (dot - *ARROW_FADE.start()) / (*ARROW_FADE.end() - *ARROW_FADE.start())).min(1.0);
+    let visibility = arrow_visibility(config, direction);
 
     let picked = visibility > 0.0 && dist <= config.focus_distance as f64;
 
     PickResult {
         subgizmo_point,
-        visibility,
         picked,
         t: ray_t,
     }
@@ -133,19 +133,12 @@ pub(crate) fn pick_plane(
 
     let ray_point = ray.origin + ray.direction * t;
 
-    let dot = config
-        .eye_to_model_dir
-        .dot(gizmo_normal(config, direction))
-        .abs();
-    let visibility = (1.0
-        - ((1.0 - dot) - *PLANE_FADE.start()) / (*PLANE_FADE.end() - *PLANE_FADE.start()))
-    .min(1.0);
+    let visibility = plane_visibility(config, direction);
 
     let picked = visibility > 0.0 && dist_from_origin <= plane_size(config);
 
     PickResult {
         subgizmo_point: ray_point,
-        visibility,
         picked,
         t,
     }
@@ -173,7 +166,6 @@ pub(crate) fn pick_circle(
 
     PickResult {
         subgizmo_point: hit_pos,
-        visibility: 1.0,
         picked,
         t,
     }
@@ -181,16 +173,17 @@ pub(crate) fn pick_circle(
 
 pub(crate) fn draw_arrow(
     config: &PreparedGizmoConfig,
-    opacity: f32,
     focused: bool,
     direction: GizmoDirection,
     mode: GizmoMode,
 ) -> GizmoDrawData {
+    let opacity = arrow_visibility(config, gizmo_normal(config, direction));
+
     if opacity <= 1e-4 {
         return GizmoDrawData::default();
     }
 
-    let color = gizmo_color(config, focused, direction).gamma_multiply(opacity);
+    let color = gizmo_color(config, focused, direction).gamma_multiply(opacity as _);
 
     let transform = if config.local_space() {
         DMat4::from_rotation_translation(config.rotation, config.translation)
@@ -243,15 +236,16 @@ pub(crate) fn draw_arrow(
 
 pub(crate) fn draw_plane(
     config: &PreparedGizmoConfig,
-    opacity: f32,
     focused: bool,
     direction: GizmoDirection,
 ) -> GizmoDrawData {
+    let opacity = plane_visibility(config, direction);
+
     if opacity <= 1e-4 {
         return GizmoDrawData::default();
     }
 
-    let color = gizmo_color(config, focused, direction).gamma_multiply(opacity);
+    let color = gizmo_color(config, focused, direction).gamma_multiply(opacity as _);
 
     let transform = if config.local_space() {
         DMat4::from_rotation_translation(config.rotation, config.translation)
@@ -371,6 +365,14 @@ pub(crate) fn plane_global_origin(
         origin = config.rotation * origin;
     }
     origin + config.translation
+}
+
+pub(crate) fn plane_visibility(config: &PreparedGizmoConfig, direction: GizmoDirection) -> f64 {
+    let dot = config
+        .eye_to_model_dir
+        .dot(gizmo_normal(config, direction))
+        .abs();
+    (1.0 - ((1.0 - dot) - *PLANE_FADE.start()) / (*PLANE_FADE.end() - *PLANE_FADE.start())).min(1.0)
 }
 
 /// Radius to use for inner circle subgizmos

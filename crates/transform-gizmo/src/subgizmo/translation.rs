@@ -52,8 +52,6 @@ impl SubGizmoKind for Translation {
     fn pick(subgizmo: &mut TranslationSubGizmo, ray: Ray) -> Option<f64> {
         let pick_result = Self::pick_preview(subgizmo, ray);
 
-        subgizmo.opacity = pick_result.visibility as _;
-
         subgizmo.state.start_view_dir = subgizmo.config.view_forward();
         subgizmo.state.start_point = pick_result.subgizmo_point;
         subgizmo.state.last_point = pick_result.subgizmo_point;
@@ -118,7 +116,6 @@ impl SubGizmoKind for Translation {
         match (subgizmo.transform_kind, subgizmo.direction) {
             (TransformKind::Axis, _) => draw_arrow(
                 &subgizmo.config,
-                subgizmo.opacity,
                 subgizmo.focused,
                 subgizmo.direction,
                 subgizmo.mode,
@@ -129,12 +126,9 @@ impl SubGizmoKind for Translation {
                 inner_circle_radius(&subgizmo.config),
                 false,
             ),
-            (TransformKind::Plane, _) => draw_plane(
-                &subgizmo.config,
-                subgizmo.opacity,
-                subgizmo.focused,
-                subgizmo.direction,
-            ),
+            (TransformKind::Plane, _) => {
+                draw_plane(&subgizmo.config, subgizmo.focused, subgizmo.direction)
+            }
         }
     }
 }
