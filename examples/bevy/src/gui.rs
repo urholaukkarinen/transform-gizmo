@@ -9,7 +9,10 @@ pub struct GuiPlugin;
 
 impl Plugin for GuiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(EguiPlugin).add_systems(Update, update_ui);
+        app.add_plugins(EguiPlugin {
+            enable_multipass_for_primary_context: false,
+        })
+        .add_systems(Update, update_ui);
     }
 }
 
