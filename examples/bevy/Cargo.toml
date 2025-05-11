@@ -13,9 +13,8 @@ publish = false
 transform-gizmo-bevy.workspace = true
 
 bevy.workspace = true
-# bevy_infinite_grid = "0.14"
-# When bevy_mod_outline is updated to 0.10. Replace this with that. This rev is to use update with jump_flood unwrap panic fix.
-# bevy_mod_outline = { git = "https://github.com/komadori/bevy_mod_outline.git", rev = "3bd8357c656f6100c3fe13a2d6bab50f6de72a6f" }
+bevy_infinite_grid = "0.15"
+bevy_mod_outline = { git = "https://github.com/komadori/bevy_mod_outline.git", rev = "3cf356f58ca1bf30f26456cf854336f9851e6fe4" }
 
 [dependencies.bevy_egui]
 version = "0.34"
