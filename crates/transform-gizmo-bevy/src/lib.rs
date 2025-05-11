@@ -264,8 +264,6 @@ fn handle_hotkeys(
     // For example, X would force X axis, but Shift-X would force Y and Z axes.
     let invert_modifier = keyboard_input.pressed(KeyCode::ShiftLeft);
 
-    let mode_override = &mut gizmo_options.mode_override;
-
     let x_hotkey_pressed = hotkeys
         .toggle_x
         .is_some_and(|key| keyboard_input.just_pressed(key));
@@ -315,7 +313,7 @@ fn handle_hotkeys(
 
     // If we do not have any mode overridden at this point, do not force the axes either.
     // This means you will have to first choose the mode and only then choose the axes.
-    if mode_override.is_none() {
+    if gizmo_options.mode_override.is_none() {
         axes.clear();
     }
 
@@ -333,7 +331,11 @@ fn handle_hotkeys(
     // and which hotkey we just pressed, if any.
     let mode_kind = if rotate_hotkey_pressed {
         // Rotation hotkey toggles between arcball and normal rotation
-        if mode_override.filter(GizmoMode::is_rotate).is_some() {
+        if gizmo_options
+            .mode_override
+            .filter(GizmoMode::is_rotate)
+            .is_some()
+        {
             Some(GizmoModeKind::Arcball)
         } else {
             Some(GizmoModeKind::Rotate)
@@ -343,24 +345,20 @@ fn handle_hotkeys(
     } else if scale_hotkey_pressed {
         Some(GizmoModeKind::Scale)
     } else {
-        mode_override.map(|mode| mode.kind())
+        gizmo_options.mode_override.map(|mode| mode.kind())
     };
 
-    *mode_override = mode_kind.and_then(|kind| {
-        // Find a mode that matches chosen axes and mode kind.
-        GizmoMode::all_from_axes(*axes)
-            .iter()
-            .find(|mode| mode.kind() == kind)
-            .or({
-                // If nothing matches, choose the default mode.
-                Some(match kind {
-                    GizmoModeKind::Rotate => GizmoMode::RotateView,
-                    GizmoModeKind::Translate => GizmoMode::TranslateView,
-                    GizmoModeKind::Scale => GizmoMode::ScaleUniform,
-                    GizmoModeKind::Arcball => GizmoMode::Arcball,
-                })
-            })
-    });
+    if let Some(kind) = mode_kind {
+        gizmo_options.mode_override = GizmoMode::from_kind_and_axes(kind, *axes)
+            .filter(|mode| gizmo_options.gizmo_modes.contains(*mode))
+            .or_else(|| {
+                GizmoMode::all_from_kind(kind)
+                    .iter()
+                    .find(|mode| gizmo_options.gizmo_modes.contains(*mode))
+            });
+    } else {
+        gizmo_options.mode_override = None;
+    }
 
     // Check if gizmo should be deactivated
     if (hotkeys.mouse_click_deactivates
@@ -369,7 +367,7 @@ fn handle_hotkeys(
             .deactivate_gizmo
             .is_some_and(|key| keyboard_input.just_pressed(key))
     {
-        *mode_override = None;
+        gizmo_options.mode_override = None;
     }
 }
 

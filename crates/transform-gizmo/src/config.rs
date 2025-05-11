@@ -234,14 +234,16 @@ impl PreparedGizmoConfig {
 /// Operation mode of a gizmo.
 #[derive(Debug, EnumSetType, Hash)]
 pub enum GizmoMode {
+    /// Rotate around the view forward axis
+    RotateView,
     /// Rotate around the X axis
     RotateX,
     /// Rotate around the Y axis
     RotateY,
     /// Rotate around the Z axis
     RotateZ,
-    /// Rotate around the view forward axis
-    RotateView,
+    /// Translate along the view forward axis
+    TranslateView,
     /// Translate along the X axis
     TranslateX,
     /// Translate along the Y axis
@@ -254,8 +256,8 @@ pub enum GizmoMode {
     TranslateXZ,
     /// Translate along the YZ plane
     TranslateYZ,
-    /// Translate along the view forward axis
-    TranslateView,
+    /// Scale uniformly in all directions
+    ScaleUniform,
     /// Scale along the X axis
     ScaleX,
     /// Scale along the Y axis
@@ -268,8 +270,6 @@ pub enum GizmoMode {
     ScaleXZ,
     /// Scale along the YZ plane
     ScaleYZ,
-    /// Scale uniformly in all directions
-    ScaleUniform,
     /// Rotate using an arcball (trackball)
     Arcball,
 }
@@ -385,6 +385,19 @@ impl GizmoMode {
             | Self::ScaleUniform => GizmoModeKind::Scale,
             Self::Arcball => GizmoModeKind::Arcball,
         }
+    }
+
+    pub fn all_from_kind(kind: GizmoModeKind) -> EnumSet<Self> {
+        EnumSet::<Self>::all()
+            .iter()
+            .filter(|mode| mode.kind() == kind)
+            .collect()
+    }
+
+    pub fn from_kind_and_axes(kind: GizmoModeKind, axes: EnumSet<GizmoDirection>) -> Option<Self> {
+        EnumSet::<Self>::all()
+            .iter()
+            .find(|mode| mode.kind() == kind && mode.axes() == axes)
     }
 }
 
