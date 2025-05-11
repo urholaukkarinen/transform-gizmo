@@ -481,9 +481,11 @@ fn update_gizmos(
     #[cfg(not(feature = "gizmo_picking_backend"))]
     let any_gizmo_hovered = true;
 
+    let hovered = any_gizmo_hovered || gizmo_options.mode_override.is_some();
+
     let gizmo_interaction = GizmoInteraction {
         cursor_pos: (cursor_pos.x, cursor_pos.y),
-        hovered: any_gizmo_hovered,
+        hovered,
         drag_started: drag_started.read().len() > 0,
         dragging: dragging.read().len() > 0,
     };
