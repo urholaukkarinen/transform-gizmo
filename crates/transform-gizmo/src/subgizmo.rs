@@ -88,9 +88,6 @@ pub(crate) struct SubGizmoConfig<T: SubGizmoKind> {
     pub(crate) focused: bool,
     /// Whether this subgizmo is active this frame
     pub(crate) active: bool,
-    /// Opacity of the subgizmo for this frame.
-    /// A fully invisible subgizmo cannot be interacted with.
-    pub(crate) opacity: f32,
     /// Implementation-specific state of the subgizmo.
     pub(crate) state: T::State,
 }
@@ -119,7 +116,6 @@ where
             config,
             focused: false,
             active: false,
-            opacity: 0.0,
             state: Default::default(),
         }
     }
