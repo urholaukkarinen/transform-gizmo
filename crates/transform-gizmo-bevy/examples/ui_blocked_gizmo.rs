@@ -10,7 +10,7 @@ fn main() {
         .add_plugins((DefaultPlugins, TransformGizmoPlugin))
         .add_systems(Startup, setup)
         .add_observer(|trigger: Trigger<Pointer<Over>>| {
-            info!("Moved over: {}", trigger.entity());
+            info!("Moved over: {}", trigger.target());
         })
         .run();
 }

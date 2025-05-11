@@ -5,6 +5,7 @@ use picking::GizmoPickingPlugin;
 use scene::ScenePlugin;
 use transform_gizmo_bevy::GizmoHotkeys;
 
+use crate::grid::GridPlugin;
 use transform_gizmo_bevy::prelude::*;
 
 mod camera;
@@ -23,6 +24,7 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(GridPlugin)
         .add_plugins(GuiPlugin)
         .add_plugins(PanOrbitCameraPlugin)
         .add_plugins(ScenePlugin)
