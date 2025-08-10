@@ -1,5 +1,5 @@
 use bevy_app::{App, Plugin, Update};
-use bevy_ecs::{event::EventWriter, system::Res};
+use bevy_ecs::{message::MessageWriter, system::Res};
 use bevy_input::{ButtonInput, mouse::MouseButton};
 
 use crate::{GizmoDragStarted, GizmoDragging};
@@ -13,8 +13,8 @@ impl Plugin for MouseGizmoInteractionPlugin {
 
 fn mouse_interact_gizmo(
     mouse: Res<ButtonInput<MouseButton>>,
-    mut drag_started: EventWriter<GizmoDragStarted>,
-    mut dragging: EventWriter<GizmoDragging>,
+    mut drag_started: MessageWriter<GizmoDragStarted>,
+    mut dragging: MessageWriter<GizmoDragging>,
 ) {
     if mouse.just_pressed(MouseButton::Left) {
         drag_started.write_default();

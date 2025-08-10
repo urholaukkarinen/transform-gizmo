@@ -2,7 +2,7 @@
 name = "transform-gizmo-egui"
 description = "egui integration for transform-gizmo"
 version.workspace = true
-rust-version = "1.85.0"
+rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
 homepage.workspace = true
