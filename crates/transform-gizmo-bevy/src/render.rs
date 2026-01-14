@@ -119,11 +119,7 @@ impl From<&GizmoDrawDataHandle> for AssetId<GizmoDrawData> {
 }
 
 fn extract_gizmo_data(mut commands: Commands, handles: Extract<Res<DrawDataHandles>>) {
-    let handle_refs = handles
-        .handles
-        .values()
-        .map(|handle| handle.clone())
-        .collect::<HashSet<_>>();
+    let handle_refs = handles.handles.values().cloned().collect::<HashSet<_>>();
 
     for handle in handle_refs {
         commands.spawn((handle, TemporaryRenderEntity));
