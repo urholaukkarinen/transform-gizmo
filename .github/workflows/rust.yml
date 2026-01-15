@@ -1,4 +1,4 @@
-on: [push, pull_request]
+on: [ push, pull_request ]
 
 name: Rust
 
@@ -7,6 +7,17 @@ jobs:
     name: format + check + test
     runs-on: ubuntu-22.04
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          tool-cache: false
+          large-packages: false
+          docker-images: false
+          swap-storage: false
+
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@master
