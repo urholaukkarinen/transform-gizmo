@@ -28,7 +28,7 @@ ahash = "0.8"
 enumset = "1.1"
 bytemuck = "1.23"
 uuid = "1.17"
-bevy = "0.17.0"
+bevy = "0.17"
 
 bevy_app = { version = "0.17", default-features = false }
 bevy_core_pipeline = { version = "0.17", default-features = false }
