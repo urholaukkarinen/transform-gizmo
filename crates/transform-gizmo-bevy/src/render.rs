@@ -205,7 +205,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawTransformGizmo {
         };
 
         if gizmo.index_buffer.size() > 0 {
-            pass.set_index_buffer(gizmo.index_buffer.slice(..), 0, IndexFormat::Uint32);
+            pass.set_index_buffer(gizmo.index_buffer.slice(..), IndexFormat::Uint32);
             pass.set_vertex_buffer(0, gizmo.position_buffer.slice(..));
             pass.set_vertex_buffer(1, gizmo.color_buffer.slice(..));
 
