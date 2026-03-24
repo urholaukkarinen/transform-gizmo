@@ -132,16 +132,17 @@ impl Gizmo {
 
         // If there is no active subgizmo, find which one of them
         // is under the mouse pointer, if any.
-        if self.active_subgizmo_id.is_none() && interaction.hovered {
-            if let Some(subgizmo) = self.pick_subgizmo(pointer_ray) {
-                subgizmo.set_focused(true);
+        if self.active_subgizmo_id.is_none()
+            && interaction.hovered
+            && let Some(subgizmo) = self.pick_subgizmo(pointer_ray)
+        {
+            subgizmo.set_focused(true);
 
-                // If we started dragging from one of the subgizmos, mark it as active.
-                if interaction.drag_started || force_active {
-                    self.active_subgizmo_id = Some(subgizmo.id());
-                    self.target_start_transforms = targets.to_vec();
-                    self.gizmo_start_transform = self.config.as_transform();
-                }
+            // If we started dragging from one of the subgizmos, mark it as active.
+            if interaction.drag_started || force_active {
+                self.active_subgizmo_id = Some(subgizmo.id());
+                self.target_start_transforms = targets.to_vec();
+                self.gizmo_start_transform = self.config.as_transform();
             }
         }
 
