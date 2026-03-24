@@ -29,8 +29,8 @@ impl Default for PanOrbitCamera {
 
 fn update_camera(
     window_q: Query<&Window>,
-    mut ev_motion: EventReader<MouseMotion>,
-    mut ev_scroll: EventReader<MouseWheel>,
+    mut ev_motion: MessageReader<MouseMotion>,
+    mut ev_scroll: MessageReader<MouseWheel>,
     input_mouse: Res<ButtonInput<MouseButton>>,
     mut query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection)>,
 ) -> Result {
