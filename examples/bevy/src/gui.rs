@@ -1,6 +1,6 @@
 use bevy::{math::DQuat, prelude::*};
 use bevy_egui::{
-    EguiContexts, EguiPlugin,
+    EguiContexts, EguiPlugin, EguiPrimaryContextPass,
     egui::{self, Layout, RichText, Widget},
 };
 use transform_gizmo_bevy::{config::TransformPivotPoint, prelude::*};
@@ -10,7 +10,7 @@ pub struct GuiPlugin;
 impl Plugin for GuiPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(EguiPlugin::default())
-            .add_systems(Update, update_ui);
+            .add_systems(EguiPrimaryContextPass, update_ui);
     }
 }
 
