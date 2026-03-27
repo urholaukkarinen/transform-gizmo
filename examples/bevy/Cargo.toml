@@ -13,11 +13,11 @@ publish = false
 transform-gizmo-bevy.workspace = true
 
 bevy.workspace = true
-bevy_infinite_grid = "0.17"
-bevy_mod_outline = { git = "https://github.com/komadori/bevy_mod_outline.git", rev = "9b509abe41ac1d2b882adaf63855e24a20ced3ff" }
+bevy_infinite_grid = "0.18.0"
+bevy_mod_outline = "0.12.0"
 
 [dependencies.bevy_egui]
-version = "0.38"
+version = "0.39.0"
 features = ["open_url", "default_fonts", "render"]
 default-features = false
 
