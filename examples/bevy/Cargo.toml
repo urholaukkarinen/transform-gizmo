@@ -17,7 +17,7 @@ bevy_infinite_grid = "0.18.0"
 bevy_mod_outline = "0.12.0"
 
 [dependencies.bevy_egui]
-version = "0.39.0"
+version = "0.41.0"
 features = ["open_url", "default_fonts", "render"]
 default-features = false
 
