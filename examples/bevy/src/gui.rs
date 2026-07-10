@@ -20,7 +20,7 @@ fn update_ui(
     gizmo_targets: Query<&GizmoTarget>,
 ) {
     let context = contexts.ctx_mut().unwrap();
-    let options_panel = egui::SidePanel::left("options").show(context, |ui| {
+    let options_panel = egui::Panel::left("options").show(context, |ui| {
         draw_options(ui, &mut gizmo_options);
     });
 
