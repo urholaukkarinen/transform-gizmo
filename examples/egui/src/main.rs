@@ -150,11 +150,11 @@ impl ExampleApp {
 
 impl eframe::App for ExampleApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        egui::Panel::left("options_panel").show_inside(ui, |ui| {
+        egui::Panel::left("options_panel").show(ui, |ui| {
             self.draw_options(ui);
         });
 
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             self.draw_gizmo(ui);
         });
     }
