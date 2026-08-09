@@ -4,6 +4,7 @@ use gui::GuiPlugin;
 use picking::GizmoPickingPlugin;
 use scene::ScenePlugin;
 use transform_gizmo_bevy::GizmoHotkeys;
+use transform_gizmo_bevy::TransformGizmoPlugin;
 
 use crate::grid::GridPlugin;
 use transform_gizmo_bevy::prelude::*;

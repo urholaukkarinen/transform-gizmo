@@ -1,9 +1,9 @@
 use bevy::{
     app::{Plugin, Startup},
+    dev_tools::infinite_grid::{InfiniteGrid, InfiniteGridPlugin, InfiniteGridSettings},
     ecs::system::Commands,
     prelude::default,
 };
-use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin, InfiniteGridSettings};
 
 pub struct GridPlugin;
 impl Plugin for GridPlugin {
@@ -14,12 +14,12 @@ impl Plugin for GridPlugin {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(InfiniteGridBundle {
-        settings: InfiniteGridSettings {
+    commands.spawn((
+        InfiniteGrid,
+        InfiniteGridSettings {
             fadeout_distance: 40000.,
             scale: 1.0,
             ..default()
         },
-        ..default()
-    });
+    ));
 }
