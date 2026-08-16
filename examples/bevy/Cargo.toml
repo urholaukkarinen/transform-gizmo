@@ -16,8 +16,7 @@ bevy.workspace = true
 bevy_mod_outline = "0.13.0"
 
 [dependencies.bevy_egui]
-git = "https://github.com/kisya-games/bevy_egui"
-branch = "egui-0.36"
+version = "0.42"
 features = ["open_url", "default_fonts", "render"]
 default-features = false
 
