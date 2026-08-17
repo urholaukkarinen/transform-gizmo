@@ -1,18 +1,16 @@
 use bevy_app::{App, Plugin};
 use bevy_asset::{Asset, AssetId, Handle, RenderAssetUsages, load_internal_asset, uuid_handle};
 use bevy_camera::visibility::RenderLayers;
-use bevy_core_pipeline::core_3d::{CORE_3D_DEPTH_FORMAT, Transparent3d};
-use bevy_core_pipeline::prepass::{
-    DeferredPrepass, DepthPrepass, MotionVectorPrepass, NormalPrepass,
-};
+use bevy_core_pipeline::core_3d::{CORE_3D_DEPTH_FORMAT, Transparent3d, TransparentSortingInfo3d};
 use bevy_derive::{Deref, DerefMut};
 use bevy_ecs::prelude::*;
 use bevy_ecs::query::ROQueryItem;
 use bevy_ecs::system::SystemParamItem;
 use bevy_ecs::system::lifetimeless::{Read, SRes};
-use bevy_image::BevyDefault as _;
 use bevy_mesh::{PrimitiveTopology, VertexBufferLayout};
-use bevy_pbr::{MeshPipeline, MeshPipelineKey, SetMeshViewBindGroup};
+use bevy_pbr::{
+    MeshPipeline, MeshPipelineKey, MeshPipelineSystems, SetMeshViewBindGroup, ViewKeyCache,
+};
 use bevy_platform::collections::{HashMap, HashSet};
 use bevy_reflect::{Reflect, TypePath};
 use bevy_render::extract_component::ExtractComponent;
@@ -28,18 +26,16 @@ use bevy_render::render_resource::{
     BlendState, Buffer, BufferInitDescriptor, BufferUsages, ColorTargetState, ColorWrites,
     CompareFunction, DepthBiasState, DepthStencilState, FragmentState, IndexFormat,
     MultisampleState, PipelineCache, PrimitiveState, RenderPipelineDescriptor,
-    SpecializedRenderPipeline, SpecializedRenderPipelines, StencilState, TextureFormat,
-    VertexAttribute, VertexFormat, VertexState, VertexStepMode,
+    SpecializedRenderPipeline, SpecializedRenderPipelines, StencilState, VertexAttribute,
+    VertexFormat, VertexState, VertexStepMode,
 };
 use bevy_render::renderer::RenderDevice;
 use bevy_render::sync_world::TemporaryRenderEntity;
-use bevy_render::view::{ExtractedView, ViewTarget};
-use bevy_render::{Extract, Render, RenderApp, RenderSystems};
+use bevy_render::view::ExtractedView;
+use bevy_render::{Extract, Render, RenderApp, RenderStartup, RenderSystems};
 use bevy_shader::Shader;
 use bytemuck::cast_slice;
 use uuid::Uuid;
-
-use crate::GizmoCamera;
 
 const GIZMO_SHADER_HANDLE: Handle<Shader> = uuid_handle!("e44be110-cb2b-4a8d-9c0c-965424e6a633");
 
@@ -61,6 +57,10 @@ impl Plugin for TransformGizmoRenderPlugin {
             .add_render_command::<Transparent3d, DrawGizmo>()
             .init_resource::<SpecializedRenderPipelines<TransformGizmoPipeline>>()
             .add_systems(
+                RenderStartup,
+                init_transform_gizmo_pipeline.after(MeshPipelineSystems),
+            )
+            .add_systems(
                 Render,
                 queue_transform_gizmos
                     .in_set(RenderSystems::Queue)
@@ -73,9 +73,7 @@ impl Plugin for TransformGizmoRenderPlugin {
             return;
         };
 
-        render_app
-            .add_systems(ExtractSchedule, extract_gizmo_data)
-            .init_resource::<TransformGizmoPipeline>();
+        render_app.add_systems(ExtractSchedule, extract_gizmo_data);
     }
 }
 
@@ -221,12 +219,10 @@ struct TransformGizmoPipeline {
     mesh_pipeline: MeshPipeline,
 }
 
-impl FromWorld for TransformGizmoPipeline {
-    fn from_world(render_world: &mut World) -> Self {
-        Self {
-            mesh_pipeline: render_world.resource::<MeshPipeline>().clone(),
-        }
-    }
+fn init_transform_gizmo_pipeline(mut commands: Commands, mesh_pipeline: Res<MeshPipeline>) {
+    commands.insert_resource(TransformGizmoPipeline {
+        mesh_pipeline: mesh_pipeline.clone(),
+    });
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -249,11 +245,7 @@ impl SpecializedRenderPipeline for TransformGizmoPipeline {
             shader_defs.push("PERSPECTIVE".into());
         }
 
-        let format = if key.view_key.contains(MeshPipelineKey::HDR) {
-            ViewTarget::TEXTURE_FORMAT_HDR
-        } else {
-            TextureFormat::bevy_default()
-        };
+        let format = key.view_key.target_format();
 
         let view_layout = self
             .mesh_pipeline
@@ -307,8 +299,8 @@ impl SpecializedRenderPipeline for TransformGizmoPipeline {
             },
             depth_stencil: Some(DepthStencilState {
                 format: CORE_3D_DEPTH_FORMAT,
-                depth_write_enabled: true,
-                depth_compare: CompareFunction::Always,
+                depth_write_enabled: Some(true),
+                depth_compare: Some(CompareFunction::Always),
                 stencil: StencilState::default(),
                 bias: DepthBiasState::default(),
             }),
@@ -317,7 +309,7 @@ impl SpecializedRenderPipeline for TransformGizmoPipeline {
                 mask: !0,
                 alpha_to_coverage_enabled: false,
             },
-            push_constant_ranges: vec![],
+            immediate_size: 0,
         }
     }
 }
@@ -330,62 +322,22 @@ fn queue_transform_gizmos(
     pipeline: Res<TransformGizmoPipeline>,
     mut pipelines: ResMut<SpecializedRenderPipelines<TransformGizmoPipeline>>,
     pipeline_cache: Res<PipelineCache>,
-    msaa_q: Query<Option<&Msaa>, With<GizmoCamera>>,
+    view_key_cache: Res<ViewKeyCache>,
     transform_gizmos: Query<(Entity, &GizmoDrawDataHandle)>,
     transform_gizmo_assets: Res<RenderAssets<GizmoBuffers>>,
-    mut views: Query<(
-        Entity,
-        &ExtractedView,
-        Option<&Msaa>,
-        Option<&RenderLayers>,
-        (
-            Has<NormalPrepass>,
-            Has<DepthPrepass>,
-            Has<MotionVectorPrepass>,
-            Has<DeferredPrepass>,
-        ),
-    )>,
+    views: Query<(Entity, &ExtractedView, Option<&RenderLayers>)>,
     mut transparent_render_phases: ResMut<ViewSortedRenderPhases<Transparent3d>>,
 ) {
     let draw_function = draw_functions.read().get_id::<DrawGizmo>().unwrap();
-    let camera_msaa = msaa_q.single().ok().flatten();
-    for (
-        view_entity,
-        view,
-        entity_msaa,
-        _render_layers,
-        (normal_prepass, depth_prepass, motion_vector_prepass, deferred_prepass),
-    ) in &mut views
-    {
+    for (view_entity, view, _render_layers) in &views {
         let Some(transparent_phase) = transparent_render_phases.get_mut(&view.retained_view_entity)
         else {
             continue;
         };
 
-        // entity_msaa > camera_msaa > default
-        let msaa_sample_count = entity_msaa.map_or(
-            camera_msaa.unwrap_or(&Msaa::default()).samples(),
-            Msaa::samples,
-        );
-
-        let mut view_key = MeshPipelineKey::from_msaa_samples(msaa_sample_count)
-            | MeshPipelineKey::from_hdr(view.hdr);
-
-        if normal_prepass {
-            view_key |= MeshPipelineKey::NORMAL_PREPASS;
-        }
-
-        if depth_prepass {
-            view_key |= MeshPipelineKey::DEPTH_PREPASS;
-        }
-
-        if motion_vector_prepass {
-            view_key |= MeshPipelineKey::MOTION_VECTOR_PREPASS;
-        }
-
-        if deferred_prepass {
-            view_key |= MeshPipelineKey::DEFERRED_PREPASS;
-        }
+        let Some(&view_key) = view_key_cache.get(&view.retained_view_entity) else {
+            continue;
+        };
 
         for (entity, handle) in &transform_gizmos {
             let Some(_) = transform_gizmo_assets.get(handle.0.id()) else {
@@ -401,7 +353,8 @@ fn queue_transform_gizmos(
                 },
             );
 
-            transparent_phase.add(Transparent3d {
+            transparent_phase.add_transient(Transparent3d {
+                sorting_info: TransparentSortingInfo3d::AlwaysOnTop,
                 entity: (entity, view_entity.into()),
                 draw_function,
                 pipeline,

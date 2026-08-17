@@ -3,7 +3,7 @@
 
 use bevy::color::palettes::css::LIME;
 use bevy::prelude::*;
-use transform_gizmo_bevy::*;
+use transform_gizmo_bevy::{TransformGizmoPlugin, *};
 
 fn main() {
     App::new()
@@ -36,7 +36,7 @@ fn setup(
     // light
     commands.spawn((
         PointLight {
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         Transform::from_xyz(4.0, 8.0, 4.0),

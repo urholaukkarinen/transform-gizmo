@@ -595,17 +595,9 @@ fn draw_gizmos(
 
         let mut bevy_draw_data = render::GizmoDrawData::default();
 
-        let (asset, is_new_asset) = if let Some(handle) = draw_data_handles.handles.get(gizmo_uuid)
-        {
-            (draw_data_assets.get_mut(handle).unwrap(), false)
-        } else {
-            (&mut bevy_draw_data, true)
-        };
-
         let viewport = &gizmo.config().viewport;
 
-        asset.0.vertices.clear();
-        asset
+        bevy_draw_data
             .0
             .vertices
             .extend(draw_data.vertices.into_iter().map(|vert| {
@@ -615,10 +607,14 @@ fn draw_gizmos(
                 ]
             }));
 
-        asset.0.colors = draw_data.colors;
-        asset.0.indices = draw_data.indices;
+        bevy_draw_data.0.colors = draw_data.colors;
+        bevy_draw_data.0.indices = draw_data.indices;
 
-        if is_new_asset {
+        if let Some(handle) = draw_data_handles.handles.get(gizmo_uuid)
+            && let Some(mut asset) = draw_data_assets.get_mut(handle)
+        {
+            *asset = bevy_draw_data;
+        } else {
             let asset = draw_data_assets.add(bevy_draw_data);
 
             draw_data_handles

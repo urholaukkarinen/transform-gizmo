@@ -18,7 +18,7 @@ pub struct GizmoPickingPlugin;
 
 impl Plugin for GizmoPickingPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_plugins(OutlinePlugin)
+        app.add_plugins(OutlinePlugin::JUMP_FLOOD)
             .add_plugins(MeshPickingPlugin)
             .add_systems(PreUpdate, toggle_picking_enabled)
             .add_systems(Update, update_picking)
