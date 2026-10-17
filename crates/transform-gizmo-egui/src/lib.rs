@@ -86,7 +86,7 @@ impl GizmoExt for Gizmo {
 
         let interaction = ui.interact(
             Rect::from_center_size(cursor_pos, Vec2::splat(1.0)),
-            ui.id().with("_interaction"),
+            ui.scope_id().with("_interaction"),
             Sense::click_and_drag(),
         );
         let hovered = interaction.hovered();
