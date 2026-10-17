@@ -16,11 +16,11 @@ transform-gizmo = { version = "0.11.0", path = "crates/transform-gizmo" }
 transform-gizmo-egui = { version = "0.11.0", path = "crates/transform-gizmo-egui" }
 transform-gizmo-bevy = { version = "0.11.0", path = "crates/transform-gizmo-bevy" }
 
-egui = "0.36"
-eframe = "0.36"
-emath = "0.36"
-epaint = "0.36"
-ecolor = "0.36"
+egui = "0.37"
+eframe = "0.37"
+emath = "0.37"
+epaint = "0.37"
+ecolor = "0.37"
 glam = { version = "0.32", features = ["mint"] }
 mint = "0.5"
 enum_dispatch = "0.3"
@@ -199,3 +199,16 @@ unwrap_used = "allow"
 wildcard_imports = "allow"
 large-types-passed-by-value = "allow"
 needless-pass-by-value = "allow"
+
+# egui is on `main` at 0.37.0, which crates.io does not have yet. The
+# requirements above name 0.37 so that a consumer patching egui to `main`
+# (akatela does) resolves a single egui rather than mixing 0.36 and 0.37; this
+# block is what lets this workspace build **standalone** in that window, the
+# same device `egui_plot` upstream carries. Drop the block and the bumps
+# together, taking 0.37 from crates.io, when it is released.
+[patch.crates-io]
+ecolor = { git = "https://github.com/emilk/egui", branch = "main" }
+eframe = { git = "https://github.com/emilk/egui", branch = "main" }
+egui = { git = "https://github.com/emilk/egui", branch = "main" }
+emath = { git = "https://github.com/emilk/egui", branch = "main" }
+epaint = { git = "https://github.com/emilk/egui", branch = "main" }
